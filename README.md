@@ -1,6 +1,6 @@
 About
 =====
-This utility can helps importing existing Docker images into cvmfs.
+This utility can help importing existing Docker images into cvmfs.
 
 How to use
 ==========
