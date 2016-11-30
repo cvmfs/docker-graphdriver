@@ -1,4 +1,4 @@
-package main
+package lib
 
 import (
 	"encoding/json"
@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
-	"github.com/spf13/cobra"
+	"errors"
 )
 
 const (
@@ -40,41 +40,6 @@ type Manifest struct {
 }
 
 var token string
-
-var RootCmd = &cobra.Command {
-	Use: "hugo",
-	Short: "Hugo is very fast static site generator",
-	Long: "foo",
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("Hello world!")
-	},
-}
-
-var PullLayers = &cobra.Command {
-	Use: "pull layers",
-	Short: "pull tha layers",
-	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) != 1 {
-			printUsage()
-			return
-		}
-
-		image := args[0]
-		manifest := getManifest(image)
-
-		os.Mkdir("/tmp/layers", 0755)
-		for idx, layer := range manifest.Layers {
-
-			fmt.Printf("%2d: %s\n", idx, layer.Digest)
-			getLayer(image, layer.Digest)
-		}
-	},
-}
-
-func main() {
-	RootCmd.AddCommand(PullLayers)
-	RootCmd.Execute()
-}
 
 func printUsage() {
 	fmt.Println("You need to specify a docker image to download!")
@@ -134,6 +99,24 @@ func getLayer(repo, digest string) {
 	resp.Body.Close()
 }
 
+
+func getBlob(url string) []byte {
+	req, _ := http.NewRequest("GET", url, nil)
+	req.Header.Add("Authorization", "Bearer "+token)
+
+	var client http.Client
+	resp, _ := client.Do(req)
+
+	body, _ := ioutil.ReadAll(resp.Body)
+	resp.Body.Close()
+
+	return body
+}
+
+func getConfig(url string) []byte {
+	return getBlob(url)
+}
+
 func getAuthParams(authHeader string) map[string]string {
 	params := make(map[string]string)
 
@@ -179,4 +162,45 @@ func createImageUrl(image string) string {
 
 func checkImageName(image string) bool {
 	return false
+}
+
+func PullLayers(args []string) {
+	if len(args) != 1 {
+		printUsage()
+		return
+	}
+
+	image := args[0]
+	manifest := getManifest(image)
+
+	os.Mkdir("/tmp/layers", 0755)
+	for idx, layer := range manifest.Layers {
+
+		fmt.Printf("%2d: %s\n", idx, layer.Digest)
+		getLayer(image, layer.Digest)
+	}
+}
+
+func GetManifest(args []string) (Manifest, error) {
+	var manifest Manifest;
+
+	if len(args) != 1 {
+		printUsage()
+		return manifest, errors.New("Not enough arguments...")
+	} else {
+		manifest = getManifest(args[0])
+		return manifest, nil
+	}
+}
+
+func GetConfig(args []string) {
+	manifest, _ := GetManifest(args)
+	repo := args[0]
+
+	config_digest := manifest.Config.Digest
+	url := dockerRegistryUrl + "/" + repo + "/blobs/" + config_digest
+
+	resp := getConfig(url)
+
+	fmt.Println(string(resp))
 }
