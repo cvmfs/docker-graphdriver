@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"github.com/spf13/cobra"
 )
 
 const (
@@ -40,20 +41,39 @@ type Manifest struct {
 
 var token string
 
+var RootCmd = &cobra.Command {
+	Use: "hugo",
+	Short: "Hugo is very fast static site generator",
+	Long: "foo",
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Println("Hello world!")
+	},
+}
+
+var PullLayers = &cobra.Command {
+	Use: "pull layers",
+	Short: "pull tha layers",
+	Run: func(cmd *cobra.Command, args []string) {
+		if len(args) != 1 {
+			printUsage()
+			return
+		}
+
+		image := args[0]
+		manifest := getManifest(image)
+
+		os.Mkdir("/tmp/layers", 0755)
+		for idx, layer := range manifest.Layers {
+
+			fmt.Printf("%2d: %s\n", idx, layer.Digest)
+			getLayer(image, layer.Digest)
+		}
+	},
+}
+
 func main() {
-	if len(os.Args) != 2 {
-		printUsage()
-		return
-	}
-
-	image := os.Args[1]
-	manifest := getManifest(image)
-
-	os.Mkdir("/tmp/layers", 0755)
-	for idx, layer := range manifest.Layers {
-		fmt.Printf("%2d: %s\n", idx, layer.Digest)
-		getLayer(image, layer.Digest)
-	}
+	RootCmd.AddCommand(PullLayers)
+	RootCmd.Execute()
 }
 
 func printUsage() {
