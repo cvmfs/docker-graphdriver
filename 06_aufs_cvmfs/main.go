@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/atlantic777/docker_graphdriver_plugins/cvmfs_graphdriver_01/aufs"
+	"github.com/atlantic777/docker_graphdriver_plugins/06_aufs_cvmfs/aufs"
 	"github.com/docker/docker/daemon/graphdriver"
 	"github.com/docker/docker/pkg/idtools"
 	"github.com/docker/docker/pkg/reexec"
