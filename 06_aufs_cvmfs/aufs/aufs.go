@@ -586,8 +586,6 @@ func (a *Driver) getParentLayerPaths(id string) ([]string, error) {
 			layers = a.appendCvmfsLayerPaths(layers, cvmfs_paths)
 
 			fmt.Println(layers)
-		} else {
-			layers[i] = path.Join(a.rootPath(), "diff", p)
 		}
 	}
 
