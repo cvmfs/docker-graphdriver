@@ -47,7 +47,7 @@ import (
 	mountpk "github.com/docker/docker/pkg/mount"
 
 	"github.com/opencontainers/runc/libcontainer/label"
-	rsystem "github.com/opencontainers/runc/libcontainer/system"
+	// rsystem "github.com/opencontainers/runc/libcontainer/system"
 )
 
 var (
@@ -128,9 +128,9 @@ func Init(root string, options []string, uidMaps, gidMaps []idtools.IDMap) (grap
 		return nil, err
 	}
 
-	if err := mountpk.MakePrivate(root); err != nil {
-		return nil, err
-	}
+	// if err := mountpk.MakePrivate(root); err != nil {
+	//	return nil, err
+	// }
 
 	// Populate the dir structure
 	for _, p := range paths {
@@ -149,25 +149,26 @@ func Init(root string, options []string, uidMaps, gidMaps []idtools.IDMap) (grap
 func supportsAufs() error {
 	// We can try to modprobe aufs first before looking at
 	// proc/filesystems for when aufs is supported
-	exec.Command("modprobe", "aufs").Run()
+	// exec.Command("modprobe", "aufs").Run()
 
-	if rsystem.RunningInUserNS() {
-		return ErrAufsNested
-	}
+	// if rsystem.RunningInUserNS() {
+	// 	return ErrAufsNested
+	// }
 
-	f, err := os.Open("/proc/filesystems")
-	if err != nil {
-		return err
-	}
-	defer f.Close()
+	// f, err := os.Open("/proc/filesystems")
+	// if err != nil {
+	// 	return err
+	// }
+	// defer f.Close()
 
-	s := bufio.NewScanner(f)
-	for s.Scan() {
-		if strings.Contains(s.Text(), "aufs") {
-			return nil
-		}
-	}
-	return ErrAufsNotSupported
+	// s := bufio.NewScanner(f)
+	// for s.Scan() {
+	// 	if strings.Contains(s.Text(), "aufs") {
+	// 		return nil
+	// 	}
+	// }
+	// return ErrAufsNotSupported
+	return nil
 }
 
 func (a *Driver) rootPath() string {
@@ -377,6 +378,7 @@ func (a *Driver) Remove(id string) error {
 // Get returns the rootfs path for the id.
 // This will mount the dir at its given path
 func (a *Driver) Get(id, mountLabel string) (string, error) {
+	fmt.Printf("Get(%s)\n", id)
 	parents, err := a.getParentLayerPaths(id)
 	if err != nil && !os.IsNotExist(err) {
 		return "", err
@@ -520,6 +522,56 @@ func (a *Driver) Changes(id, parent string) ([]archive.Change, error) {
 	return archive.Changes(layers, path.Join(a.rootPath(), "diff", id))
 }
 
+func (a *Driver) isThinImageLayer(id string) bool {
+	diff_path := a.getDiffPath(id)
+	magic_file_path := path.Join(diff_path, ".thin")
+	_, err := os.Stat(magic_file_path)
+
+	if err == nil {
+		return true
+	}
+
+	return false
+}
+
+func (a *Driver) getCvmfsLayerPaths(id []string) []string {
+	ret := make([]string, len(id))
+
+	for i, layer := range id {
+		ret[i] = path.Join("/mnt/cvmfs/atlantic777.cern.ch/", layer)
+	}
+
+	return ret
+}
+
+func (a *Driver) appendCvmfsLayerPaths(oldArray []string, newArray []string) []string {
+	l_old := len(oldArray)
+	l_new := len(newArray)
+	newLen := l_old + l_new - 1
+	ret := make([]string, newLen)
+
+	for i := 0; i < l_old-1; i++ {
+		ret[i] = oldArray[i]
+	}
+
+	for i := range newArray {
+		ret[l_old-1+i] = newArray[i]
+	}
+
+	fmt.Println(oldArray)
+	fmt.Println(newArray)
+	fmt.Println(ret)
+
+	return ret
+}
+
+func (a *Driver) getNestedLayerIDs(id string) []string {
+	magic_file_path := path.Join(a.getDiffPath(id), ".thin")
+	content, _ := ioutil.ReadFile(magic_file_path)
+	lines := strings.Split(string(content), "\n")
+	return lines[:len(lines)-1]
+}
+
 func (a *Driver) getParentLayerPaths(id string) ([]string, error) {
 	parentIds, err := getParentIDs(a.rootPath(), id)
 	if err != nil {
@@ -527,10 +579,21 @@ func (a *Driver) getParentLayerPaths(id string) ([]string, error) {
 	}
 	layers := make([]string, len(parentIds))
 
-	// Get the diff paths for all the parent ids
-	for i, p := range parentIds {
-		layers[i] = path.Join(a.rootPath(), "diff", p)
+	for _, p := range parentIds {
+		if a.isThinImageLayer(p) {
+			nested_layers := a.getNestedLayerIDs(p)
+			cvmfs_paths := a.getCvmfsLayerPaths(nested_layers)
+			layers = a.appendCvmfsLayerPaths(layers, cvmfs_paths)
+
+			fmt.Println(layers)
+		} else {
+			layers[i] = path.Join(a.rootPath(), "diff", p)
+		}
 	}
+
+	fmt.Printf("getParentLayerPaths(%s)\n", id)
+	fmt.Println(layers)
+
 	return layers, nil
 }
 
@@ -618,7 +681,8 @@ func (a *Driver) aufsMount(ro []string, rw, target, mountLabel string) (err erro
 		bp += copy(b[bp:], layer)
 	}
 
-	opts := "dio,xino=/dev/shm/aufs.xino"
+	// opts := "dio,xino=/dev/shm/aufs.xino"
+	opts := "dio"
 	if useDirperm() {
 		opts += ",dirperm1"
 	}

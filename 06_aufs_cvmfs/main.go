@@ -1,11 +1,9 @@
 package main
 
 import (
-	// err "errors"
 	"fmt"
-	"github.com/docker/docker/daemon/graphdriver"
-	// "github.com/docker/docker/daemon/graphdriver/aufs"
 	"github.com/atlantic777/docker_graphdriver_plugins/cvmfs_graphdriver_01/aufs"
+	"github.com/docker/docker/daemon/graphdriver"
 	"github.com/docker/docker/pkg/idtools"
 	"github.com/docker/docker/pkg/reexec"
 	plugin "github.com/docker/go-plugins-helpers/graphdriver"
@@ -78,7 +76,7 @@ func (d MyDriver) Diff(id, parent string) io.ReadCloser {
 }
 
 func (d MyDriver) Changes(id, parent string) ([]plugin.Change, error) {
-	fmt.Printf("Changes(%, %s)\n", id, parent)
+	fmt.Printf("Changes(%s, %s)\n", id, parent)
 	changes, err := driver.Changes(id, parent)
 	ret := make([]plugin.Change, len(changes))
 
@@ -106,5 +104,5 @@ func main() {
 
 	d := MyDriver{}
 	h := plugin.NewHandler(d)
-	h.ServeUnix("aufs_passthrough", 0)
+	h.ServeUnix("plugin", 0)
 }
