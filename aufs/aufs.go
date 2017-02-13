@@ -47,7 +47,6 @@ import (
 	mountpk "github.com/docker/docker/pkg/mount"
 
 	"github.com/opencontainers/runc/libcontainer/label"
-	rsystem "github.com/opencontainers/runc/libcontainer/system"
 )
 
 var (
@@ -80,12 +79,6 @@ type Driver struct {
 // Init returns a new AUFS driver.
 // An error is returned if AUFS is not supported.
 func Init(root string, options []string, uidMaps, gidMaps []idtools.IDMap) (graphdriver.Driver, error) {
-
-	// Try to load the aufs kernel module
-	if err := supportsAufs(); err != nil {
-		return nil, graphdriver.ErrNotSupported
-	}
-
 	fsMagic, err := graphdriver.GetFSMagic(root)
 	if err != nil {
 		return nil, err
@@ -141,33 +134,6 @@ func Init(root string, options []string, uidMaps, gidMaps []idtools.IDMap) (grap
 
 	a.naiveDiff = graphdriver.NewNaiveDiffDriver(a, uidMaps, gidMaps)
 	return a, nil
-}
-
-// Return a nil error if the kernel supports aufs
-// We cannot modprobe because inside dind modprobe fails
-// to run
-func supportsAufs() error {
-	// We can try to modprobe aufs first before looking at
-	// proc/filesystems for when aufs is supported
-	exec.Command("modprobe", "aufs").Run()
-
-	if rsystem.RunningInUserNS() {
-		return ErrAufsNested
-	}
-
-	f, err := os.Open("/proc/filesystems")
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	s := bufio.NewScanner(f)
-	for s.Scan() {
-		if strings.Contains(s.Text(), "aufs") {
-			return nil
-		}
-	}
-	return ErrAufsNotSupported
 }
 
 func (a *Driver) rootPath() string {
