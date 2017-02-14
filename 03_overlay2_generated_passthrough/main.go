@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/docker/docker/daemon/graphdriver/overlay2"
+	"github.com/atlantic777/docker_graphdriver_plugins/overlay2"
 	"github.com/docker/docker/pkg/reexec"
 	"github.com/docker/go-plugins-helpers/graphdriver/shim"
 )
