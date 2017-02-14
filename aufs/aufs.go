@@ -584,7 +584,8 @@ func (a *Driver) aufsMount(ro []string, rw, target, mountLabel string) (err erro
 		bp += copy(b[bp:], layer)
 	}
 
-	opts := "dio,xino=/dev/shm/aufs.xino"
+	// opts := "dio,xino=/dev/shm/aufs.xino"
+	opts := "dio"
 	if useDirperm() {
 		opts += ",dirperm1"
 	}
