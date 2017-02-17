@@ -538,7 +538,7 @@ func (a *Driver) getCvmfsLayerPaths(id []string) []string {
 	ret := make([]string, len(id))
 
 	for i, layer := range id {
-		ret[i] = path.Join("/mnt/cvmfs/atlantic777.cern.ch/", layer)
+		ret[i] = path.Join("/mnt/cvmfs/docker2cvmfs-ci.cern.ch/layers", layer)
 	}
 
 	return ret
