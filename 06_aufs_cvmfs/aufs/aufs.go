@@ -75,12 +75,12 @@ type Driver struct {
 	pathCacheLock sync.Mutex
 	pathCache     map[string]string
 	naiveDiff     graphdriver.DiffDriver
+	cvmfsRoot     string
 }
 
 // Init returns a new AUFS driver.
 // An error is returned if AUFS is not supported.
 func Init(root string, options []string, uidMaps, gidMaps []idtools.IDMap) (graphdriver.Driver, error) {
-
 	// Try to load the aufs kernel module
 	if err := supportsAufs(); err != nil {
 		return nil, graphdriver.ErrNotSupported
@@ -112,6 +112,12 @@ func Init(root string, options []string, uidMaps, gidMaps []idtools.IDMap) (grap
 		gidMaps:   gidMaps,
 		pathCache: make(map[string]string),
 		ctr:       graphdriver.NewRefCounter(graphdriver.NewFsChecker(graphdriver.FsMagicAufs)),
+	}
+
+	if len(options) == 0 {
+		a.cvmfsRoot = "/mnt/cvmfs/docker2cvmfs-ci.cern.ch/layers"
+	} else if len(options) == 1 && strings.HasPrefix(options[0], "cvmfsRoot") {
+		a.cvmfsRoot = strings.Split("=", options[0])[1]
 	}
 
 	rootUID, rootGID, err := idtools.GetRootUIDGID(uidMaps, gidMaps)
@@ -538,7 +544,7 @@ func (a *Driver) getCvmfsLayerPaths(id []string) []string {
 	ret := make([]string, len(id))
 
 	for i, layer := range id {
-		ret[i] = path.Join("/mnt/cvmfs/docker2cvmfs-ci.cern.ch/layers", layer)
+		ret[i] = path.Join(a.cvmfsRoot, layer)
 	}
 
 	return ret
