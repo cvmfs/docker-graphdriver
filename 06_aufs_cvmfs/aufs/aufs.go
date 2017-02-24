@@ -117,7 +117,7 @@ func Init(root string, options []string, uidMaps, gidMaps []idtools.IDMap) (grap
 	if len(options) == 0 {
 		a.cvmfsRoot = "/mnt/cvmfs/docker2cvmfs-ci.cern.ch/layers"
 	} else if len(options) == 1 && strings.HasPrefix(options[0], "cvmfsRoot") {
-		a.cvmfsRoot = strings.Split("=", options[0])[1]
+		a.cvmfsRoot = strings.Split(options[0], "=")[1]
 	}
 
 	rootUID, rootGID, err := idtools.GetRootUIDGID(uidMaps, gidMaps)
@@ -726,7 +726,8 @@ func useDirperm() bool {
 		}
 		defer os.RemoveAll(union)
 
-		opts := fmt.Sprintf("br:%s,dirperm1,xino=/dev/shm/aufs.xino", base)
+		// opts := fmt.Sprintf("br:%s,dirperm1,xino=/dev/shm/aufs.xino", base)
+		opts := fmt.Sprintf("br:%s,dirperm1", base)
 		if err := mount("none", union, "aufs", 0, opts); err != nil {
 			return
 		}
