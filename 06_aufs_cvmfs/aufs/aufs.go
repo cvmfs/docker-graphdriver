@@ -44,10 +44,11 @@ import (
 	"github.com/docker/docker/pkg/chrootarchive"
 	"github.com/docker/docker/pkg/directory"
 	"github.com/docker/docker/pkg/idtools"
+	"github.com/docker/docker/pkg/locker"
 	mountpk "github.com/docker/docker/pkg/mount"
 
 	"github.com/opencontainers/runc/libcontainer/label"
-	// rsystem "github.com/opencontainers/runc/libcontainer/system"
+	rsystem "github.com/opencontainers/runc/libcontainer/system"
 )
 
 var (
@@ -76,17 +77,13 @@ type Driver struct {
 	pathCacheLock sync.Mutex
 	pathCache     map[string]string
 	naiveDiff     graphdriver.DiffDriver
+	locker        *locker.Locker
 	cvmfsRoot     string
 }
 
 // Init returns a new AUFS driver.
 // An error is returned if AUFS is not supported.
 func Init(root string, options []string, uidMaps, gidMaps []idtools.IDMap) (graphdriver.Driver, error) {
-	// Try to load the aufs kernel module
-	if err := supportsAufs(); err != nil {
-		return nil, graphdriver.ErrNotSupported
-	}
-
 	fsMagic, err := graphdriver.GetFSMagic(root)
 	if err != nil {
 		return nil, err
@@ -153,34 +150,6 @@ func Init(root string, options []string, uidMaps, gidMaps []idtools.IDMap) (grap
 
 	a.naiveDiff = graphdriver.NewNaiveDiffDriver(a, uidMaps, gidMaps)
 	return a, nil
-}
-
-// Return a nil error if the kernel supports aufs
-// We cannot modprobe because inside dind modprobe fails
-// to run
-func supportsAufs() error {
-	// We can try to modprobe aufs first before looking at
-	// proc/filesystems for when aufs is supported
-	// exec.Command("modprobe", "aufs").Run()
-
-	// if rsystem.RunningInUserNS() {
-	// 	return ErrAufsNested
-	// }
-
-	// f, err := os.Open("/proc/filesystems")
-	// if err != nil {
-	// 	return err
-	// }
-	// defer f.Close()
-
-	// s := bufio.NewScanner(f)
-	// for s.Scan() {
-	// 	if strings.Contains(s.Text(), "aufs") {
-	// 		return nil
-	// 	}
-	// }
-	// return ErrAufsNotSupported
-	return nil
 }
 
 func (a *Driver) rootPath() string {
@@ -390,7 +359,6 @@ func (a *Driver) Remove(id string) error {
 // Get returns the rootfs path for the id.
 // This will mount the dir at its given path
 func (a *Driver) Get(id, mountLabel string) (string, error) {
-	fmt.Printf("Get(%s)\n", id)
 	parents, err := a.getParentLayerPaths(id)
 	if err != nil && !os.IsNotExist(err) {
 		return "", err
@@ -534,56 +502,6 @@ func (a *Driver) Changes(id, parent string) ([]archive.Change, error) {
 	return archive.Changes(layers, path.Join(a.rootPath(), "diff", id))
 }
 
-func (a *Driver) isThinImageLayer(id string) bool {
-	diff_path := a.getDiffPath(id)
-	magic_file_path := path.Join(diff_path, ".thin")
-	_, err := os.Stat(magic_file_path)
-
-	if err == nil {
-		return true
-	}
-
-	return false
-}
-
-func (a *Driver) getCvmfsLayerPaths(id []string) []string {
-	ret := make([]string, len(id))
-
-	for i, layer := range id {
-		ret[i] = path.Join(a.cvmfsRoot, layer)
-	}
-
-	return ret
-}
-
-func (a *Driver) appendCvmfsLayerPaths(oldArray []string, newArray []string) []string {
-	l_old := len(oldArray)
-	l_new := len(newArray)
-	newLen := l_old + l_new - 1
-	ret := make([]string, newLen)
-
-	for i := 0; i < l_old-1; i++ {
-		ret[i] = oldArray[i]
-	}
-
-	for i := range newArray {
-		ret[l_old-1+i] = newArray[i]
-	}
-
-	fmt.Println(oldArray)
-	fmt.Println(newArray)
-	fmt.Println(ret)
-
-	return ret
-}
-
-func (a *Driver) getNestedLayerIDs(id string) []string {
-	magic_file_path := path.Join(a.getDiffPath(id), ".thin")
-	content, _ := ioutil.ReadFile(magic_file_path)
-	lines := strings.Split(string(content), "\n")
-	return lines[:len(lines)-1]
-}
-
 func (a *Driver) getParentLayerPaths(id string) ([]string, error) {
 	parentIds, err := getParentIDs(a.rootPath(), id)
 	if err != nil {
@@ -591,6 +509,7 @@ func (a *Driver) getParentLayerPaths(id string) ([]string, error) {
 	}
 	layers := make([]string, len(parentIds))
 
+	// Get the diff paths for all the parent ids
 	for i, p := range parentIds {
 		if a.isThinImageLayer(p) {
 			nested_layers := a.getNestedLayerIDs(p)
@@ -602,10 +521,6 @@ func (a *Driver) getParentLayerPaths(id string) ([]string, error) {
 			layers[i] = path.Join(a.rootPath(), "diff", p)
 		}
 	}
-
-	fmt.Printf("getParentLayerPaths(%s)\n", id)
-	fmt.Println(layers)
-
 	return layers, nil
 }
 
