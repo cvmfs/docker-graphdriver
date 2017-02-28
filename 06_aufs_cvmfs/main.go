@@ -8,8 +8,6 @@ import (
 	"github.com/docker/docker/pkg/reexec"
 	plugin "github.com/docker/go-plugins-helpers/graphdriver"
 	"io"
-	"os"
-	"os/exec"
 )
 
 var driver graphdriver.Driver
@@ -19,9 +17,7 @@ type MyDriver struct {
 
 func (d MyDriver) Init(home string, options []string, uidMaps, gidMaps []idtools.IDMap) error {
 	fmt.Printf("Init(%s)\n", home)
-	os.MkdirAll("/cvmfs/docker2cvmfs-ci.cern.ch", os.ModePerm)
-	cmd := "cvmfs2 -o rw,fsname=cvmfs2,allow_other,grab_mountpoint docker2cvmfs-ci.cern.ch /cvmfs/docker2cvmfs-ci.cern.ch"
-	exec.Command("bash", "-x", "-c", cmd).Run()
+
 	var err error
 	driver, err = aufs.Init(home, options, uidMaps, gidMaps)
 	return err
@@ -71,7 +67,6 @@ func (d MyDriver) GetMetadata(id string) (map[string]string, error) {
 
 func (d MyDriver) Cleanup() error {
 	fmt.Println("Cleanup")
-	exec.Command("umount", "/cvmfs/docker2cvmfs-ci.cern.ch").Run()
 	return driver.Cleanup()
 }
 
