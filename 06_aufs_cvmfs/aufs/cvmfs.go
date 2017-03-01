@@ -5,6 +5,7 @@ import (
 	"github.com/docker/docker/pkg/parsers"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path"
 	"strings"
 )
@@ -59,15 +60,34 @@ func (a *Driver) getNestedLayerIDs(id string) []string {
 	return lines[:len(lines)-1]
 }
 
-func (a *Driver) mountCvmfsRepo(repo string) error {
+func mountCvmfsRepo(repo, target string) error {
+	mountTarget := path.Join(target, repo)
+	os.MkdirAll(mountTarget, os.ModePerm)
+
+	cmd := "cvmfs2 -o rw,fsname=cvmfs2,allow_other,grab_mountpoint"
+	cmd += " " + repo
+	cmd += " " + mountTarget
+
+	// TODO: check for errors!
+	exec.Command("bash", "-x", "-c", cmd).Run()
+
 	return nil
 }
 
-func (a *Driver) umountCvmfsRepo(repo string) error {
+func umountCvmfsRepo(target string) error {
+	// TODO: check for errors!
+	exec.Command("umount", target).Run()
+
 	return nil
 }
 
 func (a *Driver) umountAllCvmfsRepos() error {
+	umountCvmfsRepo(path.Join(a.cvmfsMountPath, cvmfsDefaultRepo))
+	return nil
+}
+
+func (a *Driver) mountAllCvmfsRepos() error {
+	mountCvmfsRepo(cvmfsDefaultRepo, a.cvmfsMountPath)
 	return nil
 }
 

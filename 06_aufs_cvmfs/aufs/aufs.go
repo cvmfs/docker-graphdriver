@@ -59,7 +59,6 @@ var (
 
 	enableDirpermLock sync.Once
 	enableDirperm     bool
-	defaultCvmfsRoot  = "/mnt/cvmfs/docker2cvmfs-ci.cern.ch/layers"
 	cvmfsDefaultRepo  = "docker2cvmfs-ci.cern.ch"
 )
 
@@ -118,16 +117,8 @@ func Init(root string, options []string, uidMaps, gidMaps []idtools.IDMap) (grap
 		return nil, err
 	}
 
-	// CernVM-FS mount
 	if a.cvmfsMountMethod == "internal" {
-		mountTarget := path.Join(a.cvmfsMountPath, "docker2cvmfs-ci.cern.ch")
-		os.MkdirAll(mountTarget, os.ModePerm)
-		// cmd := "cvmfs2 -o rw,fsname=cvmfs2,allow_other,grab_mountpoint docker2cvmfs-ci.cern.ch /cvmfs/docker2cvmfs-ci.cern.ch"
-		cmd := "cvmfs2 -o rw,fsname=cvmfs2,allow_other,grab_mountpoint"
-		cmd += " " + cvmfsDefaultRepo
-		cmd += " " + mountTarget
-		fmt.Println(cmd)
-		exec.Command("bash", "-x", "-c", cmd).Run()
+		a.mountAllCvmfsRepos()
 	}
 
 	rootUID, rootGID, err := idtools.GetRootUIDGID(uidMaps, gidMaps)
@@ -567,7 +558,9 @@ func (a *Driver) mounted(mountpoint string) (bool, error) {
 
 // Cleanup aufs and unmount all mountpoints
 func (a *Driver) Cleanup() error {
-	defer exec.Command("umount", "/cvmfs/docker2cvmfs-ci.cern.ch").Run()
+	if a.cvmfsMountMethod == "internal" {
+		defer a.umountAllCvmfsRepos()
+	}
 
 	var dirs []string
 	if err := filepath.Walk(a.mntPath(), func(path string, info os.FileInfo, err error) error {
