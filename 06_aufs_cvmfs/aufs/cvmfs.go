@@ -1,6 +1,7 @@
 package aufs
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/docker/docker/pkg/parsers"
 	"io/ioutil"
@@ -9,6 +10,19 @@ import (
 	"path"
 	"strings"
 )
+
+type ThinImageLayer struct {
+	Digest   string `json:"digest"`
+	Repo     string `json:"repo,omitempty"`
+	Location string `json:"location,omitempty"`
+}
+
+type ThinImage struct {
+	Version    string           `json:"version"`
+	MinVersion string           `json:"min_version,omitempty"`
+	Layers     []ThinImageLayer `json:"layers"`
+	Comment    string           `json:"comment,omitempty"`
+}
 
 func (a *Driver) isThinImageLayer(id string) bool {
 	diff_path := a.getDiffPath(id)
@@ -22,11 +36,17 @@ func (a *Driver) isThinImageLayer(id string) bool {
 	return false
 }
 
-func (a *Driver) getCvmfsLayerPaths(id []string) []string {
-	ret := make([]string, len(id))
+func (a *Driver) getCvmfsLayerPaths(layers []ThinImageLayer) []string {
+	ret := make([]string, len(layers))
 
-	for i, layer := range id {
-		ret[i] = path.Join(a.cvmfsMountPath, cvmfsDefaultRepo, "layers", layer)
+	for i, layer := range layers {
+		root := a.cvmfsMountPath
+		repo := cvmfsDefaultRepo
+		location := "layers"
+		digest := layer.Digest
+
+		// ret[i] = path.Join(a.cvmfsMountPath, cvmfsDefaultRepo, "layers", layer)
+		ret[i] = path.Join(root, repo, location, digest)
 	}
 
 	return ret
@@ -53,11 +73,14 @@ func (a *Driver) appendCvmfsLayerPaths(oldArray []string, newArray []string) []s
 	return ret
 }
 
-func (a *Driver) getNestedLayerIDs(id string) []string {
+func (a *Driver) getNestedLayerIDs(id string) []ThinImageLayer {
 	magic_file_path := path.Join(a.getDiffPath(id), ".thin")
 	content, _ := ioutil.ReadFile(magic_file_path)
-	lines := strings.Split(string(content), "\n")
-	return lines[:len(lines)-1]
+
+	var thin ThinImage
+	json.Unmarshal(content, &thin)
+
+	return thin.Layers
 }
 
 func mountCvmfsRepo(repo, target string) error {
