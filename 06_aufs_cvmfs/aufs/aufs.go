@@ -48,7 +48,6 @@ import (
 	mountpk "github.com/docker/docker/pkg/mount"
 
 	"github.com/opencontainers/runc/libcontainer/label"
-	rsystem "github.com/opencontainers/runc/libcontainer/system"
 )
 
 var (
@@ -61,6 +60,7 @@ var (
 	enableDirpermLock sync.Once
 	enableDirperm     bool
 	defaultCvmfsRoot  = "/mnt/cvmfs/docker2cvmfs-ci.cern.ch/layers"
+	cvmfsDefaultRepo  = "docker2cvmfs-ci.cern.ch"
 )
 
 func init() {
@@ -70,15 +70,17 @@ func init() {
 // Driver contains information about the filesystem mounted.
 type Driver struct {
 	sync.Mutex
-	root          string
-	uidMaps       []idtools.IDMap
-	gidMaps       []idtools.IDMap
-	ctr           *graphdriver.RefCounter
-	pathCacheLock sync.Mutex
-	pathCache     map[string]string
-	naiveDiff     graphdriver.DiffDriver
-	locker        *locker.Locker
-	cvmfsRoot     string
+	root             string
+	uidMaps          []idtools.IDMap
+	gidMaps          []idtools.IDMap
+	ctr              *graphdriver.RefCounter
+	pathCacheLock    sync.Mutex
+	pathCache        map[string]string
+	naiveDiff        graphdriver.DiffDriver
+	locker           *locker.Locker
+	cvmfsRoot        string
+	cvmfsMountMethod string
+	cvmfsMountPath   string
 }
 
 // Init returns a new AUFS driver.
@@ -112,15 +114,20 @@ func Init(root string, options []string, uidMaps, gidMaps []idtools.IDMap) (grap
 		ctr:       graphdriver.NewRefCounter(graphdriver.NewFsChecker(graphdriver.FsMagicAufs)),
 	}
 
-	// CernVM-FS mount
-	os.MkdirAll("/cvmfs/docker2cvmfs-ci.cern.ch", os.ModePerm)
-	cmd := "cvmfs2 -o rw,fsname=cvmfs2,allow_other,grab_mountpoint docker2cvmfs-ci.cern.ch /cvmfs/docker2cvmfs-ci.cern.ch"
-	exec.Command("bash", "-x", "-c", cmd).Run()
+	if err := a.configureCvmfs(options); err != nil {
+		return nil, err
+	}
 
-	if len(options) == 0 {
-		a.cvmfsRoot = defaultCvmfsRoot
-	} else if len(options) == 1 && strings.HasPrefix(options[0], "cvmfsRoot") {
-		a.cvmfsRoot = strings.Split(options[0], "=")[1]
+	// CernVM-FS mount
+	if a.cvmfsMountMethod == "internal" {
+		mountTarget := path.Join(a.cvmfsMountPath, "docker2cvmfs-ci.cern.ch")
+		os.MkdirAll(mountTarget, os.ModePerm)
+		// cmd := "cvmfs2 -o rw,fsname=cvmfs2,allow_other,grab_mountpoint docker2cvmfs-ci.cern.ch /cvmfs/docker2cvmfs-ci.cern.ch"
+		cmd := "cvmfs2 -o rw,fsname=cvmfs2,allow_other,grab_mountpoint"
+		cmd += " " + cvmfsDefaultRepo
+		cmd += " " + mountTarget
+		fmt.Println(cmd)
+		exec.Command("bash", "-x", "-c", cmd).Run()
 	}
 
 	rootUID, rootGID, err := idtools.GetRootUIDGID(uidMaps, gidMaps)

@@ -2,6 +2,7 @@ package aufs
 
 import (
 	"fmt"
+	"github.com/docker/docker/pkg/parsers"
 	"io/ioutil"
 	"os"
 	"path"
@@ -24,7 +25,7 @@ func (a *Driver) getCvmfsLayerPaths(id []string) []string {
 	ret := make([]string, len(id))
 
 	for i, layer := range id {
-		ret[i] = path.Join(a.cvmfsRoot, layer)
+		ret[i] = path.Join(a.cvmfsMountPath, cvmfsDefaultRepo, "layers", layer)
 	}
 
 	return ret
@@ -56,4 +57,63 @@ func (a *Driver) getNestedLayerIDs(id string) []string {
 	content, _ := ioutil.ReadFile(magic_file_path)
 	lines := strings.Split(string(content), "\n")
 	return lines[:len(lines)-1]
+}
+
+func (a *Driver) mountCvmfsRepo(repo string) error {
+	return nil
+}
+
+func (a *Driver) umountCvmfsRepo(repo string) error {
+	return nil
+}
+
+func (a *Driver) umountAllCvmfsRepos() error {
+	return nil
+}
+
+func parseOptions(options []string) (map[string]string, error) {
+	m := make(map[string]string)
+
+	for _, v := range options {
+		key, value, err := parsers.ParseKeyValueOpt(v)
+
+		if err != nil {
+			return nil, err
+		}
+
+		m[key] = value
+	}
+
+	return m, nil
+}
+
+func (a *Driver) configureCvmfs(options []string) error {
+	m, err := parseOptions(options)
+
+	if err != nil {
+		return err
+	}
+
+	if method, ok := m["cvmfsMountMethod"]; !ok {
+		a.cvmfsMountMethod = "internal"
+	} else {
+		a.cvmfsMountMethod = method
+	}
+
+	if mountPath, ok := m["cvmfsMountmethod"]; !ok {
+		if a.cvmfsMountMethod == "internal" {
+			a.cvmfsMountPath = "/cvmfs"
+		} else if a.cvmfsMountMethod == "external" {
+			a.cvmfsMountPath = "/mnt/cvmfs"
+		}
+	} else {
+		a.cvmfsMountPath = mountPath
+	}
+
+	if a.cvmfsMountMethod == "external" &&
+		!strings.HasPrefix(a.cvmfsMountPath, "/mnt") {
+		return fmt.Errorf("CVMFS Mount path is not propagated!")
+	}
+
+	return nil
 }
