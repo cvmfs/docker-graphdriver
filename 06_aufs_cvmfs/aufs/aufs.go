@@ -188,12 +188,15 @@ func (a *Driver) Exists(id string) bool {
 // CreateReadWrite creates a layer that is writable for use as a container
 // file system.
 func (a *Driver) CreateReadWrite(id, parent string, opts *graphdriver.CreateOpts) error {
+	fmt.Printf("CreateReadWrite(%s, %s)\n", id, parent)
+
 	return a.Create(id, parent, opts)
 }
 
 // Create three folders for each id
 // mnt, layers, and diff
 func (a *Driver) Create(id, parent string, opts *graphdriver.CreateOpts) error {
+	fmt.Printf("Create(%s, %s)\n", id, parent)
 
 	if opts != nil && len(opts.StorageOpt) != 0 {
 		return fmt.Errorf("--storage-opt is not supported for aufs")
@@ -286,6 +289,8 @@ func debugEBusy(mountPath string) (out []string, err error) {
 
 // Remove will unmount and remove the given id.
 func (a *Driver) Remove(id string) error {
+	fmt.Printf("Remove(%s)\n", id)
+
 	a.pathCacheLock.Lock()
 	mountpoint, exists := a.pathCache[id]
 	a.pathCacheLock.Unlock()
@@ -359,6 +364,8 @@ func (a *Driver) Remove(id string) error {
 // Get returns the rootfs path for the id.
 // This will mount the dir at its given path
 func (a *Driver) Get(id, mountLabel string) (string, error) {
+	fmt.Printf("Get(%s, %s)\n", id, mountLabel)
+
 	parents, err := a.getParentLayerPaths(id)
 	if err != nil && !os.IsNotExist(err) {
 		return "", err
@@ -394,6 +401,8 @@ func (a *Driver) Get(id, mountLabel string) (string, error) {
 
 // Put unmounts and updates list of active mounts.
 func (a *Driver) Put(id string) error {
+	fmt.Printf("Put(%s)\n", id)
+
 	a.pathCacheLock.Lock()
 	m, exists := a.pathCache[id]
 	if !exists {
@@ -414,6 +423,8 @@ func (a *Driver) Put(id string) error {
 
 // isParent returns if the passed in parent is the direct parent of the passed in layer
 func (a *Driver) isParent(id, parent string) bool {
+	fmt.Printf("isParent(%s, %s)\n", id, parent)
+
 	parents, _ := getParentIDs(a.rootPath(), id)
 	if parent == "" && len(parents) > 0 {
 		return false
@@ -424,6 +435,27 @@ func (a *Driver) isParent(id, parent string) bool {
 // Diff produces an archive of the changes between the specified
 // layer and its parent layer which may be "".
 func (a *Driver) Diff(id, parent string) (io.ReadCloser, error) {
+	fmt.Printf("Diff(%s, %s)\n", id, parent)
+
+	thin, err := a.getParentThinLayer(id)
+
+	if err == nil {
+		fmt.Println("Found a thin image!")
+
+		orig := a.getDiffPath(id)
+
+		fmt.Printf("Orig diffpath: %s\n", orig)
+		h := MoveAndUpload(orig)
+
+		fmt.Printf("Uploaded hash is: %s\n", h)
+
+		thin.AddLayer(h)
+		a.writeThinFile(thin, id)
+	} else {
+		fmt.Println("Didn't find a thin image parent!")
+		fmt.Println(err)
+	}
+
 	if !a.isParent(id, parent) {
 		return a.naiveDiff.Diff(id, parent)
 	}
@@ -448,11 +480,15 @@ func (f fileGetNilCloser) Close() error {
 // DiffGetter returns a FileGetCloser that can read files from the directory that
 // contains files for the layer differences. Used for direct access for tar-split.
 func (a *Driver) DiffGetter(id string) (graphdriver.FileGetCloser, error) {
+	fmt.Printf("DiffGetter(%s)\n", id)
+
 	p := path.Join(a.rootPath(), "diff", id)
 	return fileGetNilCloser{storage.NewPathFileGetter(p)}, nil
 }
 
 func (a *Driver) applyDiff(id string, diff io.Reader) error {
+	fmt.Printf("applyDiff(%s)\n", id)
+
 	return chrootarchive.UntarUncompressed(diff, path.Join(a.rootPath(), "diff", id), &archive.TarOptions{
 		UIDMaps: a.uidMaps,
 		GIDMaps: a.gidMaps,
@@ -463,6 +499,8 @@ func (a *Driver) applyDiff(id string, diff io.Reader) error {
 // and its parent and returns the size in bytes of the changes
 // relative to its base filesystem directory.
 func (a *Driver) DiffSize(id, parent string) (size int64, err error) {
+	fmt.Printf("DiffSize(%s, %s)\n", id, parent)
+
 	if !a.isParent(id, parent) {
 		return a.naiveDiff.DiffSize(id, parent)
 	}
@@ -474,6 +512,8 @@ func (a *Driver) DiffSize(id, parent string) (size int64, err error) {
 // layer with the specified id and parent, returning the size of the
 // new layer in bytes.
 func (a *Driver) ApplyDiff(id, parent string, diff io.Reader) (size int64, err error) {
+	fmt.Printf("ApplyDiff(%s, %s)\n", id, parent)
+
 	if !a.isParent(id, parent) {
 		return a.naiveDiff.ApplyDiff(id, parent, diff)
 	}
@@ -489,6 +529,8 @@ func (a *Driver) ApplyDiff(id, parent string, diff io.Reader) (size int64, err e
 // Changes produces a list of changes between the specified layer
 // and its parent layer. If parent is "", then all changes will be ADD changes.
 func (a *Driver) Changes(id, parent string) ([]archive.Change, error) {
+	fmt.Printf("Changes(%s, %s)\n", id, parent)
+
 	if !a.isParent(id, parent) {
 		return a.naiveDiff.Changes(id, parent)
 	}
@@ -503,6 +545,8 @@ func (a *Driver) Changes(id, parent string) ([]archive.Change, error) {
 }
 
 func (a *Driver) getParentLayerPaths(id string) ([]string, error) {
+	fmt.Printf("getParentLayerPaths(%s)\n", id)
+
 	parentIds, err := getParentIDs(a.rootPath(), id)
 	if err != nil {
 		return nil, err

@@ -24,6 +24,11 @@ type ThinImage struct {
 	Comment    string           `json:"comment,omitempty"`
 }
 
+func (t *ThinImage) AddLayer(id string) {
+	newLayer := ThinImageLayer{Digest: id}
+	t.Layers = append([]ThinImageLayer{newLayer}, t.Layers...)
+}
+
 func (a *Driver) isThinImageLayer(id string) bool {
 	diff_path := a.getDiffPath(id)
 	magic_file_path := path.Join(diff_path, ".thin")
@@ -45,7 +50,6 @@ func (a *Driver) getCvmfsLayerPaths(layers []ThinImageLayer) []string {
 		location := "layers"
 		digest := layer.Digest
 
-		// ret[i] = path.Join(a.cvmfsMountPath, cvmfsDefaultRepo, "layers", layer)
 		ret[i] = path.Join(root, repo, location, digest)
 	}
 
