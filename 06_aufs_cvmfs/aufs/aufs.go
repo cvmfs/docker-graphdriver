@@ -445,7 +445,11 @@ func (a *Driver) Diff(id, parent string) (io.ReadCloser, error) {
 		orig := a.getDiffPath(id)
 
 		fmt.Printf("Orig diffpath: %s\n", orig)
-		h := MoveAndUpload(orig)
+		h, err := MoveAndUpload(orig)
+		if err != nil {
+			fmt.Printf("error on MoveAndUpload(): %s", err.Error())
+			return nil, err
+		}
 
 		fmt.Printf("Uploaded hash is: %s\n", h)
 
@@ -552,19 +556,21 @@ func (a *Driver) getParentLayerPaths(id string) ([]string, error) {
 		return nil, err
 	}
 	layers := make([]string, len(parentIds))
+	foundThin := false
 
 	// Get the diff paths for all the parent ids
 	for i, p := range parentIds {
-		if a.isThinImageLayer(p) {
+		if a.isThinImageLayer(p) && foundThin == false {
 			nested_layers := a.getNestedLayerIDs(p)
 			cvmfs_paths := a.getCvmfsLayerPaths(nested_layers)
 			layers = a.appendCvmfsLayerPaths(layers, cvmfs_paths)
-
-			fmt.Println(layers)
+			foundThin = true
 		} else {
 			layers[i] = path.Join(a.rootPath(), "diff", p)
 		}
 	}
+
+	fmt.Println("Layers: ", layers)
 	return layers, nil
 }
 
