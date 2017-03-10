@@ -72,7 +72,7 @@ func tar(src string) (string, error) {
 	return dstFile.Name(), nil
 }
 
-func hash(src string) (string, error) {
+func sha256hash(src string) (string, error) {
 	tarFile, err := os.Open(src)
 	defer tarFile.Close()
 
@@ -88,14 +88,14 @@ func hash(src string) (string, error) {
 	return s, nil
 }
 
-func upload(src, hash string) error {
+func upload(src, h string) error {
 	minioClient, err := minio.New(host, accessKey, secretKey, ssl)
 	if err != nil {
 		fmt.Println("Failed to create a minio client!")
 		return err
 	}
 
-	_, err = minioClient.FPutObject("layers", hash, src, "application/x-gzip")
+	_, err = minioClient.FPutObject("layers", h, src, "application/x-gzip")
 	if err != nil {
 		fmt.Println("Failed call to FPutObject()")
 		return err
@@ -117,7 +117,7 @@ func MoveAndUpload(orig string) (string, error) {
 		return "", err
 	}
 
-	h, err := hash(tarFileName)
+	h, err := sha256hash(tarFileName)
 	if err != nil {
 		fmt.Printf("Failed to calculate hash: %s\n", err.Error())
 		return "", err
