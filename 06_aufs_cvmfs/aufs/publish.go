@@ -23,29 +23,15 @@ var (
 )
 
 func move(src string) (string, error) {
-	// tmp, err := ioutil.TempDir(os.TempDir(), "dlcg-")
-	// if err != nil {
-	// 	fmt.Println("Failed to create temp dir.")
-	// 	return "", err
-	// }
 	rand.Seed(time.Now().UTC().UnixNano())
 	tmp := path.Join(os.TempDir(), fmt.Sprintf("dlcg-%d", rand.Int()))
 
-	// if err := os.Rename(src, tmp); err != nil {
-	// 	fmt.Println("Failed to rename")
-	// 	return "", err
-	// }
 	var out bytes.Buffer
 	cmd := fmt.Sprintf("mv %s/* %s", src, tmp)
 	c := exec.Command("bash", "-c", cmd)
 	c.Stdout = &out
 	if err := c.Run(); err != nil {
 		fmt.Println("Failed to move!")
-		return "", err
-	}
-
-	if err := os.Mkdir(src, os.ModePerm); err != nil {
-		fmt.Println("Failed to recreate original dir.")
 		return "", err
 	}
 
