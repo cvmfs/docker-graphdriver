@@ -26,6 +26,11 @@ func move(src string) (string, error) {
 	rand.Seed(time.Now().UTC().UnixNano())
 	tmp := path.Join(os.TempDir(), fmt.Sprintf("dlcg-%d", rand.Int()))
 
+	if err := os.MkdirAll(tmp, os.ModePerm); err != nil {
+		fmt.Println("Failed to create tmp!")
+		return "", err
+	}
+
 	var out bytes.Buffer
 	cmd := fmt.Sprintf("mv %s/* %s", src, tmp)
 	c := exec.Command("bash", "-c", cmd)

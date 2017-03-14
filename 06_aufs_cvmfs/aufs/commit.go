@@ -3,6 +3,7 @@ package aufs
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
@@ -31,8 +32,19 @@ func (a *Driver) readThinFile(id string) ThinImage {
 	return thin
 }
 
-func (a *Driver) writeThinFile(thin ThinImage, id string) {
+func (a *Driver) writeThinFile(thin ThinImage, id string) error {
 	p := path.Join(a.getDiffPath(id), ".thin")
-	j, _ := json.Marshal(thin)
-	ioutil.WriteFile(p, j, os.ModePerm)
+
+	j, err := json.Marshal(thin)
+	if err != nil {
+		fmt.Println("Failed to marshal new thin file to json!")
+		return err
+	}
+
+	if err := ioutil.WriteFile(p, j, os.ModePerm); err != nil {
+		fmt.Println("Failed to write new thin file!")
+		return err
+	}
+
+	return nil
 }
