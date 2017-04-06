@@ -79,6 +79,8 @@ type Driver struct {
 // Init returns a new AUFS driver.
 // An error is returned if AUFS is not supported.
 func Init(root string, options []string, uidMaps, gidMaps []idtools.IDMap) (graphdriver.Driver, error) {
+	os.MkdirAll(root, os.ModePerm)
+
 	fsMagic, err := graphdriver.GetFSMagic(root)
 	if err != nil {
 		return nil, err

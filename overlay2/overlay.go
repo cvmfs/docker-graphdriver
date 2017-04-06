@@ -116,6 +116,8 @@ func init() {
 // If overlay filesystem is not supported on the host, graphdriver.ErrNotSupported is returned as error.
 // If an overlay filesystem is not supported over an existing filesystem then error graphdriver.ErrIncompatibleFS is returned.
 func Init(home string, options []string, uidMaps, gidMaps []idtools.IDMap) (graphdriver.Driver, error) {
+	os.MkdirAll(home, os.ModePerm)
+
 	opts, err := parseOptions(options)
 	if err != nil {
 		return nil, err

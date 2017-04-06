@@ -96,7 +96,15 @@ func mountCvmfsRepo(repo, target string) error {
 	cmd += " " + mountTarget
 
 	// TODO: check for errors!
-	exec.Command("bash", "-x", "-c", cmd).Run()
+	out, err := exec.Command("bash", "-x", "-c", cmd).Output()
+
+	if err != nil {
+		fmt.Println("There was an error during mount!")
+		fmt.Printf("%s\n", out)
+		return err
+	} else {
+		fmt.Println("default repo mounted successfully!")
+	}
 
 	return nil
 }
