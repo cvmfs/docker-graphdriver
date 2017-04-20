@@ -437,11 +437,14 @@ func (a *Driver) isParent(id, parent string) bool {
 func (a *Driver) Diff(id, parent string) (io.ReadCloser, error) {
 	fmt.Printf("Diff(%s, %s)\n", id, parent)
 	var newThinLayer string
+	var exportPath string
+	var isThin bool
 
 	thin, err := a.getParentThinLayer(id)
 
 	if err == nil {
 		fmt.Println("Found a thin image!")
+		isThin = true
 
 		orig := a.getDiffPath(id)
 
@@ -464,11 +467,17 @@ func (a *Driver) Diff(id, parent string) (io.ReadCloser, error) {
 		fmt.Println(err)
 	}
 
+	if isThin == true {
+		exportPath = newThinLayer
+	} else {
+		exportPath = path.Join(a.rootPath(), "diff", id)
+	}
+
 	if !a.isParent(id, parent) {
 		return a.naiveDiff.Diff(id, parent)
 	}
 
-	return archive.TarWithOptions(newThinLayer, &archive.TarOptions{
+	return archive.TarWithOptions(exportPath, &archive.TarOptions{
 		Compression:     archive.Uncompressed,
 		ExcludePatterns: []string{archive.WhiteoutMetaPrefix + "*", "!" + archive.WhiteoutOpaqueDir},
 		UIDMaps:         a.uidMaps,
