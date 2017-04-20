@@ -130,3 +130,29 @@ func MoveAndUpload(orig string) (string, error) {
 
 	return h, nil
 }
+
+func UploadNewLayer(orig string) (string, error) {
+	tarFileName, err := tar(orig)
+	if err != nil {
+		fmt.Printf("Failed to create tar: %s\n", err.Error())
+		return "", err
+	}
+
+	h, err := sha256hash(tarFileName)
+	if err != nil {
+		fmt.Printf("Failed to calculate hash: %s\n", err.Error())
+		return "", err
+	}
+
+	if err := upload(tarFileName, h); err != nil {
+		fmt.Printf("Failed to upload: %s\n", err.Error())
+		return "", err
+	}
+
+	if err := remountCvmfs(); err != nil {
+		fmt.Printf("Failed to remount cvmfs repo: %s\n", err.Error())
+		return "", err
+	}
+
+	return h, nil
+}

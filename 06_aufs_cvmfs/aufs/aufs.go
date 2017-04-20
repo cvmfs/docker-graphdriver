@@ -436,6 +436,7 @@ func (a *Driver) isParent(id, parent string) bool {
 // layer and its parent layer which may be "".
 func (a *Driver) Diff(id, parent string) (io.ReadCloser, error) {
 	fmt.Printf("Diff(%s, %s)\n", id, parent)
+	var newThinLayer string
 
 	thin, err := a.getParentThinLayer(id)
 
@@ -445,7 +446,7 @@ func (a *Driver) Diff(id, parent string) (io.ReadCloser, error) {
 		orig := a.getDiffPath(id)
 
 		fmt.Printf("Orig diffpath: %s\n", orig)
-		h, err := MoveAndUpload(orig)
+		h, err := UploadNewLayer(orig)
 		if err != nil {
 			fmt.Printf("error on MoveAndUpload(): %s", err.Error())
 			return nil, err
@@ -454,7 +455,10 @@ func (a *Driver) Diff(id, parent string) (io.ReadCloser, error) {
 		fmt.Printf("Uploaded hash is: %s\n", h)
 
 		thin.AddLayer(h)
-		a.writeThinFile(thin, id)
+		if newThinLayer, err = a.writeThinFile(thin, id); err != nil {
+			fmt.Printf("Failed to create thin file")
+			return nil, err
+		}
 	} else {
 		fmt.Println("Didn't find a thin image parent!")
 		fmt.Println(err)
@@ -464,8 +468,7 @@ func (a *Driver) Diff(id, parent string) (io.ReadCloser, error) {
 		return a.naiveDiff.Diff(id, parent)
 	}
 
-	// AUFS doesn't need the parent layer to produce a diff.
-	return archive.TarWithOptions(path.Join(a.rootPath(), "diff", id), &archive.TarOptions{
+	return archive.TarWithOptions(newThinLayer, &archive.TarOptions{
 		Compression:     archive.Uncompressed,
 		ExcludePatterns: []string{archive.WhiteoutMetaPrefix + "*", "!" + archive.WhiteoutOpaqueDir},
 		UIDMaps:         a.uidMaps,

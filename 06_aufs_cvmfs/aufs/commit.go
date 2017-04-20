@@ -5,8 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"path"
+	"time"
 )
 
 func (a *Driver) getParentThinLayer(id string) (ThinImage, error) {
@@ -32,19 +34,23 @@ func (a *Driver) readThinFile(id string) ThinImage {
 	return thin
 }
 
-func (a *Driver) writeThinFile(thin ThinImage, id string) error {
-	p := path.Join(a.getDiffPath(id), ".thin")
+func (a *Driver) writeThinFile(thin ThinImage, id string) (string, error) {
+	rand.Seed(time.Now().UTC().UnixNano())
+	tmp := path.Join(os.TempDir(), fmt.Sprintf("dlcg-%d", rand.Int()))
+	os.MkdirAll(tmp, os.ModePerm)
+
+	p := path.Join(tmp, ".thin")
 
 	j, err := json.Marshal(thin)
 	if err != nil {
 		fmt.Println("Failed to marshal new thin file to json!")
-		return err
+		return "", err
 	}
 
 	if err := ioutil.WriteFile(p, j, os.ModePerm); err != nil {
-		fmt.Println("Failed to write new thin file!")
-		return err
+		fmt.Printf("Failed to write new thin file!\nFile: %s\n", p)
+		return "", err
 	}
 
-	return nil
+	return tmp, nil
 }
