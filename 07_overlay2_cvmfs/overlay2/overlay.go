@@ -513,12 +513,23 @@ func (d *Driver) Get(id string, mountLabel string) (s string, err error) {
 		}
 	}()
 
-	// TODO: inject paths to layers from thin image descriptor stored in CVMFS
 	workDir := path.Join(dir, "work")
 	splitLowers := strings.Split(string(lowers), ":")
 	absLowers := make([]string, len(splitLowers))
+
+	foundThin := false
+
 	for i, s := range splitLowers {
-		absLowers[i] = path.Join(d.home, s)
+		diffPath := path.Join(d.home, s)
+
+		if util.IsThinImageLayer(diffPath) && (foundThin == false) {
+			nested_layers := util.GetNestedLayerIDs(diffPath)
+			cvmfs_paths := util.GetCvmfsLayerPaths(nested_layers, d.cvmfsMountPath)
+			absLowers = util.AppendCvmfsLayerPaths(absLowers, cvmfs_paths)
+			foundThin = true
+		} else if !util.IsThinImageLayer(diffPath) {
+			absLowers[i] = diffPath
+		}
 	}
 
 	opts := fmt.Sprintf("lowerdir=%s,upperdir=%s,workdir=%s", strings.Join(absLowers, ":"), path.Join(dir, "diff"), path.Join(dir, "work"))
