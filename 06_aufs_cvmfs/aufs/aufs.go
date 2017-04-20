@@ -47,6 +47,7 @@ import (
 	"github.com/docker/docker/pkg/locker"
 	mountpk "github.com/docker/docker/pkg/mount"
 
+	"github.com/atlantic777/docker_graphdriver_plugins/util"
 	"github.com/opencontainers/selinux/go-selinux/label"
 )
 
@@ -59,7 +60,7 @@ var (
 
 	enableDirpermLock sync.Once
 	enableDirperm     bool
-	cvmfsDefaultRepo  = "docker2cvmfs-ci.cern.ch"
+	// cvmfsDefaultRepo  = "docker2cvmfs-ci.cern.ch"
 )
 
 func init() {
@@ -120,7 +121,7 @@ func Init(root string, options []string, uidMaps, gidMaps []idtools.IDMap) (grap
 	}
 
 	if a.cvmfsMountMethod == "internal" {
-		a.mountAllCvmfsRepos()
+		util.MountAllCvmfsRepos(a.cvmfsMountPath)
 	}
 
 	rootUID, rootGID, err := idtools.GetRootUIDGID(uidMaps, gidMaps)
@@ -572,12 +573,13 @@ func (a *Driver) getParentLayerPaths(id string) ([]string, error) {
 
 	// Get the diff paths for all the parent ids
 	for i, p := range parentIds {
-		if a.isThinImageLayer(p) && (foundThin == false) {
-			nested_layers := a.getNestedLayerIDs(p)
-			cvmfs_paths := a.getCvmfsLayerPaths(nested_layers)
-			layers = a.appendCvmfsLayerPaths(layers, cvmfs_paths)
+		diffPath := a.getDiffPath(p)
+		if util.IsThinImageLayer(p, diffPath) && (foundThin == false) {
+			nested_layers := util.GetNestedLayerIDs(p, diffPath)
+			cvmfs_paths := util.GetCvmfsLayerPaths(nested_layers, a.cvmfsMountPath)
+			layers = util.AppendCvmfsLayerPaths(layers, cvmfs_paths)
 			foundThin = true
-		} else if !a.isThinImageLayer(p) {
+		} else if !util.IsThinImageLayer(p, diffPath) {
 			layers[i] = path.Join(a.rootPath(), "diff", p)
 		}
 	}
@@ -623,7 +625,7 @@ func (a *Driver) mounted(mountpoint string) (bool, error) {
 // Cleanup aufs and unmount all mountpoints
 func (a *Driver) Cleanup() error {
 	if a.cvmfsMountMethod == "internal" {
-		defer a.umountAllCvmfsRepos()
+		defer util.UmountAllCvmfsRepos(a.cvmfsMountPath)
 	}
 
 	var dirs []string
@@ -724,4 +726,35 @@ func useDirperm() bool {
 		}
 	})
 	return enableDirperm
+}
+
+func (a *Driver) configureCvmfs(options []string) error {
+	m, err := util.ParseOptions(options)
+
+	if err != nil {
+		return err
+	}
+
+	if method, ok := m["cvmfsMountMethod"]; !ok {
+		a.cvmfsMountMethod = "internal"
+	} else {
+		a.cvmfsMountMethod = method
+	}
+
+	if mountPath, ok := m["cvmfsMountmethod"]; !ok {
+		if a.cvmfsMountMethod == "internal" {
+			a.cvmfsMountPath = "/cvmfs"
+		} else if a.cvmfsMountMethod == "external" {
+			a.cvmfsMountPath = "/mnt/cvmfs"
+		}
+	} else {
+		a.cvmfsMountPath = mountPath
+	}
+
+	if a.cvmfsMountMethod == "external" &&
+		!strings.HasPrefix(a.cvmfsMountPath, "/mnt") {
+		return fmt.Errorf("CVMFS Mount path is not propagated!")
+	}
+
+	return nil
 }
