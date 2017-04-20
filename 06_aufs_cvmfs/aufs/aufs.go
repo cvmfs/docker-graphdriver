@@ -70,14 +70,15 @@ func init() {
 // Driver contains information about the filesystem mounted.
 type Driver struct {
 	sync.Mutex
-	root             string
-	uidMaps          []idtools.IDMap
-	gidMaps          []idtools.IDMap
-	ctr              *graphdriver.RefCounter
-	pathCacheLock    sync.Mutex
-	pathCache        map[string]string
-	naiveDiff        graphdriver.DiffDriver
-	locker           *locker.Locker
+	root          string
+	uidMaps       []idtools.IDMap
+	gidMaps       []idtools.IDMap
+	ctr           *graphdriver.RefCounter
+	pathCacheLock sync.Mutex
+	pathCache     map[string]string
+	naiveDiff     graphdriver.DiffDriver
+	locker        *locker.Locker
+
 	cvmfsRoot        string
 	cvmfsMountMethod string
 	cvmfsMountPath   string

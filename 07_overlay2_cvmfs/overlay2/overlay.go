@@ -32,6 +32,7 @@ import (
 	"github.com/docker/docker/pkg/parsers/kernel"
 	"github.com/docker/go-units"
 
+	"github.com/atlantic777/docker_graphdriver_plugins/util"
 	"github.com/opencontainers/selinux/go-selinux/label"
 )
 
@@ -98,6 +99,10 @@ type Driver struct {
 	options       overlayOptions
 	naiveDiff     graphdriver.DiffDriver
 	supportsDType bool
+
+	cvmfsRoot        string
+	cvmfsMountMethod string
+	cvmfsMountPath   string
 }
 
 var (
@@ -182,6 +187,14 @@ func Init(home string, options []string, uidMaps, gidMaps []idtools.IDMap) (grap
 		gidMaps:       gidMaps,
 		ctr:           graphdriver.NewRefCounter(graphdriver.NewFsChecker(graphdriver.FsMagicOverlay)),
 		supportsDType: supportsDType,
+	}
+
+	if err := d.configureCvmfs(options); err != nil {
+		return nil, err
+	}
+
+	if d.cvmfsMountMethod == "internal" {
+		util.MountAllCvmfsRepos(d.cvmfsMountPath)
 	}
 
 	d.naiveDiff = graphdriver.NewNaiveDiffDriver(d, uidMaps, gidMaps)
@@ -294,6 +307,10 @@ func (d *Driver) GetMetadata(id string) (map[string]string, error) {
 // is being shutdown. For now, we just have to unmount the bind mounted
 // we had created.
 func (d *Driver) Cleanup() error {
+	if d.cvmfsMountMethod == "internal" {
+		defer util.UmountAllCvmfsRepos(d.cvmfsMountPath)
+	}
+
 	return mount.Unmount(d.home)
 }
 
@@ -496,12 +513,14 @@ func (d *Driver) Get(id string, mountLabel string) (s string, err error) {
 		}
 	}()
 
+	// TODO: inject paths to layers from thin image descriptor stored in CVMFS
 	workDir := path.Join(dir, "work")
 	splitLowers := strings.Split(string(lowers), ":")
 	absLowers := make([]string, len(splitLowers))
 	for i, s := range splitLowers {
 		absLowers[i] = path.Join(d.home, s)
 	}
+
 	opts := fmt.Sprintf("lowerdir=%s,upperdir=%s,workdir=%s", strings.Join(absLowers, ":"), path.Join(dir, "diff"), path.Join(dir, "work"))
 	mountData := label.FormatMountLabel(opts, mountLabel)
 	mount := syscall.Mount
@@ -523,16 +542,17 @@ func (d *Driver) Get(id string, mountLabel string) (s string, err error) {
 	// fit within a page and relative links make the mount data much
 	// smaller at the expense of requiring a fork exec to chroot.
 	if len(mountData) > pageSize {
-		opts = fmt.Sprintf("lowerdir=%s,upperdir=%s,workdir=%s", string(lowers), path.Join(id, "diff"), path.Join(id, "work"))
-		mountData = label.FormatMountLabel(opts, mountLabel)
-		if len(mountData) > pageSize {
-			return "", fmt.Errorf("cannot mount layer, mount label too large %d", len(mountData))
-		}
+		return "", fmt.Errorf("cannot mount layer, mount label too large %d", len(mountData))
+		// opts = fmt.Sprintf("lowerdir=%s,upperdir=%s,workdir=%s", string(lowers), path.Join(id, "diff"), path.Join(id, "work"))
+		// mountData = label.FormatMountLabel(opts, mountLabel)
+		// if len(mountData) > pageSize {
+		// 	return "", fmt.Errorf("cannot mount layer, mount label too large %d", len(mountData))
+		// }
 
-		mount = func(source string, target string, mType string, flags uintptr, label string) error {
-			return mountFrom(d.home, source, target, mType, flags, label)
-		}
-		mountTarget = path.Join(id, "merged")
+		// mount = func(source string, target string, mType string, flags uintptr, label string) error {
+		// 	return mountFrom(d.home, source, target, mType, flags, label)
+		// }
+		// mountTarget = path.Join(id, "merged")
 	}
 
 	if err := mount("overlay", mountTarget, "overlay", 0, mountData); err != nil {
@@ -661,4 +681,35 @@ func (d *Driver) Changes(id, parent string) ([]archive.Change, error) {
 	}
 
 	return archive.OverlayChanges(layers, diffPath)
+}
+
+func (d *Driver) configureCvmfs(options []string) error {
+	m, err := util.ParseOptions(options)
+
+	if err != nil {
+		return err
+	}
+
+	if method, ok := m["cvmfsMountMethod"]; !ok {
+		d.cvmfsMountMethod = "internal"
+	} else {
+		d.cvmfsMountMethod = method
+	}
+
+	if mountPath, ok := m["cvmfsMountmethod"]; !ok {
+		if d.cvmfsMountMethod == "internal" {
+			d.cvmfsMountPath = "/cvmfs"
+		} else if d.cvmfsMountMethod == "external" {
+			d.cvmfsMountPath = "/mnt/cvmfs"
+		}
+	} else {
+		d.cvmfsMountPath = mountPath
+	}
+
+	if d.cvmfsMountMethod == "external" &&
+		!strings.HasPrefix(d.cvmfsMountPath, "/mnt") {
+		return fmt.Errorf("CVMFS Mount path is not propagated!")
+	}
+
+	return nil
 }
