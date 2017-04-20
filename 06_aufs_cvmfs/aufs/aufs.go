@@ -574,12 +574,12 @@ func (a *Driver) getParentLayerPaths(id string) ([]string, error) {
 	// Get the diff paths for all the parent ids
 	for i, p := range parentIds {
 		diffPath := a.getDiffPath(p)
-		if util.IsThinImageLayer(p, diffPath) && (foundThin == false) {
+		if util.IsThinImageLayer(diffPath) && (foundThin == false) {
 			nested_layers := util.GetNestedLayerIDs(p, diffPath)
 			cvmfs_paths := util.GetCvmfsLayerPaths(nested_layers, a.cvmfsMountPath)
 			layers = util.AppendCvmfsLayerPaths(layers, cvmfs_paths)
 			foundThin = true
-		} else if !util.IsThinImageLayer(p, diffPath) {
+		} else if !util.IsThinImageLayer(diffPath) {
 			layers[i] = path.Join(a.rootPath(), "diff", p)
 		}
 	}

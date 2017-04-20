@@ -32,7 +32,7 @@ func (t *ThinImage) AddLayer(id string) {
 	t.Layers = append([]ThinImageLayer{newLayer}, t.Layers...)
 }
 
-func IsThinImageLayer(id, diffPath string) bool {
+func IsThinImageLayer(diffPath string) bool {
 	magic_file_path := path.Join(diffPath, ".thin")
 	_, err := os.Stat(magic_file_path)
 

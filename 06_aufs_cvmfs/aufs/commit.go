@@ -19,7 +19,7 @@ func (a *Driver) getParentThinLayer(id string) (util.ThinImage, error) {
 
 	for _, l := range roLayers {
 		diffPath := a.getDiffPath(l)
-		if util.IsThinImageLayer(l, diffPath) {
+		if util.IsThinImageLayer(diffPath) {
 			return a.readThinFile(l), nil
 		}
 	}
