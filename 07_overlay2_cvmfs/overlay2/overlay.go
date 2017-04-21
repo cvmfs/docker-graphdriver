@@ -100,7 +100,6 @@ type Driver struct {
 	naiveDiff     graphdriver.DiffDriver
 	supportsDType bool
 
-	cvmfsRoot        string
 	cvmfsMountMethod string
 	cvmfsMountPath   string
 }
@@ -226,6 +225,7 @@ func parseOptions(options []string) (*overlayOptions, error) {
 				return nil, err
 			}
 
+		case "cvmfsmountmethod":
 		default:
 			return nil, fmt.Errorf("overlay2: Unknown option %s\n", key)
 		}
@@ -707,20 +707,8 @@ func (d *Driver) configureCvmfs(options []string) error {
 		d.cvmfsMountMethod = method
 	}
 
-	if mountPath, ok := m["cvmfsMountmethod"]; !ok {
-		if d.cvmfsMountMethod == "internal" {
-			d.cvmfsMountPath = "/cvmfs"
-		} else if d.cvmfsMountMethod == "external" {
-			d.cvmfsMountPath = "/mnt/cvmfs"
-		}
-	} else {
-		d.cvmfsMountPath = mountPath
-	}
-
-	if d.cvmfsMountMethod == "external" &&
-		!strings.HasPrefix(d.cvmfsMountPath, "/mnt") {
-		return fmt.Errorf("CVMFS Mount path is not propagated!")
-	}
+	d.cvmfsMountPath = path.Join(d.home, "cvmfs")
+	os.MkdirAll(d.cvmfsMountPath, os.ModePerm)
 
 	return nil
 }

@@ -60,7 +60,6 @@ var (
 
 	enableDirpermLock sync.Once
 	enableDirperm     bool
-	// cvmfsDefaultRepo  = "docker2cvmfs-ci.cern.ch"
 )
 
 func init() {
@@ -79,7 +78,6 @@ type Driver struct {
 	naiveDiff     graphdriver.DiffDriver
 	locker        *locker.Locker
 
-	cvmfsRoot        string
 	cvmfsMountMethod string
 	cvmfsMountPath   string
 }
@@ -110,11 +108,12 @@ func Init(root string, options []string, uidMaps, gidMaps []idtools.IDMap) (grap
 	}
 
 	a := &Driver{
-		root:      root,
-		uidMaps:   uidMaps,
-		gidMaps:   gidMaps,
-		pathCache: make(map[string]string),
-		ctr:       graphdriver.NewRefCounter(graphdriver.NewFsChecker(graphdriver.FsMagicAufs)),
+		root:           root,
+		uidMaps:        uidMaps,
+		gidMaps:        gidMaps,
+		pathCache:      make(map[string]string),
+		ctr:            graphdriver.NewRefCounter(graphdriver.NewFsChecker(graphdriver.FsMagicAufs)),
+		cvmfsMountPath: "/mnt/cvmfs",
 	}
 
 	if err := a.configureCvmfs(options); err != nil {
@@ -742,20 +741,8 @@ func (a *Driver) configureCvmfs(options []string) error {
 		a.cvmfsMountMethod = method
 	}
 
-	if mountPath, ok := m["cvmfsMountmethod"]; !ok {
-		if a.cvmfsMountMethod == "internal" {
-			a.cvmfsMountPath = "/cvmfs"
-		} else if a.cvmfsMountMethod == "external" {
-			a.cvmfsMountPath = "/mnt/cvmfs"
-		}
-	} else {
-		a.cvmfsMountPath = mountPath
-	}
-
-	if a.cvmfsMountMethod == "external" &&
-		!strings.HasPrefix(a.cvmfsMountPath, "/mnt") {
-		return fmt.Errorf("CVMFS Mount path is not propagated!")
-	}
+	a.cvmfsMountPath = path.Join(a.root, "cvmfs")
+	os.MkdirAll(a.cvmfsMountPath, os.ModePerm)
 
 	return nil
 }
