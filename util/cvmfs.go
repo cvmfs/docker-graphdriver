@@ -139,3 +139,11 @@ func ParseOptions(options []string) (map[string]string, error) {
 
 	return m, nil
 }
+
+func ReadThinFile(thinFilePath string) ThinImage {
+	content, _ := ioutil.ReadFile(thinFilePath)
+	var thin ThinImage
+	json.Unmarshal(content, &thin)
+
+	return thin
+}

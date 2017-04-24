@@ -102,6 +102,7 @@ type Driver struct {
 
 	cvmfsMountMethod string
 	cvmfsMountPath   string
+	cvmfsDefaultRepo string
 }
 
 var (
@@ -434,7 +435,11 @@ func (d *Driver) getLower(parent string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	lowers := []string{path.Join(linkDir, string(parentLink))}
+
+	lowers := make([]string, 0)
+	if !util.IsThinImageLayer(path.Join(parentDir, "diff")) {
+		lowers = append(lowers, path.Join(linkDir, string(parentLink)))
+	}
 
 	parentLower, err := ioutil.ReadFile(path.Join(parentDir, lowerFile))
 	if err == nil {
@@ -471,6 +476,16 @@ func (d *Driver) getLowerDirs(id string) ([]string, error) {
 // Remove cleans the directories that are created for this id.
 func (d *Driver) Remove(id string) error {
 	dir := d.dir(id)
+
+	if util.IsThinImageLayer(path.Join(dir, "diff")) {
+		lowers, _ := ioutil.ReadFile(path.Join(dir, "lower"))
+		for _, lowerLink := range strings.Split(string(lowers), ":") {
+			link := path.Join(d.home, lowerLink)
+			fmt.Printf("Removing: %s\n", link)
+			os.Remove(link)
+		}
+	}
+
 	lid, err := ioutil.ReadFile(path.Join(dir, "link"))
 	if err == nil {
 		if err := os.RemoveAll(path.Join(d.home, linkDir, string(lid))); err != nil {
@@ -517,19 +532,8 @@ func (d *Driver) Get(id string, mountLabel string) (s string, err error) {
 	splitLowers := strings.Split(string(lowers), ":")
 	absLowers := make([]string, len(splitLowers))
 
-	foundThin := false
-
 	for i, s := range splitLowers {
-		diffPath := path.Join(d.home, s)
-
-		if util.IsThinImageLayer(diffPath) && (foundThin == false) {
-			nested_layers := util.GetNestedLayerIDs(diffPath)
-			cvmfs_paths := util.GetCvmfsLayerPaths(nested_layers, d.cvmfsMountPath)
-			absLowers = util.AppendCvmfsLayerPaths(absLowers, cvmfs_paths)
-			foundThin = true
-		} else if !util.IsThinImageLayer(diffPath) {
-			absLowers[i] = diffPath
-		}
+		absLowers[i] = path.Join(d.home, s)
 	}
 
 	opts := fmt.Sprintf("lowerdir=%s,upperdir=%s,workdir=%s", strings.Join(absLowers, ":"), path.Join(dir, "diff"), path.Join(dir, "work"))
@@ -553,17 +557,16 @@ func (d *Driver) Get(id string, mountLabel string) (s string, err error) {
 	// fit within a page and relative links make the mount data much
 	// smaller at the expense of requiring a fork exec to chroot.
 	if len(mountData) > pageSize {
-		return "", fmt.Errorf("cannot mount layer, mount label too large %d", len(mountData))
-		// opts = fmt.Sprintf("lowerdir=%s,upperdir=%s,workdir=%s", string(lowers), path.Join(id, "diff"), path.Join(id, "work"))
-		// mountData = label.FormatMountLabel(opts, mountLabel)
-		// if len(mountData) > pageSize {
-		// 	return "", fmt.Errorf("cannot mount layer, mount label too large %d", len(mountData))
-		// }
+		opts = fmt.Sprintf("lowerdir=%s,upperdir=%s,workdir=%s", string(lowers), path.Join(id, "diff"), path.Join(id, "work"))
+		mountData = label.FormatMountLabel(opts, mountLabel)
+		if len(mountData) > pageSize {
+			return "", fmt.Errorf("cannot mount layer, mount label too large %d", len(mountData))
+		}
 
-		// mount = func(source string, target string, mType string, flags uintptr, label string) error {
-		// 	return mountFrom(d.home, source, target, mType, flags, label)
-		// }
-		// mountTarget = path.Join(id, "merged")
+		mount = func(source string, target string, mType string, flags uintptr, label string) error {
+			return mountFrom(d.home, source, target, mType, flags, label)
+		}
+		mountTarget = path.Join(id, "merged")
 	}
 
 	if err := mount("overlay", mountTarget, "overlay", 0, mountData); err != nil {
@@ -641,6 +644,28 @@ func (d *Driver) ApplyDiff(id string, parent string, diff io.Reader) (size int64
 		return 0, err
 	}
 
+	// TODO: check if thin layer had any regular parents
+	if util.IsThinImageLayer(applyDir) {
+		thinDescriptor := util.ReadThinFile(path.Join(applyDir, ".thin"))
+		lowers := make([]string, len(thinDescriptor.Layers))
+
+		for i, layer := range thinDescriptor.Layers {
+			lid := generateID(idLength)
+			digest := layer.Digest
+			cvmfsPath := path.Join("..", "cvmfs", d.cvmfsDefaultRepo, "layers", digest)
+			os.Symlink(cvmfsPath, path.Join(d.home, linkDir, lid))
+
+			lowers[i] = path.Join(linkDir, lid)
+		}
+
+		newLowers := strings.Join(lowers, ":")
+		lowerFilePath := path.Join(d.dir(id), lowerFile)
+
+		if len(lowers) > 0 {
+			ioutil.WriteFile(lowerFilePath, []byte(newLowers), 0666)
+		}
+	}
+
 	return directory.Size(applyDir)
 }
 
@@ -696,6 +721,7 @@ func (d *Driver) Changes(id, parent string) ([]archive.Change, error) {
 
 func (d *Driver) configureCvmfs(options []string) error {
 	m, err := util.ParseOptions(options)
+	d.cvmfsDefaultRepo = "docker2cvmfs-ci.cern.ch"
 
 	if err != nil {
 		return err

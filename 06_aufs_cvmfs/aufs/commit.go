@@ -20,21 +20,11 @@ func (a *Driver) getParentThinLayer(id string) (util.ThinImage, error) {
 	for _, l := range roLayers {
 		diffPath := a.getDiffPath(l)
 		if util.IsThinImageLayer(diffPath) {
-			return a.readThinFile(l), nil
+			return util.ReadThinFile(path.Join(diffPath, ".thin")), nil
 		}
 	}
 
 	return thin, errors.New("Not a thin image!")
-}
-
-func (a *Driver) readThinFile(id string) util.ThinImage {
-	thin_file_path := path.Join(a.getDiffPath(id), ".thin")
-	content, _ := ioutil.ReadFile(thin_file_path)
-
-	var thin util.ThinImage
-	json.Unmarshal(content, &thin)
-
-	return thin
 }
 
 func (a *Driver) writeThinFile(thin util.ThinImage, id string) (string, error) {
