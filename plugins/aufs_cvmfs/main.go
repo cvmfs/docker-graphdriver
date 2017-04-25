@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/atlantic777/docker_graphdriver_plugins/06_aufs_cvmfs/aufs"
+	"github.com/atlantic777/docker_graphdriver_plugins/aufs_cvmfs/aufs"
 	"github.com/docker/docker/pkg/reexec"
 	"github.com/docker/go-plugins-helpers/graphdriver/shim"
 )

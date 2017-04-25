@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/atlantic777/docker_graphdriver_plugins/07_overlay2_cvmfs/overlay2"
+	"github.com/atlantic777/docker_graphdriver_plugins/overlay2_cvmfs/overlay2"
 	"github.com/docker/docker/pkg/reexec"
 	"github.com/docker/go-plugins-helpers/graphdriver/shim"
 )
