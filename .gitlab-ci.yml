@@ -1,0 +1,43 @@
+variables:
+  GOPATH: "$CI_PROJECT_DIR/gopath"
+
+stages:
+  - build
+  - test:unit
+  - test:integration
+
+cache:
+  paths:
+    - workspace/cache/
+
+build:plugins:
+  stage: build
+  tags:
+    - docker
+  image: golang
+  artifacts:
+    paths:
+      - binaries/
+  script:
+    - ci/build/build_graphdriver_plugins.sh
+
+test:unit:
+  image: golang
+  stage: test:unit
+  tags:
+    - docker
+    - privileged
+  dependencies:
+    - build:plugins
+  script:
+    - ci/test/unit.sh
+
+test:integration:
+  stage: test:integration
+  tags:
+    - bare
+  dependencies:
+    - build:plugins
+    - test:unit
+  script:
+    - tests/run.sh
