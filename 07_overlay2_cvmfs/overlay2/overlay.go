@@ -688,15 +688,6 @@ func (d *Driver) DiffSize(id, parent string) (size int64, err error) {
 // Diff produces an archive of the changes between the specified
 // layer and its parent layer which may be "".
 func (d *Driver) Diff(id, parent string) (io.ReadCloser, error) {
-	// TODO: implement thin commit
-	// get parent thin layer
-	// if this is a thin image
-	// then:
-	// - get diff path
-	// - upload new layer and get hash
-	// - create tmp dir with updated thin file descriptor
-	// - return tar stream to that tmp dir
-
 	var newThinLayer, exportPath string
 	var isThin bool
 
