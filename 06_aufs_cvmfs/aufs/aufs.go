@@ -450,7 +450,7 @@ func (a *Driver) Diff(id, parent string) (io.ReadCloser, error) {
 		orig := a.getDiffPath(id)
 
 		fmt.Printf("Orig diffpath: %s\n", orig)
-		h, err := UploadNewLayer(orig)
+		h, err := util.UploadNewLayer(orig)
 		if err != nil {
 			fmt.Printf("error on MoveAndUpload(): %s", err.Error())
 			return nil, err
@@ -459,7 +459,7 @@ func (a *Driver) Diff(id, parent string) (io.ReadCloser, error) {
 		fmt.Printf("Uploaded hash is: %s\n", h)
 
 		thin.AddLayer(h)
-		if newThinLayer, err = a.writeThinFile(thin, id); err != nil {
+		if newThinLayer, err = util.WriteThinFile(thin); err != nil {
 			fmt.Printf("Failed to create thin file")
 			return nil, err
 		}
@@ -468,7 +468,7 @@ func (a *Driver) Diff(id, parent string) (io.ReadCloser, error) {
 		fmt.Println(err)
 	}
 
-	if isThin == true {
+	if isThin {
 		exportPath = newThinLayer
 	} else {
 		exportPath = path.Join(a.rootPath(), "diff", id)

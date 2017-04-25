@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"github.com/docker/docker/pkg/parsers"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"os/exec"
 	"path"
+	"time"
 )
 
 var (
@@ -146,4 +148,25 @@ func ReadThinFile(thinFilePath string) ThinImage {
 	json.Unmarshal(content, &thin)
 
 	return thin
+}
+
+func WriteThinFile(thin ThinImage) (string, error) {
+	rand.Seed(time.Now().UTC().UnixNano())
+	tmp := path.Join(os.TempDir(), fmt.Sprintf("dlcg-%d", rand.Int()))
+	os.MkdirAll(tmp, os.ModePerm)
+
+	p := path.Join(tmp, ".thin")
+
+	j, err := json.Marshal(thin)
+	if err != nil {
+		fmt.Println("Failed to marshal new thin file to json!")
+		return "", err
+	}
+
+	if err := ioutil.WriteFile(p, j, os.ModePerm); err != nil {
+		fmt.Printf("Failed to write new thin file!\nFile: %s\n", p)
+		return "", err
+	}
+
+	return tmp, nil
 }

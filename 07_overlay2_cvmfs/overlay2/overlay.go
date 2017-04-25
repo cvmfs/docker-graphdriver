@@ -688,13 +688,41 @@ func (d *Driver) DiffSize(id, parent string) (size int64, err error) {
 // Diff produces an archive of the changes between the specified
 // layer and its parent layer which may be "".
 func (d *Driver) Diff(id, parent string) (io.ReadCloser, error) {
-	if useNaiveDiff(d.home) || !d.isParent(id, parent) {
-		return d.naiveDiff.Diff(id, parent)
-	}
+	// TODO: implement thin commit
+	// get parent thin layer
+	// if this is a thin image
+	// then:
+	// - get diff path
+	// - upload new layer and get hash
+	// - create tmp dir with updated thin file descriptor
+	// - return tar stream to that tmp dir
+
+	var newThinLayer, exportPath string
+	var isThin bool
 
 	diffPath := d.getDiffPath(id)
 	logrus.Debugf("Tar with options on %s", diffPath)
-	return archive.TarWithOptions(diffPath, &archive.TarOptions{
+
+	if util.IsThinImageLayer(d.getDiffPath(parent)) {
+		isThin = true
+		thin := util.ReadThinFile(path.Join(diffPath, ".thin"))
+		h, _ := util.UploadNewLayer(diffPath)
+		thin.AddLayer(h)
+		newThinLayer, _ = util.WriteThinFile(thin)
+	}
+
+	if isThin {
+		exportPath = newThinLayer
+	} else {
+		exportPath = diffPath
+	}
+
+	if useNaiveDiff(d.home) || !d.isParent(id, parent) {
+		fmt.Println("Using naive diff!")
+		return d.naiveDiff.Diff(id, parent)
+	}
+
+	return archive.TarWithOptions(exportPath, &archive.TarOptions{
 		Compression:    archive.Uncompressed,
 		UIDMaps:        d.uidMaps,
 		GIDMaps:        d.gidMaps,
