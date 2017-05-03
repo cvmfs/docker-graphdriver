@@ -8,8 +8,8 @@ export DOCKER_VERSIONS=(
 )
 
 export GRAPHDRIVERS=(
-    "06_aufs_cvmfs"
-    "07_overlay2_cvmfs"
+    "aufs_cvmfs"
+    "overlay2_cvmfs"
 )
 
 function init() {
@@ -25,7 +25,8 @@ function init() {
   export GOPATH="$CACHE/gopath"
 
   export GRAPHDRIVERS_REPO_URL="github.com/atlantic777/docker_graphdriver_plugins"
-  export GRAPH_PLUGIN_ROOTFS_TAR="/data/ubuntu_cvmfs-2.4.x_rootfs.tar.bz2"
+  export GRAPH_PLUGIN_ROOTFS_TAR="$CACHE/data/ubuntu_cvmfs-2.4.x_rootfs.tar.bz2"
+  export GRAPH_PLUGIN_CONFIG="$CACHE/data/config.json"
 
 	mkdir -p "$CACHE" "$SCRATCH" "$GOPATH"
 
@@ -33,6 +34,7 @@ function init() {
   . "$TESTS/utils/graph.sh"
   . "$TESTS/utils/discovery.sh"
 
+  download_rootfs
 }
 
 function destroy() {
