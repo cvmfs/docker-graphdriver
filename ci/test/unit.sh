@@ -5,13 +5,13 @@ WORKSPACE="/tmp/workspace/$REPO_NAME"
 GOPATH="$WORKSPACE/cache/gopath"
 
 SRC="plugins"
-DST="$GOPATH/src/$REPO"
+DST="$GOPATH/src/$REPO/plugins"
 
 mkdir -p "$DST" > /dev/null
 cp -r "$SRC"/* "$DST"
 
-go get  "$REPO/..."
-go test "$REPO/..."
+go get  "$REPO/plugins/..."
+go test "$REPO/plugins/..."
 
 status=$?
 
