@@ -47,7 +47,7 @@ import (
 	"github.com/docker/docker/pkg/locker"
 	mountpk "github.com/docker/docker/pkg/mount"
 
-	"github.com/atlantic777/docker_graphdriver_plugins/util"
+	"github.com/atlantic777/docker_graphdriver_plugins/plugins/util"
 	"github.com/opencontainers/selinux/go-selinux/label"
 )
 

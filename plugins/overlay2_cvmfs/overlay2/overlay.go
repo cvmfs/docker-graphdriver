@@ -32,7 +32,7 @@ import (
 	"github.com/docker/docker/pkg/parsers/kernel"
 	"github.com/docker/go-units"
 
-	"github.com/atlantic777/docker_graphdriver_plugins/util"
+	"github.com/atlantic777/docker_graphdriver_plugins/plugins/util"
 	"github.com/opencontainers/selinux/go-selinux/label"
 )
 
