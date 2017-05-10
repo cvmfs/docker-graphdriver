@@ -1,0 +1,3 @@
+---
+- include: download.yml
+- include: install.yml

@@ -16,18 +16,3 @@
 - name: TEMPORARY SOLUTION - Install cvmfs-server (CentOS)
   shell: rpm -q cvmfs-server || rpm -U --nodeps "{{ workdir }}/{{ pkgs_centos.cvmfs_server.file }}"
   when: ansible_distribution == "CentOS"
-
-- name: Make sure that Docker is not installed
-  package:
-    name: "{{ item }}"
-    state: absent
-  with_items:
-    - docker
-    - docker-client
-    - docker-distribution
-    - docker-common
-
-- name: Install Docker Registry
-  package:
-    name: docker-registry
-    state: present

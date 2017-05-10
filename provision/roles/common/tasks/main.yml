@@ -1,0 +1,3 @@
+---
+- name: create working directory
+  file: name="{{ workdir }}"  state=directory

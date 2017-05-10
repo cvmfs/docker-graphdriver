@@ -1,18 +1,4 @@
 ---
-
-- name: create working directory
-  file: name="{{ workdir }}"  state=directory
-
-- name: download docker binaries
-  get_url:
-    url: "https://get.docker.com/builds/Linux/x86_64/{{ binaries.docker }}"
-    dest: "{{ workdir }}/{{ binaries.docker }}"
-
-- name: download go binaries
-  get_url:
-    url: "https://storage.googleapis.com/golang/{{ binaries.golang }}"
-    dest: "{{ workdir }}/{{ binaries.golang }}"
-
 - name: download cvmfs packages (Ubuntu)
   get_url:
     url: "{{ item.value.url }}/{{ item.value.file }}"
