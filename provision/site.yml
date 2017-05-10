@@ -1,0 +1,34 @@
+---
+- hosts: dockerhub
+  become: true
+  vars:
+    workdir: "/opt/dockerhub"
+    binaries:
+      docker: docker-17.05.0-ce.tgz
+      golang: go1.8.1.src.tar.gz
+    pkgs_centos:
+      cvmfs:
+        file: cvmfs-2.4.0-0.416.86a783b30d95304egit.el7.centos.x86_64.rpm
+        url:  https://ecsft.cern.ch/dist/cvmfs/nightlies/cvmfs-git-416/
+      cvmfs_server:
+        file: cvmfs-server-2.4.0-0.416.86a783b30d95304egit.el7.centos.x86_64.rpm
+        url:  https://ecsft.cern.ch/dist/cvmfs/nightlies/cvmfs-git-416/
+      cvmfs_config:
+        file: cvmfs-config-default-latest.noarch.rpm
+        url:  https://ecsft.cern.ch/dist/cvmfs/cvmfs-config/
+    pkgs_ubuntu:
+      cvmfs:
+        file: cvmfs_2.4.0~0.416git86a783b30d95304e+ubuntu12.04_amd64.deb
+        url:  https://ecsft.cern.ch/dist/cvmfs/nightlies/cvmfs-git-416/
+      cvmfs_server:
+        file: cvmfs-server_2.4.0~0.416git86a783b30d95304e+ubuntu12.04_amd64.deb
+        url:  https://ecsft.cern.ch/dist/cvmfs/nightlies/cvmfs-git-416/
+      cvmfs_config:
+        file: cvmfs-config-default_latest_all.deb
+        url:  https://ecsft.cern.ch/dist/cvmfs/cvmfs-config/
+  tasks:
+  - include: fetch_dependencies.yml
+  - include: install_tools.yml
+  # - include: install_services.yml
+  # - include: start_minio.yml
+  # - include: setup_cvmfs_repo.yml

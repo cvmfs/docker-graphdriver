@@ -1,0 +1,33 @@
+---
+- name: Install CernVM-FS (Ubuntu)
+  apt:
+    deb: "{{ workdir }}/{{ item.value.file }}"
+    state: present
+  with_dict: "{{ pkgs_ubuntu }}"
+  when: ansible_distribution == "Ubuntu"
+
+- name: Install CernVM-FS (CentOS)
+  yum:
+    name: "{{ workdir }}/{{ item.value.file }}"
+    state: present
+  with_dict: "{{ pkgs_centos }}"
+  when: ansible_distribution == "CentOS" and item.value.file.find('server') == -1
+
+- name: TEMPORARY SOLUTION - Install cvmfs-server (CentOS)
+  shell: rpm -q cvmfs-server || rpm -U --nodeps "{{ workdir }}/{{ pkgs_centos.cvmfs_server.file }}"
+  when: ansible_distribution == "CentOS"
+
+- name: Make sure that Docker is not installed
+  package:
+    name: "{{ item }}"
+    state: absent
+  with_items:
+    - docker
+    - docker-client
+    - docker-distribution
+    - docker-common
+
+- name: Install Docker Registry
+  package:
+    name: docker-registry
+    state: present

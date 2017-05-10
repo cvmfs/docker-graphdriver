@@ -1,0 +1,28 @@
+---
+
+- name: create working directory
+  file: name="{{ workdir }}"  state=directory
+
+- name: download docker binaries
+  get_url:
+    url: "https://get.docker.com/builds/Linux/x86_64/{{ binaries.docker }}"
+    dest: "{{ workdir }}/{{ binaries.docker }}"
+
+- name: download go binaries
+  get_url:
+    url: "https://storage.googleapis.com/golang/{{ binaries.golang }}"
+    dest: "{{ workdir }}/{{ binaries.golang }}"
+
+- name: download cvmfs packages (Ubuntu)
+  get_url:
+    url: "{{ item.value.url }}/{{ item.value.file }}"
+    dest: "{{ workdir }}/{{ item.value.file }}"
+  with_dict: "{{ pkgs_ubuntu }}"
+  when: ansible_distribution == "Ubuntu"
+
+- name: download cvmfs packages (CentOS)
+  get_url:
+    url: "{{ item.value.url }}/{{ item.value.file }}"
+    dest: "{{ workdir }}/{{ item.value.file }}"
+  with_dict: "{{ pkgs_centos }}"
+  when: ansible_distribution == "CentOS"
