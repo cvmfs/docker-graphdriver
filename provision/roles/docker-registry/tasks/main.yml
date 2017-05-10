@@ -1,0 +1,8 @@
+---
+- name: Install docker registry (Ubuntu)
+  package: name=docker-registry state=present
+  when: ansible_distribution == "Ubuntu"
+
+- name: Install docker registry (CentOS)
+  package: name=docker-distribution state=present
+  when: ansible_distribution == "CentOS"
