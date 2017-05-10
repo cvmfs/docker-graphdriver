@@ -6,3 +6,66 @@
 - name: Install docker registry (CentOS)
   package: name=docker-distribution state=present
   when: ansible_distribution == "CentOS"
+
+- name: Uninstall apache2 (Ubuntu)
+  package: name=apache2 state=absent
+  when: ansible_distribution == "Ubuntu"
+
+- name: Uninstall httpd (CentOS)
+  package: name=httpd state=absent
+  when: ansible_distribution == "CentOS"
+
+# Setup nginx proxy
+- name: Install nginx
+  package: name=nginx state=present
+
+- name: Copy nginx configuration
+  template:
+    src: registry.conf.j2
+    dest: /etc/nginx/conf.d/registry.conf
+    force: yes
+
+- name: Start registry (Ubuntu)
+  service: name=docker-registry  state=started
+  when: ansible_distribution == "Ubuntu"
+
+- name: Start registry (CentOS)
+  service: name=docker-distribution  state=started
+  when: ansible_distribution == "CentOS"
+
+- name: Enable nginx SELinux
+  seboolean:
+    name: httpd_can_network_connect
+    state: yes
+    persistent: yes
+  when: ansible_distribution == "CentOS"
+
+- name: Deploy SSL keys
+  copy: src={{ item }} dest=/etc/nginx/conf.d/{{ item }}
+  with_items:
+    - "{{ ansible_fqdn }}.key"
+    - "{{ ansible_fqdn }}.crt"
+
+- name: Restart nginx
+  service: name=nginx state=restarted
+
+- name: Install httpasswd (CentOS)
+  package: name=httpd-tools state=present
+  when: ansible_distribution == "CentOS"
+
+- name: Install httpasswd (Ubuntu)
+  package: name=apache2-utils state=present
+  when: ansible_distribution == "Ubuntu"
+
+- name: install pip
+  package: name=python-pip state=present
+
+- name: install passlib
+  pip: name=passlib state=present
+
+- name: fill-in htpasswd file
+  htpasswd:
+    name: cernvm
+    password: cernvm
+    path: /etc/nginx/conf.d/registry.password
+    state: present
