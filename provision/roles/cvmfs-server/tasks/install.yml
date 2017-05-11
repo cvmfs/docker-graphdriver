@@ -15,4 +15,7 @@
 
 - name: TEMPORARY SOLUTION - Install cvmfs-server (CentOS)
   shell: rpm -q cvmfs-server || rpm -U --nodeps "{{ workdir }}/{{ pkgs_centos.cvmfs_server.file }}"
+  args:
+    creates: "/bin/cvmfs_server"
+
   when: ansible_distribution == "CentOS"

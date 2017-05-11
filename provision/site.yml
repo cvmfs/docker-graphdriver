@@ -1,6 +1,9 @@
 ---
 - hosts: dockerhub
   become: true
+  vars:
+    workdir: "/opt/dockerhub"
   roles:
-    - cvmfs-server
+    - common
     - docker-registry
+    - cvmfs-server

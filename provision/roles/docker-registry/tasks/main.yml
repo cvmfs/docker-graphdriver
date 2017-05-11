@@ -7,23 +7,17 @@
   package: name=docker-distribution state=present
   when: ansible_distribution == "CentOS"
 
-- name: Uninstall apache2 (Ubuntu)
-  package: name=apache2 state=absent
+- name: Install apache2 (Ubuntu)
+  package: name=apache2 state=present
   when: ansible_distribution == "Ubuntu"
 
-- name: Uninstall httpd (CentOS)
-  package: name=httpd state=absent
+- name: Install httpd (CentOS)
+  yum: name=httpd state=present
   when: ansible_distribution == "CentOS"
 
-# Setup nginx proxy
-- name: Install nginx
-  package: name=nginx state=present
-
-- name: Copy nginx configuration
-  template:
-    src: registry.conf.j2
-    dest: /etc/nginx/conf.d/registry.conf
-    force: yes
+- name: Install mod_ssl on CentOS
+  package: name=mod_ssl state=present
+  when: ansible_distribution == "CentOS"
 
 - name: Start registry (Ubuntu)
   service: name=docker-registry  state=started
@@ -33,7 +27,7 @@
   service: name=docker-distribution  state=started
   when: ansible_distribution == "CentOS"
 
-- name: Enable nginx SELinux
+- name: Enable httpd SELinux
   seboolean:
     name: httpd_can_network_connect
     state: yes
@@ -41,13 +35,44 @@
   when: ansible_distribution == "CentOS"
 
 - name: Deploy SSL keys
-  copy: src={{ item }} dest=/etc/nginx/conf.d/{{ item }}
+  copy: src="{{ item }}" dest="{{ workdir }}/{{ item }}"
   with_items:
     - "{{ ansible_fqdn }}.key"
     - "{{ ansible_fqdn }}.crt"
 
-- name: Restart nginx
-  service: name=nginx state=restarted
+- name: Enable apache2 modules
+  apache2_module: name="{{ item }}" state=present
+  with_items:
+    - proxy
+    - proxy_http
+    - ssl
+
+- name: Upload the apache conf (Ubuntu)
+  template:
+    src: apache-registry.conf.j2
+    dest: /etc/apache2/conf-available/registry.conf
+  when: ansible_distribution == "Ubuntu"
+
+- name: Enable apache config (Ubuntu)
+  file:
+    dest: /etc/apache2/conf-enabled/registry.conf
+    src: /etc/apache2/conf-available/registry.conf
+    state: link
+  when: ansible_distribution == "Ubuntu"
+
+- name: Upload the apache conf (CentOS)
+  template:
+    src: apache-registry.conf.j2
+    dest: /etc/httpd/conf.d/registry.conf
+  when: ansible_distribution == "CentOS"
+
+- name: Restart apache (CentOS)
+  service: name=httpd state=restarted
+  when: ansible_distribution == "CentOS"
+
+- name: Restart apache (Ubuntu)
+  service: name=apache2 state=restarted
+  when: ansible_distribution == "Ubuntu"
 
 - name: Install httpasswd (CentOS)
   package: name=httpd-tools state=present
@@ -67,5 +92,6 @@
   htpasswd:
     name: cernvm
     password: cernvm
-    path: /etc/nginx/conf.d/registry.password
+    path: "{{ workdir }}/registry.htpasswd"
     state: present
+    mode: 0644

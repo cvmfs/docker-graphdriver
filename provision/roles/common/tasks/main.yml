@@ -1,3 +1,15 @@
 ---
 - name: create working directory
   file: name="{{ workdir }}"  state=directory
+
+- name: install golang
+  package: name=golang state=present
+
+- name: install common packages
+  package: name="{{ item }}" state=present
+  with_items:
+    - vim
+    - tmux
+    - git
+    - tree
+    - htop
