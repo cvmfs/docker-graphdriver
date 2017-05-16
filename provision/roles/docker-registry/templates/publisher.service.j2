@@ -1,0 +1,7 @@
+[Unit]
+Description=Minios S3 to CernVM-FS publisher service
+
+[Service]
+ExecStart={{ workdir }}/bin/publisher
+StandardOutput=journal
+StandardError=journal

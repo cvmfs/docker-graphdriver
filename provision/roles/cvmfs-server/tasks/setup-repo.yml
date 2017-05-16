@@ -2,4 +2,4 @@
 - name: CernVM-FS make file-system
   command: cvmfs_server mkfs -o root "{{ ansible_fqdn }}"
   args:
-    creates: "/var/spool/cvmfs/{{ ansible_fqdn }}"
+    creates: "/srv/cvmfs/{{ ansible_fqdn }}"

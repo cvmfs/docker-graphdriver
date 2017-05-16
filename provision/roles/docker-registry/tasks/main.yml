@@ -95,3 +95,43 @@
     path: "{{ workdir }}/registry.htpasswd"
     state: present
     mode: 0644
+
+- name: Create bin directory
+  file: name="{{ workdir }}/bin" state=directory
+
+- name: Get minio binary
+  get_url:
+    url: https://dl.minio.io/server/minio/release/linux-amd64/minio
+    dest: "{{ workdir }}/bin/minio"
+    mode: 0755
+
+- name: Get publisher binary
+  get_url:
+    url: https://cernbox.cern.ch/index.php/s/CceD5cYUQDray4H/download
+    dest: "{{ workdir }}/bin/publisher"
+    mode: 0755
+
+- name: Prepare minio directories
+  file: name="{{ workdir}}/{{ item }}" state=directory
+  with_items:
+    - minio_data
+    - minio_config
+
+- name: Install systemd units
+  template:
+    src="{{ item }}.j2"
+    dest="/etc/systemd/system/{{ item }}"
+    force=yes
+  with_items:
+    - minio.service
+    - publisher.service
+
+- name: Enable systemd units
+  systemd:
+    name: "{{ item }}"
+    state: started
+    enabled: yes
+    daemon-reload: yes
+  with_items:
+    - minio.service
+    - publisher.service
