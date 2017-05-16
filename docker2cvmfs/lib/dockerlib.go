@@ -2,18 +2,21 @@ package lib
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
-	"errors"
+
+	cvmfsUtil "github.com/cvmfs/docker-graphdriver/plugins/util"
 )
 
 const (
 	dockerAuthUrl     = "https://auth.docker.io"
 	dockerRegistryUrl = "https://registry-1.docker.io/v2"
+	thinImageVersion  = "0.1"
 )
 
 type TokenMessage struct {
@@ -99,7 +102,6 @@ func getLayer(repo, digest string) {
 	resp.Body.Close()
 }
 
-
 func getBlob(url string) []byte {
 	req, _ := http.NewRequest("GET", url, nil)
 	req.Header.Add("Authorization", "Bearer "+token)
@@ -182,7 +184,7 @@ func PullLayers(args []string) {
 }
 
 func GetManifest(args []string) (Manifest, error) {
-	var manifest Manifest;
+	var manifest Manifest
 
 	if len(args) != 1 {
 		printUsage()
@@ -203,4 +205,15 @@ func GetConfig(args []string) {
 	resp := getConfig(url)
 
 	fmt.Println(string(resp))
+}
+
+func MakeThinImage(m Manifest, repo string) cvmfsUtil.ThinImage {
+	layers := make([]cvmfsUtil.ThinImageLayer, len(m.Layers))
+
+	for i, l := range m.Layers {
+		d := strings.Split(l.Digest, ":")[1]
+		layers[i] = cvmfsUtil.ThinImageLayer{Digest: d, Repo: repo}
+	}
+
+	return cvmfsUtil.ThinImage{Layers: layers, Version: thinImageVersion}
 }
