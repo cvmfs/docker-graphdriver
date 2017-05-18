@@ -9,8 +9,8 @@
         SSLCipherSuite EECDH+AESGCM:EDH+AESGCM:AES256+EECDH:AES256+EDH
         SSLHonorCipherOrder on
 
-        ProxyPass "/docker" "http://localhost:5000"
-        ProxyPassReverse "/docker" "http://localhost:5000"
+        ProxyPass "/" "http://localhost:5000/"
+        ProxyPassReverse "/" "http://localhost:5000/"
 
         <Location /docker>
                 AuthName "Docker Registry Authentication"
