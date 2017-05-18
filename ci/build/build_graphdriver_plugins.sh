@@ -4,7 +4,7 @@ if [ x"$GOPATH" == x"" ]; then
 	exit -1
 fi
 
-PLUGINS_REPO="github.com/atlantic777/docker_graphdriver_plugins"
+PLUGINS_REPO="github.com/cvmfs/docker-graphdriver"
 PLUGINS_REPO_PATH="$GOPATH/src/$PLUGINS_REPO"
 
 mkdir -p "$PLUGINS_REPO_PATH/plugins" > /dev/null

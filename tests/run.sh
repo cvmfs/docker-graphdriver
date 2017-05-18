@@ -24,7 +24,7 @@ function init() {
 
   export GOPATH="$CACHE/gopath"
 
-  export GRAPHDRIVERS_REPO_URL="github.com/atlantic777/docker_graphdriver_plugins"
+  export GRAPHDRIVERS_REPO_URL="github.com/cvmfs/docker-graphdriver"
   export GRAPH_PLUGIN_ROOTFS_TAR="$CACHE/data/ubuntu_cvmfs-2.4.x_rootfs.tar.bz2"
   export GRAPH_PLUGIN_CONFIG="$CACHE/data/config.json"
 
