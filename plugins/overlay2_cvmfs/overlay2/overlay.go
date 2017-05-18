@@ -651,8 +651,12 @@ func (d *Driver) ApplyDiff(id string, parent string, diff io.Reader) (size int64
 
 		for i, layer := range thinDescriptor.Layers {
 			lid := generateID(idLength)
+
 			digest := layer.Digest
-			cvmfsPath := path.Join("..", "cvmfs", d.cvmfsDefaultRepo, "layers", digest)
+			repo := layer.Repo
+			location := "layers"
+			cvmfsPath := path.Join("..", "cvmfs", repo, location, digest)
+
 			os.Symlink(cvmfsPath, path.Join(d.home, linkDir, lid))
 
 			lowers[i] = path.Join(linkDir, lid)
