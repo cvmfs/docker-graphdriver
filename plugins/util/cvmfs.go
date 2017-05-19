@@ -12,10 +12,6 @@ import (
 	"time"
 )
 
-var (
-	cvmfsDefaultRepo = "docker2cvmfs-ci.cern.ch"
-)
-
 type ThinImageLayer struct {
 	Digest   string `json:"digest"`
 	Repo     string `json:"repo,omitempty"`
@@ -50,7 +46,8 @@ func GetCvmfsLayerPaths(layers []ThinImageLayer, cvmfsMountPath string) []string
 
 	for i, layer := range layers {
 		root := cvmfsMountPath
-		repo := cvmfsDefaultRepo
+		// repo := cvmfsDefaultRepo
+		repo := layer.Repo
 		location := "layers"
 		digest := layer.Digest
 
@@ -85,45 +82,6 @@ func GetNestedLayerIDs(diffPath string) []ThinImageLayer {
 	json.Unmarshal(content, &thin)
 
 	return thin.Layers
-}
-
-func mountCvmfsRepo(repo, target string) error {
-	mountTarget := path.Join(target, repo)
-	os.MkdirAll(mountTarget, os.ModePerm)
-
-	cmd := "cvmfs2 -o rw,fsname=cvmfs2,allow_other,grab_mountpoint"
-	cmd += " " + repo
-	cmd += " " + mountTarget
-
-	// TODO: check for errors!
-	out, err := exec.Command("bash", "-x", "-c", cmd).Output()
-
-	if err != nil {
-		fmt.Println("There was an error during mount!")
-		fmt.Printf("%s\n", out)
-		return err
-	} else {
-		fmt.Println("default repo mounted successfully!")
-	}
-
-	return nil
-}
-
-func umountCvmfsRepo(target string) error {
-	// TODO: check for errors!
-	exec.Command("umount", target).Run()
-
-	return nil
-}
-
-func UmountAllCvmfsRepos(cvmfsMountPath string) error {
-	umountCvmfsRepo(path.Join(cvmfsMountPath, cvmfsDefaultRepo))
-	return nil
-}
-
-func MountAllCvmfsRepos(cvmfsMountPath string) error {
-	mountCvmfsRepo(cvmfsDefaultRepo, cvmfsMountPath)
-	return nil
 }
 
 func ParseOptions(options []string) (map[string]string, error) {
@@ -169,4 +127,148 @@ func WriteThinFile(thin ThinImage) (string, error) {
 	}
 
 	return tmp, nil
+}
+
+type ICvmfsManager interface {
+	Get(repo string) error
+	GetLayers(layers ...ThinImageLayer) error
+	Put(repo string) error
+	PutLayers(layers ...ThinImageLayer) error
+	PutAll() error
+}
+
+type cvmfsManager struct {
+	mountPath string
+	ctr       map[string]int
+}
+
+func NewCvmfsManager(cvmfsMountPath, cvmfsMountMethod string) ICvmfsManager {
+	if cvmfsMountMethod == "external" {
+		return nil
+	}
+
+	return &cvmfsManager{
+		mountPath: cvmfsMountPath,
+		ctr:       make(map[string]int),
+	}
+}
+
+func (cm *cvmfsManager) mount(repo string) error {
+	mountTarget := path.Join(cm.mountPath, repo)
+	os.MkdirAll(mountTarget, os.ModePerm)
+
+	cmd := "cvmfs2 -o rw,fsname=cvmfs2,allow_other,grab_mountpoint"
+	cmd += " " + repo
+	cmd += " " + mountTarget
+
+	// TODO: check for errors!
+	out, err := exec.Command("bash", "-x", "-c", cmd).CombinedOutput()
+
+	if err != nil {
+		fmt.Println("There was an error during mount!")
+		fmt.Printf("%s\n", out)
+		return err
+	} else {
+		fmt.Println("default repo mounted successfully!")
+	}
+
+	return nil
+}
+
+func (cm *cvmfsManager) umount(repo string) error {
+	// TODO: check for errors!
+	mountTarget := path.Join(cm.mountPath, repo)
+	cmd := exec.Command("umount", mountTarget)
+
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("Cvmfs mount failed.\nOutput:%s\nError%s\n",
+			out, err)
+	}
+
+	return nil
+}
+
+func (cm *cvmfsManager) isConfigured(repo string) error {
+	fmt.Println("isConfigured()")
+
+	confPath := "/etc/cvmfs/config.d"
+	keysPath := "/etc/cvmfs/keys"
+
+	repoConf := path.Join(confPath, repo) + ".conf"
+	repoKeys := path.Join(keysPath, repo) + ".pub"
+
+	errmsg1 := "Configuration for CVMFS repository %s is missing."
+	errmsg2 := "Key for CVMFS repository %s is missing."
+
+	if _, err := os.Stat(repoConf); os.IsNotExist(err) {
+		return fmt.Errorf(errmsg1, repo)
+	}
+
+	if _, err := os.Stat(repoKeys); os.IsNotExist(err) {
+		return fmt.Errorf(errmsg2, repo)
+	}
+
+	fmt.Println("Repo configuration ok!")
+
+	return nil
+}
+
+func (cm *cvmfsManager) Get(repo string) error {
+	// TODO: maybe delegate this check to the mount call itself?
+	if err := cm.isConfigured(repo); err != nil {
+		return err
+	}
+
+	if _, ok := cm.ctr[repo]; !ok {
+		fmt.Printf("Repo %s is not in the map!\n", repo)
+		cm.ctr[repo] = 1
+		cm.mount(repo)
+		return nil
+	} else {
+		fmt.Printf("Repos %s is already in the map...\n", repo)
+	}
+
+	cm.ctr[repo] += 1
+
+	return nil
+}
+
+func (cm *cvmfsManager) Put(repo string) error {
+	if _, ok := cm.ctr[repo]; !ok {
+		return nil
+	}
+
+	if cm.ctr[repo] > 1 {
+		cm.ctr[repo] -= 1
+		return nil
+	}
+
+	cm.ctr[repo] = 0
+	cm.umount(repo)
+	return nil
+}
+
+func (cm *cvmfsManager) PutAll() error {
+	for k := range cm.ctr {
+		cm.umount(k)
+		cm.ctr[k] = 0
+	}
+	return nil
+}
+
+func (cm *cvmfsManager) GetLayers(layers ...ThinImageLayer) error {
+	for i, l := range layers {
+		if err := cm.Get(l.Repo); err != nil {
+			cm.PutLayers(layers[:i]...)
+			return err
+		}
+	}
+	return nil
+}
+
+func (cm *cvmfsManager) PutLayers(layers ...ThinImageLayer) error {
+	for _, l := range layers {
+		cm.Put(l.Repo)
+	}
+	return nil
 }

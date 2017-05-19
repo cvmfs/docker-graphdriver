@@ -99,6 +99,7 @@ type Driver struct {
 	options       overlayOptions
 	naiveDiff     graphdriver.DiffDriver
 	supportsDType bool
+	cvmfsManager  util.ICvmfsManager
 
 	cvmfsMountMethod string
 	cvmfsMountPath   string
@@ -192,10 +193,7 @@ func Init(home string, options []string, uidMaps, gidMaps []idtools.IDMap) (grap
 	if err := d.configureCvmfs(options); err != nil {
 		return nil, err
 	}
-
-	if d.cvmfsMountMethod == "internal" {
-		util.MountAllCvmfsRepos(d.cvmfsMountPath)
-	}
+	d.cvmfsManager = util.NewCvmfsManager(d.cvmfsMountPath, d.cvmfsMountMethod)
 
 	d.naiveDiff = graphdriver.NewNaiveDiffDriver(d, uidMaps, gidMaps)
 
@@ -309,7 +307,7 @@ func (d *Driver) GetMetadata(id string) (map[string]string, error) {
 // we had created.
 func (d *Driver) Cleanup() error {
 	if d.cvmfsMountMethod == "internal" {
-		defer util.UmountAllCvmfsRepos(d.cvmfsMountPath)
+		defer d.cvmfsManager.PutAll()
 	}
 
 	return mount.Unmount(d.home)
@@ -324,7 +322,6 @@ func (d *Driver) CreateReadWrite(id, parent string, opts *graphdriver.CreateOpts
 // Create is used to create the upper, lower, and merge directories required for overlay fs for a given id.
 // The parent filesystem is used to configure these directories for the overlay.
 func (d *Driver) Create(id, parent string, opts *graphdriver.CreateOpts) (retErr error) {
-
 	if opts != nil && len(opts.StorageOpt) != 0 && !projectQuotaSupported {
 		return fmt.Errorf("--storage-opt is supported only for overlay over xfs with 'pquota' mount option")
 	}
@@ -393,6 +390,13 @@ func (d *Driver) Create(id, parent string, opts *graphdriver.CreateOpts) (retErr
 	if err != nil {
 		return err
 	}
+
+	if util.IsThinImageLayer(d.getDiffPath(parent)) {
+		if err := ioutil.WriteFile(path.Join(dir, "thin_parent"), []byte(parent), 0644); err != nil {
+			return err
+		}
+	}
+
 	if lower != "" {
 		if err := ioutil.WriteFile(path.Join(dir, lowerFile), []byte(lower), 0666); err != nil {
 			return err
@@ -489,7 +493,7 @@ func (d *Driver) Remove(id string) error {
 	lid, err := ioutil.ReadFile(path.Join(dir, "link"))
 	if err == nil {
 		if err := os.RemoveAll(path.Join(d.home, linkDir, string(lid))); err != nil {
-			logrus.Debugf("Failed to remove link: %v", err)
+			fmt.Printf("Failed to remove link: %v", err)
 		}
 	}
 
@@ -514,6 +518,12 @@ func (d *Driver) Get(id string, mountLabel string) (s string, err error) {
 			return diffDir, nil
 		}
 		return "", err
+	}
+
+	if thinParent := d.getThinParent(id); thinParent != "" {
+		f := path.Join(d.getDiffPath(thinParent), ".thin")
+		t := util.ReadThinFile(f)
+		d.cvmfsManager.GetLayers(t.Layers...)
 	}
 
 	mergedDir := path.Join(dir, "merged")
@@ -589,12 +599,19 @@ func (d *Driver) Get(id string, mountLabel string) (s string, err error) {
 
 // Put unmounts the mount path created for the give id.
 func (d *Driver) Put(id string) error {
+	p := d.getDiffPath(id)
+	if util.IsThinImageLayer(p) {
+		f := path.Join(p, ".thin")
+		t := util.ReadThinFile(f)
+		d.cvmfsManager.PutLayers(t.Layers...)
+	}
+
 	mountpoint := path.Join(d.dir(id), "merged")
 	if count := d.ctr.Decrement(mountpoint); count > 0 {
 		return nil
 	}
 	if err := syscall.Unmount(mountpoint, 0); err != nil {
-		logrus.Debugf("Failed to unmount %s overlay: %s - %v", id, mountpoint, err)
+		fmt.Printf("Failed to unmount %s overlay: %s - %v", id, mountpoint, err)
 	}
 	return nil
 }
@@ -651,8 +668,12 @@ func (d *Driver) ApplyDiff(id string, parent string, diff io.Reader) (size int64
 
 		for i, layer := range thinDescriptor.Layers {
 			lid := generateID(idLength)
+
 			digest := layer.Digest
-			cvmfsPath := path.Join("..", "cvmfs", d.cvmfsDefaultRepo, "layers", digest)
+			repo := layer.Repo
+			location := "layers"
+			cvmfsPath := path.Join("..", "cvmfs", repo, location, digest)
+
 			os.Symlink(cvmfsPath, path.Join(d.home, linkDir, lid))
 
 			lowers[i] = path.Join(linkDir, lid)
@@ -740,7 +761,6 @@ func (d *Driver) Changes(id, parent string) ([]archive.Change, error) {
 
 func (d *Driver) configureCvmfs(options []string) error {
 	m, err := util.ParseOptions(options)
-	d.cvmfsDefaultRepo = "docker2cvmfs-ci.cern.ch"
 
 	if err != nil {
 		return err
@@ -755,5 +775,19 @@ func (d *Driver) configureCvmfs(options []string) error {
 	d.cvmfsMountPath = path.Join(d.home, "cvmfs")
 	os.MkdirAll(d.cvmfsMountPath, os.ModePerm)
 
+	exec.Command("cp", "-rvT", "/cvmfs_ext_config", "/etc/cvmfs").Run()
+
 	return nil
+}
+
+func (d *Driver) getThinParent(id string) (thinParent string) {
+	dir := d.dir(id)
+	f := path.Join(dir, "thin_parent")
+
+	if _, err := os.Stat(f); os.IsNotExist(err) {
+		return ""
+	}
+
+	out, _ := ioutil.ReadFile(f)
+	return string(out)
 }

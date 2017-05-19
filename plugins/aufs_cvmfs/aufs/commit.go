@@ -4,7 +4,7 @@ import (
 	"errors"
 	"path"
 
-	"github.com/atlantic777/docker_graphdriver_plugins/plugins/util"
+	"github.com/cvmfs/docker-graphdriver/plugins/util"
 )
 
 func (a *Driver) getParentThinLayer(id string) (util.ThinImage, error) {

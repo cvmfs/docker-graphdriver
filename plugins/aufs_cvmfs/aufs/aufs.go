@@ -47,7 +47,7 @@ import (
 	"github.com/docker/docker/pkg/locker"
 	mountpk "github.com/docker/docker/pkg/mount"
 
-	"github.com/atlantic777/docker_graphdriver_plugins/plugins/util"
+	"github.com/cvmfs/docker-graphdriver/plugins/util"
 	"github.com/opencontainers/selinux/go-selinux/label"
 )
 
@@ -77,6 +77,7 @@ type Driver struct {
 	pathCache     map[string]string
 	naiveDiff     graphdriver.DiffDriver
 	locker        *locker.Locker
+	cvmfsManager  util.ICvmfsManager
 
 	cvmfsMountMethod string
 	cvmfsMountPath   string
@@ -120,9 +121,7 @@ func Init(root string, options []string, uidMaps, gidMaps []idtools.IDMap) (grap
 		return nil, err
 	}
 
-	if a.cvmfsMountMethod == "internal" {
-		util.MountAllCvmfsRepos(a.cvmfsMountPath)
-	}
+	a.cvmfsManager = util.NewCvmfsManager(a.cvmfsMountPath, a.cvmfsMountMethod)
 
 	rootUID, rootGID, err := idtools.GetRootUIDGID(uidMaps, gidMaps)
 	if err != nil {
@@ -368,7 +367,7 @@ func (a *Driver) Get(id, mountLabel string) (string, error) {
 	fmt.Printf("Get(%s, %s)\n", id, mountLabel)
 
 	parents, err := a.getParentLayerPaths(id)
-	if err != nil && !os.IsNotExist(err) {
+	if err != nil {
 		return "", err
 	}
 
@@ -576,9 +575,14 @@ func (a *Driver) getParentLayerPaths(id string) ([]string, error) {
 		diffPath := a.getDiffPath(p)
 		if util.IsThinImageLayer(diffPath) && (foundThin == false) {
 			nested_layers := util.GetNestedLayerIDs(diffPath)
+			if err := a.cvmfsManager.GetLayers(nested_layers...); err != nil {
+				return nil, err
+			}
+
 			cvmfs_paths := util.GetCvmfsLayerPaths(nested_layers, a.cvmfsMountPath)
 			layers = util.AppendCvmfsLayerPaths(layers, cvmfs_paths)
 			foundThin = true
+
 		} else if !util.IsThinImageLayer(diffPath) {
 			layers[i] = path.Join(a.rootPath(), "diff", p)
 		}
@@ -625,7 +629,7 @@ func (a *Driver) mounted(mountpoint string) (bool, error) {
 // Cleanup aufs and unmount all mountpoints
 func (a *Driver) Cleanup() error {
 	if a.cvmfsMountMethod == "internal" {
-		defer util.UmountAllCvmfsRepos(a.cvmfsMountPath)
+		a.cvmfsManager.PutAll()
 	}
 
 	var dirs []string
@@ -743,6 +747,8 @@ func (a *Driver) configureCvmfs(options []string) error {
 
 	a.cvmfsMountPath = path.Join(a.root, "cvmfs")
 	os.MkdirAll(a.cvmfsMountPath, os.ModePerm)
+
+	exec.Command("cp", "-rvT", "/cvmfs_ext_config", "/etc/cvmfs").Run()
 
 	return nil
 }
