@@ -1,0 +1,3 @@
+---
+ssl_path_ubuntu: "/etc/ssl"
+ssl_path_centos: "/etc/pki/tls"

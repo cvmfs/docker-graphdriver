@@ -10,9 +10,9 @@ CA_NAME=devdockerCA
 ROOT_KEY=$(CA_NAME).key
 ROOT_CRT=$(CA_NAME).crt
 
-SERVER_KEY=$(FQDN).key
+SERVER_KEY=private/$(FQDN).key
+SERVER_CRT=certs/$(FQDN).crt
 SERVER_CSR=$(FQDN).csr
-SERVER_CRT=$(FQDN).crt
 
 DAYS_VALID=31
 
@@ -27,12 +27,14 @@ $(ROOT_CRT): $(ROOT_KEY)
 	openssl req -x509 -new -nodes -key $(ROOT_KEY) -days $(DAYS_VALID) -out $(ROOT_CRT) -subj "/CN=cern.ch"
 
 $(SERVER_KEY):
+	mkdir -p private
 	openssl genrsa -out $(SERVER_KEY) 2048
 
 $(SERVER_CSR): $(ROOT_KEY)
 	openssl req -new -key $(SERVER_KEY) -out $(SERVER_CSR) -subj "/C=CH/CN=$(FQDN)"
 
 $(SERVER_CRT): $(SERVER_KEY) $(SERVER_CSR) $(ROOT_KEY) $(ROOT_CRT)
+	mkdir -p certs
 	openssl x509 -req -in $(SERVER_CSR) -CA $(ROOT_CRT) -CAkey $(ROOT_KEY) -CAcreateserial -out $(SERVER_CRT) -days $(DAYS_VALID)
 
 clean:

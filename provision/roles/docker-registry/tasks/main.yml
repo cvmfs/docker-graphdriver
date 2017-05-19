@@ -34,23 +34,26 @@
     persistent: yes
   when: ansible_distribution == "CentOS"
 
-- name: Deploy SSL keys
-  copy: src="{{ item }}" dest="{{ workdir }}/{{ item }}"
+- name: Deploy SSL keys (Ubuntu)
+  copy: src="{{ item }}" dest="/etc/ssl/{{ item }}"
   with_items:
-    - "{{ ansible_fqdn }}.key"
-    - "{{ ansible_fqdn }}.crt"
+    - "private/{{ ansible_fqdn }}.key"
+    - "certs/{{ ansible_fqdn }}.crt"
+  when: ansible_distribution == "Ubuntu"
 
-- name: Enable apache2 modules
-  apache2_module: name="{{ item }}" state=present
+- name: Deploy SSL keys (CentOS)
+  copy: src="{{ item }}" dest="/etc/pki/tls/{{ item }}"
   with_items:
-    - proxy
-    - proxy_http
-    - ssl
+    - "private/{{ ansible_fqdn }}.key"
+    - "certs/{{ ansible_fqdn }}.crt"
+  when: ansible_distribution == "CentOS"
+
 
 - name: Upload the apache conf (Ubuntu)
   template:
-    src: apache-registry.conf.j2
+    src: ubuntu-apache-registry.conf.j2
     dest: /etc/apache2/conf-available/registry.conf
+    force: yes
   when: ansible_distribution == "Ubuntu"
 
 - name: Enable apache config (Ubuntu)
@@ -62,9 +65,17 @@
 
 - name: Upload the apache conf (CentOS)
   template:
-    src: apache-registry.conf.j2
+    src: centos-apache-registry.conf.j2
     dest: /etc/httpd/conf.d/registry.conf
+    force: yes
   when: ansible_distribution == "CentOS"
+
+- name: Enable apache2 modules
+  apache2_module: name="{{ item }}" state=present
+  with_items:
+    - proxy
+    - proxy_http
+    - ssl
 
 - name: Restart apache (CentOS)
   service: name=httpd state=restarted
