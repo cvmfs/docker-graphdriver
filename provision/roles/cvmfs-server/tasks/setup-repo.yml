@@ -3,3 +3,11 @@
   command: cvmfs_server mkfs -o root "{{ ansible_fqdn }}"
   args:
     creates: "/srv/cvmfs/{{ ansible_fqdn }}"
+
+- name: Install patch tool
+  package: name=patch state=present
+
+- name: Ignore special files
+  patch: 
+    src: server.conf.patch
+    dest: "/etc/cvmfs/repositories.d/{{ ansible_fqdn }}/server.conf"
