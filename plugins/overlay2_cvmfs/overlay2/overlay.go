@@ -718,8 +718,8 @@ func (d *Driver) Diff(id, parent string) (io.ReadCloser, error) {
 	if util.IsThinImageLayer(d.getDiffPath(parent)) {
 		isThin = true
 		thin := util.ReadThinFile(path.Join(diffPath, ".thin"))
-		h, _ := util.UploadNewLayer(diffPath)
-		thin.AddLayer(h)
+		newLayer, _ := util.UploadNewLayer(diffPath)
+		thin.AddLayer(newLayer)
 		newThinLayer, _ = util.WriteThinFile(thin)
 	}
 

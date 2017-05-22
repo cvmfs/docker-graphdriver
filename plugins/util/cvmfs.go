@@ -25,8 +25,7 @@ type ThinImage struct {
 	Comment    string           `json:"comment,omitempty"`
 }
 
-func (t *ThinImage) AddLayer(id string) {
-	newLayer := ThinImageLayer{Digest: id}
+func (t *ThinImage) AddLayer(newLayer ThinImageLayer) {
 	t.Layers = append([]ThinImageLayer{newLayer}, t.Layers...)
 }
 

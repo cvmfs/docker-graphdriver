@@ -99,60 +99,32 @@ func remountCvmfs() error {
 	return exec.Command("cvmfs_talk", "remount", "sync").Run()
 }
 
-func MoveAndUpload(orig string) (string, error) {
-	tmpDirectory, err := move(orig)
-	if err != nil {
-		fmt.Printf("Failed to move directory: %s\n", err.Error())
-		return "", err
-	}
-
-	tarFileName, err := tar(tmpDirectory)
-	if err != nil {
-		fmt.Printf("Failed to create tar: %s\n", err.Error())
-		return "", err
-	}
-
-	h, err := sha256hash(tarFileName)
-	if err != nil {
-		fmt.Printf("Failed to calculate hash: %s\n", err.Error())
-		return "", err
-	}
-
-	if err := upload(tarFileName, h); err != nil {
-		fmt.Printf("Failed to upload: %s\n", err.Error())
-		return "", err
-	}
-
-	if err := remountCvmfs(); err != nil {
-		fmt.Printf("Failed to remount cvmfs repo: %s\n", err.Error())
-		return "", err
-	}
-
-	return h, nil
-}
-
-func UploadNewLayer(orig string) (string, error) {
+func UploadNewLayer(orig string) (layer ThinImageLayer, err error) {
 	tarFileName, err := tar(orig)
+
 	if err != nil {
 		fmt.Printf("Failed to create tar: %s\n", err.Error())
-		return "", err
+		return layer, err
 	}
 
 	h, err := sha256hash(tarFileName)
 	if err != nil {
 		fmt.Printf("Failed to calculate hash: %s\n", err.Error())
-		return "", err
+		return layer, err
 	}
 
 	if err := upload(tarFileName, h); err != nil {
 		fmt.Printf("Failed to upload: %s\n", err.Error())
-		return "", err
+		return layer, err
 	}
 
 	if err := remountCvmfs(); err != nil {
 		fmt.Printf("Failed to remount cvmfs repo: %s\n", err.Error())
-		return "", err
+		return layer, err
 	}
 
-	return h, nil
+	layer.Digest = h
+	layer.Repo = "nhardi-ansible.cern.ch"
+
+	return layer, nil
 }
