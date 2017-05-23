@@ -1,0 +1,5 @@
+- name: restart minio
+  service: name="{{ item }}" state=restarted
+  with_items:
+    - minio.service
+    - publisher.service

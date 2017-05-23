@@ -48,6 +48,12 @@
     - "certs/{{ ansible_fqdn }}.crt"
   when: ansible_distribution == "CentOS"
 
+- name: Enable apache2 modules
+  apache2_module: name="{{ item }}" state=present
+  with_items:
+    - proxy
+    - proxy_http
+    - ssl
 
 - name: Upload the apache conf (Ubuntu)
   template:
@@ -69,13 +75,6 @@
     dest: /etc/httpd/conf.d/registry.conf
     force: yes
   when: ansible_distribution == "CentOS"
-
-- name: Enable apache2 modules
-  apache2_module: name="{{ item }}" state=present
-  with_items:
-    - proxy
-    - proxy_http
-    - ssl
 
 - name: Restart apache (CentOS)
   service: name=httpd state=restarted
@@ -118,7 +117,7 @@
 
 - name: Get publisher binary
   get_url:
-    url: https://cernbox.cern.ch/index.php/s/CceD5cYUQDray4H/download
+    url: https://cernbox.cern.ch/index.php/s/3YijEDgOQoCHmWY/download
     dest: "{{ workdir }}/bin/publisher"
     mode: 0755
 
@@ -127,6 +126,12 @@
   with_items:
     - minio_data
     - minio_config
+
+- name: Deploy publisher configuration
+  template:
+    src: "publisher.json.j2"
+    dest: "{{ workdir }}/minio_config/publisher.json"
+    force: yes
 
 - name: Install systemd units
   template:
@@ -146,3 +151,9 @@
   with_items:
     - minio.service
     - publisher.service
+
+- name: Enable minio webhook
+  patch:
+    src: "minio-config.json.patch"
+    dest: "{{ workdir }}/minio_config/config.json"
+  notify: restart minio
