@@ -6,6 +6,7 @@ import "encoding/json"
 import "bytes"
 import "os/exec"
 import "path"
+import "io/ioutil"
 import "os"
 
 type StoredObjectRecord struct {
@@ -38,59 +39,141 @@ func (p *WebhookPayload) Object() Object {
 	}
 }
 
-func publishHandler(w http.ResponseWriter, r *http.Request) {
-	buf := new(bytes.Buffer)
-	buf.ReadFrom(r.Body)
+type PublisherConfig struct {
+	CvmfsRepo        string
+	MinioStoragePath string
+}
 
-	var payload WebhookPayload
-	json.Unmarshal(buf.Bytes(), &payload)
+var publisherConfig PublisherConfig
 
-	obj := payload.Object()
+func LoadConfig(configPath string) (config PublisherConfig, err error) {
+	var f []byte
 
-	fmt.Printf("Bucket:\t%s\n", obj.Bucket)
-	fmt.Printf("Key:\t%s\n", obj.Key)
-
-	// start transaction
-	var out bytes.Buffer
-	cmd_transaction := exec.Command("cvmfs_server", "transaction")
-	cmd_transaction.Stdout = &out
-	err := cmd_transaction.Run()
+	f, err = ioutil.ReadFile(configPath)
 	if err != nil {
+		return config, err
+	}
+
+	err = json.Unmarshal(f, &config)
+	if err != nil {
+		return config, err
+	}
+
+	return config, nil
+}
+
+type CvmfsManager struct {
+	CvmfsRepo string
+}
+
+func (cm CvmfsManager) StartTransaction() error {
+	cmd := exec.Command("cvmfs_server", "transaction", publisherConfig.CvmfsRepo)
+	if out, err := cmd.CombinedOutput(); err != nil {
 		fmt.Println("ERROR: failed to open transaction!")
+		fmt.Println(err)
+		fmt.Println(out)
+		return err
 	}
 	fmt.Println("Started transaction...")
-	fmt.Println(out.String())
+	return nil
+}
 
-	// unpack the layer
-	repo := "docker2cvmfs-ci.cern.ch"
-	src := path.Join("/home/ubuntu/minio/export/", obj.Bucket, obj.Key)
-	dst := path.Join("/cvmfs", repo, "layers", obj.Key)
+func (cm CvmfsManager) ImportTarball(src, digest string) error {
+	dst := path.Join("/cvmfs", cm.CvmfsRepo, "layers", digest)
 
 	os.Mkdir(dst, os.ModePerm)
 	tarCmd := fmt.Sprintf("tar xf %s -C %s", src, dst)
 
-	fmt.Printf("Command is: %s\n", tarCmd)
+	cmd := exec.Command("bash", "-c", tarCmd)
 
-	cmd_extract := exec.Command("bash", "-c", tarCmd)
-	cmd_extract.Stdout = &out
-	err = cmd_extract.Run()
-	if err != nil {
+	if out, err := cmd.CombinedOutput(); err != nil {
 		fmt.Println("ERROR: failed to extract!")
+		fmt.Printf("Command was: %s\n", tarCmd)
+		fmt.Println(err)
+		fmt.Println(out)
+		return err
 	}
 	fmt.Println("Extracted")
-	fmt.Println(out.String())
+	return nil
+}
 
-	cmd_publish := exec.Command("cvmfs_server", "publish")
-	cmd_publish.Stdout = &out
-	err = cmd_publish.Run()
-	if err != nil {
+func (cm CvmfsManager) PublishTransaction() error {
+	cmd := exec.Command("cvmfs_server", "publish")
+	if out, err := cmd.CombinedOutput(); err != nil {
 		fmt.Println("ERROR: failed to publish!")
+		fmt.Println(err)
+		fmt.Println(out)
+		return err
+	} else {
+		fmt.Println("Published transaction!")
+		fmt.Println(out)
+		return nil
 	}
-	fmt.Println("Published transaction!")
-	fmt.Println(out.String())
+}
+
+func decodePayload(r *http.Request) (obj Object, err error) {
+	buf := new(bytes.Buffer)
+	buf.ReadFrom(r.Body)
+
+	var payload WebhookPayload
+	if err := json.Unmarshal(buf.Bytes(), &payload); err != nil {
+		fmt.Println(buf.String())
+		return obj, err
+	}
+
+	obj = payload.Object()
+	return obj, nil
+}
+
+func publishHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("Got a request!")
+
+	var obj Object
+	var err error
+	if obj, err = decodePayload(r); err != nil {
+		fmt.Println("Failed to parse request.")
+		return
+	}
+
+	fmt.Printf("Bucket:\t%s\n", obj.Bucket)
+	fmt.Printf("Key:\t%s\n", obj.Key)
+
+	cm := CvmfsManager{CvmfsRepo: publisherConfig.CvmfsRepo}
+	if err := cm.StartTransaction(); err != nil {
+		fmt.Println(err)
+		w.WriteHeader(400)
+		return
+	}
+
+	filepath := path.Join(publisherConfig.MinioStoragePath, obj.Bucket, obj.Key)
+	if err := cm.ImportTarball(filepath, obj.Key); err != nil {
+		fmt.Println(err)
+		w.WriteHeader(400)
+		return
+	}
+
+	if err := cm.PublishTransaction(); err != nil {
+		fmt.Println(err)
+		w.WriteHeader(400)
+		return
+	}
 }
 
 func main() {
+	if len(os.Args) < 2 {
+		fmt.Println("Specify path to config file as first argument.")
+		os.Exit(-1)
+	}
+
+	var err error
+	if publisherConfig, err = LoadConfig(os.Args[1]); err != nil {
+		fmt.Println("Invalid config.")
+		fmt.Println(err)
+		os.Exit(-2)
+	}
+
+	fmt.Println("Config finished!")
+
 	http.HandleFunc("/", publishHandler)
 	http.ListenAndServe("0.0.0.0:3000", nil)
 
