@@ -135,9 +135,9 @@
 
 - name: Install systemd units
   template:
-    src="{{ item }}.j2"
-    dest="/etc/systemd/system/{{ item }}"
-    force=yes
+    src: "{{ item }}.j2"
+    dest: "/etc/systemd/system/{{ item }}"
+    force: yes
   with_items:
     - minio.service
     - publisher.service
@@ -152,8 +152,24 @@
     - minio.service
     - publisher.service
 
+- name: Fetch minio credentials
+  fetch:
+    src: "{{ workdir }}/minio_config/config.json"
+    dest: "secrets"
+
 - name: Enable minio webhook
   patch:
     src: "minio-config.json.patch"
     dest: "{{ workdir }}/minio_config/config.json"
   notify: restart minio
+
+- name: Get minio client binary
+  get_url:
+    url: https://dl.minio.io/client/mc/release/linux-amd64/mc
+    dest: "{{ workdir }}/bin/mc"
+    mode: 0755
+
+- name: Setup bucket and event handler
+  script: setup_minio_webhook.sh "{{ workdir }}/minio_config/config.json"
+  environment:
+    PATH: "{{ workdir }}/bin:{{ ansible_env.PATH }}"
