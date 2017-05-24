@@ -1,6 +1,6 @@
 #!/bin/bash
-REPO_NAME="docker_graphdriver_plugins"
-REPO="github.com/atlantic777/$REPO_NAME"
+REPO_NAME="docker-graphdriver"
+REPO="github.com/cvmfs/$REPO_NAME"
 WORKSPACE="/tmp/workspace/$REPO_NAME"
 GOPATH="$WORKSPACE/cache/gopath"
 
