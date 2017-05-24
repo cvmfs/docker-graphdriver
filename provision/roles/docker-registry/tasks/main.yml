@@ -115,11 +115,27 @@
     dest: "{{ workdir }}/bin/minio"
     mode: 0755
 
+- name: Install systemd units
+  template:
+    src: "{{ item }}.j2"
+    dest: "/etc/systemd/system/{{ item }}"
+    force: yes
+  with_items:
+    - minio.service
+    - publisher.service
+
+- name: Temporarily stop publisher service
+  service: name="publisher" state="stopped"
+
 - name: Get publisher binary
   get_url:
-    url: https://cernbox.cern.ch/index.php/s/3YijEDgOQoCHmWY/download
+    url: https://cernbox.cern.ch/index.php/s/m6gFtvCL1V0WIt9/download
     dest: "{{ workdir }}/bin/publisher"
     mode: 0755
+    force: yes
+
+- name: Start publisher service
+  service: name="publisher.service" state="started"
 
 - name: Prepare minio directories
   file: name="{{ workdir}}/{{ item }}" state=directory
@@ -132,15 +148,6 @@
     src: "publisher.json.j2"
     dest: "{{ workdir }}/minio_config/publisher.json"
     force: yes
-
-- name: Install systemd units
-  template:
-    src: "{{ item }}.j2"
-    dest: "/etc/systemd/system/{{ item }}"
-    force: yes
-  with_items:
-    - minio.service
-    - publisher.service
 
 - name: Enable systemd units
   systemd:
