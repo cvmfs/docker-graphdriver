@@ -1,0 +1,52 @@
+{
+  "Description": "aufs_cvmfs graphdriver as a plugin",
+  "Documentation": "-",
+  "Entrypoint": [
+    "/usr/local/bin/aufs_cvmfs"
+  ],
+  "Interface": {
+    "Socket": "plugin.sock",
+    "Types": [
+      "docker.graphdriver/1.0"
+    ]
+  },
+  "Linux": {
+    "Capabilities": [
+      "CAP_SYS_ADMIN",
+      "CAP_MKNOD"
+    ],
+    "Devices": [
+        { "Path": "/dev/fuse" }
+	]
+  },
+  "PropagatedMount": "/mnt",
+  "Environment": [
+	{ "Name": "CVMFS_EXT_CONFIG",
+	  "Description": "Use external cvmfs config",
+	  "Settable": ["Value"],
+	  "Value": "true"
+	},
+	{ "Name": "MINIO_EXT_CONFIG",
+	  "Description": "Use external minio config",
+	  "Settable": ["Value"],
+	  "Value": "true"
+	}
+  ],
+  "Mounts": [
+	{ "Name": "cvmfs_ext_config",
+	  "Source": "/tmp/cvmfs_ext_config",
+	  "Destination": "/cvmfs_ext_config",
+	  "Type": "none",
+	  "Options": ["bind", "ro"],
+	  "Settable": ["source"]
+	},
+	{ "Name": "minio_ext_config",
+	  "Source": "/tmp/minio_ext_config",
+	  "Destination": "/minio_ext_config",
+	  "Type": "none",
+	  "Options": ["bind", "ro"],
+	  "Settable": ["Source"]
+	}
+  ],
+  "Network": {"type": "host"}
+}

@@ -164,6 +164,11 @@
     src: "{{ workdir }}/minio_config/config.json"
     dest: "secrets"
 
+- name: Fetch cvmfs key
+  fetch:
+    src: "/etc/cvmfs/keys/{{ ansible_fqdn }}.pub"
+    dest: "secrets"
+
 - name: Enable minio webhook
   patch:
     src: "minio-config.json.patch"

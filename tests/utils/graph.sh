@@ -1,12 +1,10 @@
 #!/bin/bash
 GRAPHDRIVER_ROOTFS_URL="https://cernbox.cern.ch/index.php/s/9XwhGJOZlQJwQ80/download"
-GRAPHDRIVER_CONFIG_URL="https://cernbox.cern.ch/index.php/s/vhADGe3sR2vg2pp/download"
 
 function download_rootfs() {
     mkdir -p "$CACHE/data" > /dev/null
 
     wget --quiet -O "$GRAPH_PLUGIN_ROOTFS_TAR" "$GRAPHDRIVER_ROOTFS_URL"
-    wget --quiet -O "$GRAPH_PLUGIN_CONFIG" "$GRAPHDRIVER_CONFIG_URL"
 }
 
 function setup_graphdriver() {
@@ -19,7 +17,7 @@ function setup_graphdriver() {
     mkdir plugin_workdir
     pushd plugin_workdir > /dev/null
 
-    cp "$CACHE/data/config.json" .
+    cp "$ROOT_DIR/data/plugin-config.json" "config.json"
     sed -i "s/__binary__/$graphdriver_name/" config.json
 
     mkdir rootfs
