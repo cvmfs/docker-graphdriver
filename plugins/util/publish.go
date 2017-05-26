@@ -129,7 +129,17 @@ func upload(src, h string) error {
 }
 
 func remountCvmfs() error {
-	return exec.Command("cvmfs_talk", "remount", "sync").Run()
+	cmd := "cvmfs_talk"
+	args := []string{"-i", minioConfig.CvmfsRepo, "remount", "sync"}
+
+	out, err := exec.Command(cmd, args...).CombinedOutput()
+	if err != nil {
+		fmt.Println(string(out))
+		fmt.Println(err)
+		return err
+	} else {
+		return nil
+	}
 }
 
 func UploadNewLayer(orig string) (layer ThinImageLayer, err error) {
