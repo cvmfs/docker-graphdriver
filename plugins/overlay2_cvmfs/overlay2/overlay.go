@@ -624,6 +624,14 @@ func (d *Driver) Exists(id string) bool {
 
 // isParent returns if the passed in parent is the direct parent of the passed in layer
 func (d *Driver) isParent(id, parent string) bool {
+	thin_parent_id := d.getThinParent(id)
+
+	if thin_parent_id == parent {
+		return true
+	} else if thin_parent_id != "" {
+		return false
+	}
+
 	lowers, err := d.getLowerDirs(id)
 	if err != nil {
 		return false
@@ -709,28 +717,30 @@ func (d *Driver) DiffSize(id, parent string) (size int64, err error) {
 // Diff produces an archive of the changes between the specified
 // layer and its parent layer which may be "".
 func (d *Driver) Diff(id, parent string) (io.ReadCloser, error) {
-	var newThinLayer, exportPath string
-	var isThin bool
+	var newThinLayer string
+	var isThin bool = false
 
 	diffPath := d.getDiffPath(id)
+	exportPath := diffPath
 	logrus.Debugf("Tar with options on %s", diffPath)
 
-	if util.IsThinImageLayer(d.getDiffPath(parent)) {
+	var thin_parent_id string
+	if id := d.getThinParent(parent); id != "" {
+		thin_parent_id = id
 		isThin = true
-		thin := util.ReadThinFile(path.Join(diffPath, ".thin"))
+	}
+
+	parent_thin_path := d.dir(thin_parent_id)
+
+	if isThin {
+		thin := util.ReadThinFile(path.Join(parent_thin_path, "diff", ".thin"))
 		newLayer, _ := util.UploadNewLayer(diffPath)
 		thin.AddLayer(newLayer)
 		newThinLayer, _ = util.WriteThinFile(thin)
-	}
-
-	if isThin {
 		exportPath = newThinLayer
-	} else {
-		exportPath = diffPath
 	}
 
 	if useNaiveDiff(d.home) || !d.isParent(id, parent) {
-		fmt.Println("Using naive diff!")
 		return d.naiveDiff.Diff(id, parent)
 	}
 
