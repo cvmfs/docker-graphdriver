@@ -10,7 +10,7 @@ status1=$?
 PLUGIN_ID=$(docker plugin inspect --format="{{.Id}}" $PLUGIN_NAME)
 CVMFS_MOUNT_PATH="$PWD/graph/plugins/$PLUGIN_ID/rootfs/mnt/$PLUGIN_NAME/cvmfs/$DEFAULT_REPO"
 sudo mkdir -p "$CVMFS_MOUNT_PATH"
-sudo mount -t cvmfs "$DEFAULT_REPO" "$CVMFS_MOUNT_PATH"
+sudo cvmfs2 "$DEFAULT_REPO" "$CVMFS_MOUNT_PATH"
 
 docker run atlantic777/thin_ubuntu echo "Hello world"
 status2=$?

@@ -520,7 +520,7 @@ func (d *Driver) Get(id string, mountLabel string) (s string, err error) {
 		return "", err
 	}
 
-	if thinParent := d.getThinParent(id); thinParent != "" {
+	if thinParent := d.getThinParent(id); d.cvmfsMountMethod == "internal" && thinParent != "" {
 		f := path.Join(d.getDiffPath(thinParent), ".thin")
 		t := util.ReadThinFile(f)
 		d.cvmfsManager.GetLayers(t.Layers...)
@@ -600,7 +600,7 @@ func (d *Driver) Get(id string, mountLabel string) (s string, err error) {
 // Put unmounts the mount path created for the give id.
 func (d *Driver) Put(id string) error {
 	p := d.getDiffPath(id)
-	if util.IsThinImageLayer(p) {
+	if util.IsThinImageLayer(p) && d.cvmfsMountMethod == "internal" {
 		f := path.Join(p, ".thin")
 		t := util.ReadThinFile(f)
 		d.cvmfsManager.PutLayers(t.Layers...)
