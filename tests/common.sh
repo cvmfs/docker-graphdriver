@@ -60,6 +60,7 @@ function wait_process
             sleep 1
             echo "."
         done
+        docker info &>/dev/null
     elif [ "$target_status" == "down" ]; then
         while [ "$(pidof $process)" != "" ]
         do

@@ -1,5 +1,6 @@
 #!/bin/bash
 export DOCKER_VERSIONS=(
+    "17.05.0-ce"
     "17.04.0-ce"
     "17.03.1-ce"
     "17.03.0-ce"
