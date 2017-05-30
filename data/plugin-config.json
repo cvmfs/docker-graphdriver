@@ -1,8 +1,8 @@
 {
-  "Description": "aufs_cvmfs graphdriver as a plugin",
+  "Description": "__binary__ graphdriver as a plugin",
   "Documentation": "-",
   "Entrypoint": [
-    "/usr/local/bin/aufs_cvmfs"
+    "/usr/local/bin/__binary__"
   ],
   "Interface": {
     "Socket": "plugin.sock",
