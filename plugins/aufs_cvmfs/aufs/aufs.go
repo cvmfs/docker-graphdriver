@@ -575,7 +575,13 @@ func (a *Driver) getParentLayerPaths(id string) ([]string, error) {
 		diffPath := a.getDiffPath(p)
 		if util.IsThinImageLayer(diffPath) && (foundThin == false) {
 			nested_layers := util.GetNestedLayerIDs(diffPath)
-			if err := a.cvmfsManager.GetLayers(nested_layers...); err != nil {
+
+			var err error
+			if a.cvmfsMountMethod == "internal" {
+				err = a.cvmfsManager.GetLayers(nested_layers...)
+			}
+
+			if err != nil {
 				return nil, err
 			}
 

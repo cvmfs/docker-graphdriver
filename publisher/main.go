@@ -81,7 +81,11 @@ func (cm CvmfsManager) StartTransaction() error {
 func (cm CvmfsManager) ImportTarball(src, digest string) error {
 	dst := path.Join("/cvmfs", cm.CvmfsRepo, "layers", digest)
 
-	os.Mkdir(dst, os.ModePerm)
+	if err := os.MkdirAll(dst, os.ModePerm); err != nil {
+		fmt.Println("Failed to create destination!")
+		fmt.Println(err)
+		return err
+	}
 	tarCmd := fmt.Sprintf("tar xf %s -C %s", src, dst)
 
 	cmd := exec.Command("bash", "-c", tarCmd)
@@ -90,7 +94,7 @@ func (cm CvmfsManager) ImportTarball(src, digest string) error {
 		fmt.Println("ERROR: failed to extract!")
 		fmt.Printf("Command was: %s\n", tarCmd)
 		fmt.Println(err)
-		fmt.Println(out)
+		fmt.Println(string(out))
 		return err
 	}
 	fmt.Println("Extracted")
@@ -102,11 +106,11 @@ func (cm CvmfsManager) PublishTransaction() error {
 	if out, err := cmd.CombinedOutput(); err != nil {
 		fmt.Println("ERROR: failed to publish!")
 		fmt.Println(err)
-		fmt.Println(out)
+		fmt.Println(string(out))
 		return err
 	} else {
 		fmt.Println("Published transaction!")
-		fmt.Println(out)
+		fmt.Println(string(out))
 		return nil
 	}
 }
@@ -149,13 +153,11 @@ func publishHandler(w http.ResponseWriter, r *http.Request) {
 	if err := cm.ImportTarball(filepath, obj.Key); err != nil {
 		fmt.Println(err)
 		w.WriteHeader(400)
-		return
 	}
 
 	if err := cm.PublishTransaction(); err != nil {
 		fmt.Println(err)
 		w.WriteHeader(400)
-		return
 	}
 }
 
