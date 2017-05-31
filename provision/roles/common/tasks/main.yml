@@ -13,3 +13,5 @@
     - git
     - tree
     - htop
+    - patch
+    - jq

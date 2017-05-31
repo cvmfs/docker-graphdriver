@@ -1,0 +1,13 @@
+--- config.json	2017-05-23 15:29:28.756348153 +0200
++++ config.json.new	2017-05-23 15:29:24.812351840 +0200
+@@ -90,8 +90,8 @@
+ 		},
+ 		"webhook": {
+ 			"1": {
+-				"enable": false,
+-				"endpoint": ""
++				"enable": true,
++				"endpoint": "http://localhost:3000"
+ 			}
+ 		},
+ 		"mysql": {

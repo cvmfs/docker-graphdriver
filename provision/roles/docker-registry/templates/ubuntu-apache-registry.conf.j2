@@ -1,7 +1,7 @@
 <VirtualHost *:443>
         SSLEngine on
-        SSLCertificateFile "/opt/dockerhub/{{ ansible_fqdn }}.crt"
-        SSLCertificateKeyFile "/opt/dockerhub/{{ ansible_fqdn }}.key"
+        SSLCertificateFile "{{ ssl_path_ubuntu }}/certs/{{ ansible_fqdn }}.crt"
+        SSLCertificateKeyFile "{{ ssl_path_ubuntu }}/private/{{ ansible_fqdn }}.key"
 
         SSLCompression off 
         SSLProtocol all -SSLv2 -SSLv2 -SSLv3 -TLSv1
@@ -9,8 +9,8 @@
         SSLCipherSuite EECDH+AESGCM:EDH+AESGCM:AES256+EECDH:AES256+EDH
         SSLHonorCipherOrder on
 
-        ProxyPass "/" "http://localhost:5000/"
-        ProxyPassReverse "/" "http://localhost:5000/"
+        ProxyPass "/docker" "http://localhost:5000"
+        ProxyPassReverse "/docker" "http://localhost:5000"
 
         <Location /docker>
                 AuthName "Docker Registry Authentication"

@@ -34,11 +34,19 @@
     persistent: yes
   when: ansible_distribution == "CentOS"
 
-- name: Deploy SSL keys
-  copy: src="{{ item }}" dest="{{ workdir }}/{{ item }}"
+- name: Deploy SSL keys (Ubuntu)
+  copy: src="{{ item }}" dest="/etc/ssl/{{ item }}"
   with_items:
-    - "{{ ansible_fqdn }}.key"
-    - "{{ ansible_fqdn }}.crt"
+    - "private/{{ ansible_fqdn }}.key"
+    - "certs/{{ ansible_fqdn }}.crt"
+  when: ansible_distribution == "Ubuntu"
+
+- name: Deploy SSL keys (CentOS)
+  copy: src="{{ item }}" dest="/etc/pki/tls/{{ item }}"
+  with_items:
+    - "private/{{ ansible_fqdn }}.key"
+    - "certs/{{ ansible_fqdn }}.crt"
+  when: ansible_distribution == "CentOS"
 
 - name: Enable apache2 modules
   apache2_module: name="{{ item }}" state=present
@@ -49,8 +57,9 @@
 
 - name: Upload the apache conf (Ubuntu)
   template:
-    src: apache-registry.conf.j2
+    src: ubuntu-apache-registry.conf.j2
     dest: /etc/apache2/conf-available/registry.conf
+    force: yes
   when: ansible_distribution == "Ubuntu"
 
 - name: Enable apache config (Ubuntu)
@@ -62,8 +71,9 @@
 
 - name: Upload the apache conf (CentOS)
   template:
-    src: apache-registry.conf.j2
+    src: centos-apache-registry.conf.j2
     dest: /etc/httpd/conf.d/registry.conf
+    force: yes
   when: ansible_distribution == "CentOS"
 
 - name: Restart apache (CentOS)
@@ -107,7 +117,7 @@
 
 - name: Get publisher binary
   get_url:
-    url: https://cernbox.cern.ch/index.php/s/CceD5cYUQDray4H/download
+    url: https://cernbox.cern.ch/index.php/s/3YijEDgOQoCHmWY/download
     dest: "{{ workdir }}/bin/publisher"
     mode: 0755
 
@@ -117,11 +127,17 @@
     - minio_data
     - minio_config
 
+- name: Deploy publisher configuration
+  template:
+    src: "publisher.json.j2"
+    dest: "{{ workdir }}/minio_config/publisher.json"
+    force: yes
+
 - name: Install systemd units
   template:
-    src="{{ item }}.j2"
-    dest="/etc/systemd/system/{{ item }}"
-    force=yes
+    src: "{{ item }}.j2"
+    dest: "/etc/systemd/system/{{ item }}"
+    force: yes
   with_items:
     - minio.service
     - publisher.service
@@ -135,3 +151,25 @@
   with_items:
     - minio.service
     - publisher.service
+
+- name: Fetch minio credentials
+  fetch:
+    src: "{{ workdir }}/minio_config/config.json"
+    dest: "secrets"
+
+- name: Enable minio webhook
+  patch:
+    src: "minio-config.json.patch"
+    dest: "{{ workdir }}/minio_config/config.json"
+  notify: restart minio
+
+- name: Get minio client binary
+  get_url:
+    url: https://dl.minio.io/client/mc/release/linux-amd64/mc
+    dest: "{{ workdir }}/bin/mc"
+    mode: 0755
+
+- name: Setup bucket and event handler
+  script: setup_minio_webhook.sh "{{ workdir }}/minio_config/config.json"
+  environment:
+    PATH: "{{ workdir }}/bin:{{ ansible_env.PATH }}"

@@ -449,15 +449,15 @@ func (a *Driver) Diff(id, parent string) (io.ReadCloser, error) {
 		orig := a.getDiffPath(id)
 
 		fmt.Printf("Orig diffpath: %s\n", orig)
-		h, err := util.UploadNewLayer(orig)
+		newLayer, err := util.UploadNewLayer(orig)
 		if err != nil {
-			fmt.Printf("error on MoveAndUpload(): %s", err.Error())
+			fmt.Printf("error on UploadNewLayer(): %s", err.Error())
 			return nil, err
 		}
 
-		fmt.Printf("Uploaded hash is: %s\n", h)
+		fmt.Printf("Uploaded hash is: %s\n", newLayer.Digest)
 
-		thin.AddLayer(h)
+		thin.AddLayer(newLayer)
 		if newThinLayer, err = util.WriteThinFile(thin); err != nil {
 			fmt.Printf("Failed to create thin file")
 			return nil, err

@@ -3,6 +3,7 @@ package util
 import (
 	"bytes"
 	"crypto/sha256"
+	"encoding/json"
 	"fmt"
 	"github.com/docker/docker/pkg/archive"
 	"github.com/minio/minio-go"
@@ -15,12 +16,39 @@ import (
 	"time"
 )
 
-var (
-	accessKey = "LD9GJ1V2T9V6LA09E052"
-	secretKey = "CgrYAbowR91YJykDqvWX3kxBQIzvGKZ20n2l7MwY"
-	host      = "nhardi-stratum0.cern.ch:9000"
-	ssl       = false
-)
+type MinioConfig struct {
+	AccessKey    string
+	AccessSecret string
+	Host         string
+	CvmfsRepo    string
+	SSL          bool
+}
+
+var minioConfig = readConfig()
+
+func readConfig() (config MinioConfig) {
+	fmt.Println("reading minio config")
+
+	var out []byte
+	var err error
+
+	if out, err = ioutil.ReadFile("/minio_ext_config/config.json"); err != nil {
+		fmt.Println("Failed to read minio config.")
+		fmt.Println(err)
+		return
+	}
+	if err = json.Unmarshal(out, &config); err != nil {
+		fmt.Println("Failed to parse minio config.")
+		fmt.Println(err)
+		return
+	}
+
+	fmt.Println("Minio config read successfully!")
+	sc, _ := json.MarshalIndent(config, "", "    ")
+	fmt.Println(string(sc))
+
+	return config
+}
 
 func move(src string) (string, error) {
 	rand.Seed(time.Now().UTC().UnixNano())
@@ -80,7 +108,12 @@ func sha256hash(src string) (string, error) {
 }
 
 func upload(src, h string) error {
-	minioClient, err := minio.New(host, accessKey, secretKey, ssl)
+	minioClient, err := minio.New(
+		minioConfig.Host,
+		minioConfig.AccessKey,
+		minioConfig.AccessSecret,
+		minioConfig.SSL)
+
 	if err != nil {
 		fmt.Println("Failed to create a minio client!")
 		return err
@@ -99,60 +132,32 @@ func remountCvmfs() error {
 	return exec.Command("cvmfs_talk", "remount", "sync").Run()
 }
 
-func MoveAndUpload(orig string) (string, error) {
-	tmpDirectory, err := move(orig)
-	if err != nil {
-		fmt.Printf("Failed to move directory: %s\n", err.Error())
-		return "", err
-	}
-
-	tarFileName, err := tar(tmpDirectory)
-	if err != nil {
-		fmt.Printf("Failed to create tar: %s\n", err.Error())
-		return "", err
-	}
-
-	h, err := sha256hash(tarFileName)
-	if err != nil {
-		fmt.Printf("Failed to calculate hash: %s\n", err.Error())
-		return "", err
-	}
-
-	if err := upload(tarFileName, h); err != nil {
-		fmt.Printf("Failed to upload: %s\n", err.Error())
-		return "", err
-	}
-
-	if err := remountCvmfs(); err != nil {
-		fmt.Printf("Failed to remount cvmfs repo: %s\n", err.Error())
-		return "", err
-	}
-
-	return h, nil
-}
-
-func UploadNewLayer(orig string) (string, error) {
+func UploadNewLayer(orig string) (layer ThinImageLayer, err error) {
 	tarFileName, err := tar(orig)
+
 	if err != nil {
 		fmt.Printf("Failed to create tar: %s\n", err.Error())
-		return "", err
+		return layer, err
 	}
 
 	h, err := sha256hash(tarFileName)
 	if err != nil {
 		fmt.Printf("Failed to calculate hash: %s\n", err.Error())
-		return "", err
+		return layer, err
 	}
 
 	if err := upload(tarFileName, h); err != nil {
 		fmt.Printf("Failed to upload: %s\n", err.Error())
-		return "", err
+		return layer, err
 	}
 
 	if err := remountCvmfs(); err != nil {
 		fmt.Printf("Failed to remount cvmfs repo: %s\n", err.Error())
-		return "", err
+		return layer, err
 	}
 
-	return h, nil
+	layer.Digest = h
+	layer.Repo = minioConfig.CvmfsRepo
+
+	return layer, nil
 }
