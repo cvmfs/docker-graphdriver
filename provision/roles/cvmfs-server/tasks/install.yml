@@ -1,0 +1,21 @@
+---
+- name: Install CernVM-FS (Ubuntu)
+  apt:
+    deb: "{{ workdir }}/{{ item.value.file }}"
+    state: present
+  with_dict: "{{ pkgs_ubuntu }}"
+  when: ansible_distribution == "Ubuntu"
+
+- name: Install CernVM-FS (CentOS)
+  yum:
+    name: "{{ workdir }}/{{ item.value.file }}"
+    state: present
+  with_dict: "{{ pkgs_centos }}"
+  when: ansible_distribution == "CentOS" and item.value.file.find('server') == -1
+
+- name: TEMPORARY SOLUTION - Install cvmfs-server (CentOS)
+  shell: rpm -q cvmfs-server || rpm -U --nodeps "{{ workdir }}/{{ pkgs_centos.cvmfs_server.file }}"
+  args:
+    creates: "/bin/cvmfs_server"
+
+  when: ansible_distribution == "CentOS"

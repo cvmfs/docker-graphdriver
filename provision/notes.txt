@@ -1,0 +1,19 @@
+Run this before provisioning.
+
+For CentOS host:
+----------------
+- Kernel update
+  - update machine and reboot (new kernel)
+
+- OverlayFS unsupported version
+  - create openstack volume
+  - attach it to the machine
+  - create partition table and format it to ext4
+  - mount this ext4 partition to /var/spool/cvmfs
+
+
+For ubuntu host:
+---------------
+Python is missing in the official ubuntu cloud image.
+That means that Ansible will not work.
+Just install python-minimal.

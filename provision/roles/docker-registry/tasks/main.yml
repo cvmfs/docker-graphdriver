@@ -1,0 +1,137 @@
+---
+- name: Install docker registry (Ubuntu)
+  package: name=docker-registry state=present
+  when: ansible_distribution == "Ubuntu"
+
+- name: Install docker registry (CentOS)
+  package: name=docker-distribution state=present
+  when: ansible_distribution == "CentOS"
+
+- name: Install apache2 (Ubuntu)
+  package: name=apache2 state=present
+  when: ansible_distribution == "Ubuntu"
+
+- name: Install httpd (CentOS)
+  yum: name=httpd state=present
+  when: ansible_distribution == "CentOS"
+
+- name: Install mod_ssl on CentOS
+  package: name=mod_ssl state=present
+  when: ansible_distribution == "CentOS"
+
+- name: Start registry (Ubuntu)
+  service: name=docker-registry  state=started
+  when: ansible_distribution == "Ubuntu"
+
+- name: Start registry (CentOS)
+  service: name=docker-distribution  state=started
+  when: ansible_distribution == "CentOS"
+
+- name: Enable httpd SELinux
+  seboolean:
+    name: httpd_can_network_connect
+    state: yes
+    persistent: yes
+  when: ansible_distribution == "CentOS"
+
+- name: Deploy SSL keys
+  copy: src="{{ item }}" dest="{{ workdir }}/{{ item }}"
+  with_items:
+    - "{{ ansible_fqdn }}.key"
+    - "{{ ansible_fqdn }}.crt"
+
+- name: Enable apache2 modules
+  apache2_module: name="{{ item }}" state=present
+  with_items:
+    - proxy
+    - proxy_http
+    - ssl
+
+- name: Upload the apache conf (Ubuntu)
+  template:
+    src: apache-registry.conf.j2
+    dest: /etc/apache2/conf-available/registry.conf
+  when: ansible_distribution == "Ubuntu"
+
+- name: Enable apache config (Ubuntu)
+  file:
+    dest: /etc/apache2/conf-enabled/registry.conf
+    src: /etc/apache2/conf-available/registry.conf
+    state: link
+  when: ansible_distribution == "Ubuntu"
+
+- name: Upload the apache conf (CentOS)
+  template:
+    src: apache-registry.conf.j2
+    dest: /etc/httpd/conf.d/registry.conf
+  when: ansible_distribution == "CentOS"
+
+- name: Restart apache (CentOS)
+  service: name=httpd state=restarted
+  when: ansible_distribution == "CentOS"
+
+- name: Restart apache (Ubuntu)
+  service: name=apache2 state=restarted
+  when: ansible_distribution == "Ubuntu"
+
+- name: Install httpasswd (CentOS)
+  package: name=httpd-tools state=present
+  when: ansible_distribution == "CentOS"
+
+- name: Install httpasswd (Ubuntu)
+  package: name=apache2-utils state=present
+  when: ansible_distribution == "Ubuntu"
+
+- name: install pip
+  package: name=python-pip state=present
+
+- name: install passlib
+  pip: name=passlib state=present
+
+- name: fill-in htpasswd file
+  htpasswd:
+    name: cernvm
+    password: cernvm
+    path: "{{ workdir }}/registry.htpasswd"
+    state: present
+    mode: 0644
+
+- name: Create bin directory
+  file: name="{{ workdir }}/bin" state=directory
+
+- name: Get minio binary
+  get_url:
+    url: https://dl.minio.io/server/minio/release/linux-amd64/minio
+    dest: "{{ workdir }}/bin/minio"
+    mode: 0755
+
+- name: Get publisher binary
+  get_url:
+    url: https://cernbox.cern.ch/index.php/s/CceD5cYUQDray4H/download
+    dest: "{{ workdir }}/bin/publisher"
+    mode: 0755
+
+- name: Prepare minio directories
+  file: name="{{ workdir}}/{{ item }}" state=directory
+  with_items:
+    - minio_data
+    - minio_config
+
+- name: Install systemd units
+  template:
+    src="{{ item }}.j2"
+    dest="/etc/systemd/system/{{ item }}"
+    force=yes
+  with_items:
+    - minio.service
+    - publisher.service
+
+- name: Enable systemd units
+  systemd:
+    name: "{{ item }}"
+    state: started
+    enabled: yes
+    daemon-reload: yes
+  with_items:
+    - minio.service
+    - publisher.service

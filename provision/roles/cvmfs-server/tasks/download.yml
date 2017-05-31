@@ -1,0 +1,14 @@
+---
+- name: download cvmfs packages (Ubuntu)
+  get_url:
+    url: "{{ item.value.url }}/{{ item.value.file }}"
+    dest: "{{ workdir }}/{{ item.value.file }}"
+  with_dict: "{{ pkgs_ubuntu }}"
+  when: ansible_distribution == "Ubuntu"
+
+- name: download cvmfs packages (CentOS)
+  get_url:
+    url: "{{ item.value.url }}/{{ item.value.file }}"
+    dest: "{{ workdir }}/{{ item.value.file }}"
+  with_dict: "{{ pkgs_centos }}"
+  when: ansible_distribution == "CentOS"

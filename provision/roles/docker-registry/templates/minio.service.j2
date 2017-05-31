@@ -1,0 +1,11 @@
+[Unit]
+Description=Minio S3 service
+Requires=publisher.service
+
+[Service]
+ExecStart={{ workdir }}/bin/minio server \
+-C {{ workdir }}/minio_config \
+{{ workdir }}/minio_data
+
+StandardOutput=journal
+StandardError=journal

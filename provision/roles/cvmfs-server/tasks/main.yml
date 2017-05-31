@@ -1,0 +1,4 @@
+---
+- include: download.yml
+- include: install.yml
+- include: setup-repo.yml
