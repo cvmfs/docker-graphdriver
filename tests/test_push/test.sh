@@ -7,7 +7,7 @@ docker login "$DOCKERHUB_URL" -u cernvm -p cernvm
 login_status=$?
 
 SRC_IMAGE="atlantic777/thin_ubuntu"
-DST_IMAGE="$DOCKERHUB_URL/$SRC_IMAGE-$RANDOM"
+DST_IMAGE="$DOCKERHUB_URL/thin_ubuntu-$RANDOM"
 
 if [ "x$login_status" == "x0" ]; then
     docker pull "$SRC_IMAGE"
