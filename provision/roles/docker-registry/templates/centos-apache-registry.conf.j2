@@ -9,8 +9,16 @@
         SSLCipherSuite EECDH+AESGCM:EDH+AESGCM:AES256+EECDH:AES256+EDH
         SSLHonorCipherOrder on
 
-        ProxyPass "/docker" "http://localhost:5000"
-        ProxyPassReverse "/docker" "http://localhost:5000"
+        Header always set "Docker-Distribution-Api-Version" "registry/2.0"
+        Header onsuccess set "Docker-Distribution-Api-Version" "registry/2.0"
+        RequestHeader set X-Forwarded-Proto "https"
+
+        ProxyRequests     off
+        ProxyPreserveHost on
+
+
+        ProxyPass "/v2" "http://localhost:5000/v2"
+        ProxyPassReverse "/v2" "http://localhost:5000/v2"
 
         <Location /docker>
                 AuthName "Docker Registry Authentication"

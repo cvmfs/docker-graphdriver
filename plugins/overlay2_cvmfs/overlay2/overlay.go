@@ -511,6 +511,11 @@ func (d *Driver) Get(id string, mountLabel string) (s string, err error) {
 	}
 
 	diffDir := path.Join(dir, "diff")
+
+	if util.IsThinImageLayer(diffDir) {
+		return diffDir, nil
+	}
+
 	lowers, err := ioutil.ReadFile(path.Join(dir, lowerFile))
 	if err != nil {
 		// If no lower, just return diff directory
