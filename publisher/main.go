@@ -71,7 +71,7 @@ func (cm CvmfsManager) StartTransaction() error {
 	if out, err := cmd.CombinedOutput(); err != nil {
 		fmt.Println("ERROR: failed to open transaction!")
 		fmt.Println(err)
-		fmt.Println(out)
+		fmt.Println(string(out))
 		return err
 	}
 	fmt.Println("Started transaction...")
