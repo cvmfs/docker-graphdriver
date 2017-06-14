@@ -10,14 +10,14 @@ cp "$ROOT_DIR/data/thin_scratch/Dockerfile" .
 echo "Hello world" > "test_file"
 
 cd "$IMG_DIR"
-cp "$ROOT_DIR/data/thin_scratch/thin_scratch" ".thin"
+cp "$ROOT_DIR/data/thin_scratch/thin_scratch" "$IMG_DIR/.thin"
 
 cd "$SCRATCH"
 
 sudo dockerd -D --experimental -g graph -s "$PLUGIN_NAME" &
 wait_process dockerd up
 
-tar c "image" | docker imoprt - "thin_scratch"
+tar c "$IMG_DIR" | docker import - "thin_scratch"
 docker build "$BUILD_DIR"
 
 status=$?
