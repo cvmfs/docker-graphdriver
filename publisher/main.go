@@ -8,6 +8,7 @@ import "os/exec"
 import "path"
 import "io/ioutil"
 import "os"
+import "time"
 
 type StoredObjectRecord struct {
 	S3 struct {
@@ -143,10 +144,9 @@ func publishHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Printf("Key:\t%s\n", obj.Key)
 
 	cm := CvmfsManager{CvmfsRepo: publisherConfig.CvmfsRepo}
-	if err := cm.StartTransaction(); err != nil {
+	for cm.StartTransaction() == nil {
 		fmt.Println(err)
-		w.WriteHeader(400)
-		return
+		time.Sleep(1 * time.Second)
 	}
 
 	filepath := path.Join(publisherConfig.MinioStoragePath, obj.Bucket, obj.Key)
