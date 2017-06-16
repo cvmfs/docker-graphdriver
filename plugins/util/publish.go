@@ -10,6 +10,7 @@ import (
 	"io"
 	"io/ioutil"
 	"math/rand"
+	"net/http"
 	"os"
 	"os/exec"
 	"path"
@@ -17,11 +18,12 @@ import (
 )
 
 type MinioConfig struct {
-	AccessKey    string
-	AccessSecret string
-	Host         string
-	CvmfsRepo    string
-	SSL          bool
+	AccessKey        string
+	AccessSecret     string
+	Host             string
+	CvmfsRepo        string
+	SSL              bool
+	PublishStatusURL string
 }
 
 var minioConfig = readConfig()
@@ -128,6 +130,38 @@ func upload(src, h string) error {
 	return nil
 }
 
+func waitForPublishing(hash string) {
+	for {
+		target := minioConfig.PublishStatusURL + "/" + hash
+		fmt.Println("waiting for publish.....")
+		fmt.Println(target)
+
+		client := http.Client{Timeout: time.Duration(2 * time.Second)}
+		resp, err := client.Get(target)
+		fmt.Println("got response")
+
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		defer resp.Body.Close()
+		buf, err := ioutil.ReadAll(resp.Body)
+		body := string(buf)
+
+		if body == "publishing" {
+			time.Sleep(1 * time.Second)
+		} else if body == "done" {
+			break
+		} else if body == "unknown" {
+			fmt.Println("Unknown publish status, abort.")
+			break
+		}
+
+	}
+
+}
+
 func (cm *cvmfsManager) UploadNewLayer(orig string) (layer ThinImageLayer, err error) {
 	tarFileName, err := tar(orig)
 
@@ -146,6 +180,9 @@ func (cm *cvmfsManager) UploadNewLayer(orig string) (layer ThinImageLayer, err e
 		fmt.Printf("Failed to upload: %s\n", err.Error())
 		return layer, err
 	}
+
+	fmt.Println("Wait for it!")
+	waitForPublishing(h)
 
 	if err := cm.Remount(minioConfig.CvmfsRepo); err != nil {
 		fmt.Printf("Failed to remount cvmfs repo: %s\n", err.Error())
