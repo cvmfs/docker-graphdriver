@@ -73,6 +73,16 @@ func AppendCvmfsLayerPaths(oldArray []string, newArray []string) []string {
 	return ret
 }
 
+func ExpandCvmfsLayerPaths(oldArray []string, newArray []string, i int) (result []string) {
+	left := oldArray[:i]
+	right := oldArray[i+1:]
+
+	result = append(left, newArray...)
+	result = append(result, right...)
+
+	return result
+}
+
 func GetNestedLayerIDs(diffPath string) []ThinImageLayer {
 	magic_file_path := path.Join(diffPath, ".thin")
 	content, _ := ioutil.ReadFile(magic_file_path)
