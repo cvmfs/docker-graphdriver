@@ -56,23 +56,6 @@ func GetCvmfsLayerPaths(layers []ThinImageLayer, cvmfsMountPath string) []string
 	return ret
 }
 
-func AppendCvmfsLayerPaths(oldArray []string, newArray []string) []string {
-	l_old := len(oldArray)
-	l_new := len(newArray)
-	newLen := l_old + l_new - 1
-	ret := make([]string, newLen)
-
-	for i := 0; i < l_old-1; i++ {
-		ret[i] = oldArray[i]
-	}
-
-	for i := range newArray {
-		ret[l_old-1+i] = newArray[i]
-	}
-
-	return ret
-}
-
 func ExpandCvmfsLayerPaths(oldArray []string, newArray []string, i int) (result []string) {
 	left := oldArray[:i]
 	right := oldArray[i+1:]
