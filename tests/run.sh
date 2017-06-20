@@ -78,7 +78,7 @@ function run_tests() {
 filter="$1"
 init
 run_tests "$filter"
-# destroy
+destroy
 
 if [ "x$status" != "x0" ]
 then
