@@ -128,21 +128,7 @@ func upload(src, h string) error {
 	return nil
 }
 
-func remountCvmfs() error {
-	cmd := "cvmfs_talk"
-	args := []string{"-i", minioConfig.CvmfsRepo, "remount", "sync"}
-
-	out, err := exec.Command(cmd, args...).CombinedOutput()
-	if err != nil {
-		fmt.Println(string(out))
-		fmt.Println(err)
-		return err
-	} else {
-		return nil
-	}
-}
-
-func UploadNewLayer(orig string) (layer ThinImageLayer, err error) {
+func UploadNewLayer(orig string, cvmfsManager ICvmfsManager) (layer ThinImageLayer, err error) {
 	tarFileName, err := tar(orig)
 
 	if err != nil {
@@ -161,7 +147,7 @@ func UploadNewLayer(orig string) (layer ThinImageLayer, err error) {
 		return layer, err
 	}
 
-	if err := remountCvmfs(); err != nil {
+	if err := cvmfsManager.Remount(minioConfig.CvmfsRepo); err != nil {
 		fmt.Printf("Failed to remount cvmfs repo: %s\n", err.Error())
 		return layer, err
 	}
