@@ -1,0 +1,3 @@
+FROM thin_scratch
+ADD ubuntu_cvmfs-2.4.x_rootfs.tar.bz2 /
+RUN bash -c "echo hello > /something"
