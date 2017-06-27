@@ -260,24 +260,6 @@ func (cm *cvmfsManager) GetLayers(layers ...ThinImageLayer) error {
 	return nil
 }
 
-func (cm *cvmfsManager) Remount(repo string) error {
-	if _, ok := cm.ctr[repo]; !ok {
-		return nil
-	}
-
-	cmd := "cvmfs_talk"
-	args := []string{"-i", repo, "remount", "sync"}
-
-	out, err := exec.Command(cmd, args...).CombinedOutput()
-	if err != nil {
-		fmt.Println(string(out))
-		fmt.Println(err)
-		return err
-	}
-
-	return nil
-}
-
 func (cm *cvmfsManager) PutLayers(layers ...ThinImageLayer) error {
 	for _, l := range layers {
 		cm.Put(l.Repo)
