@@ -32,7 +32,7 @@ func (cm CvmfsManager) ImportTarball(src, digest string) error {
 		fmt.Println(err)
 		return err
 	}
-	tarCmd := fmt.Sprintf("tar xf %s -C %s", src, dst)
+	tarCmd := fmt.Sprintf("bsdtar -xf %s -C %s", src, dst)
 
 	cmd := exec.Command("bash", "-c", tarCmd)
 
