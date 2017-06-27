@@ -135,6 +135,7 @@ type ICvmfsManager interface {
 	PutLayers(layers ...ThinImageLayer) error
 	PutAll() error
 	Remount(repo string) error
+	UploadNewLayer(string) (ThinImageLayer, error)
 }
 
 type cvmfsManager struct {
@@ -289,4 +290,26 @@ func (cm *cvmfsManager) PutLayers(layers ...ThinImageLayer) error {
 		cm.Put(l.Repo)
 	}
 	return nil
+}
+
+func (cm *cvmfsManager) Remount(repo string) error {
+	if _, ok := cm.ctr[repo]; !ok {
+		return nil
+	}
+
+	if cm.ctr[repo] == 0 {
+		return nil
+	}
+
+	cmd := "cvmfs_talk"
+	args := []string{"-i", repo, "remount", "sync"}
+
+	out, err := exec.Command(cmd, args...).CombinedOutput()
+	if err != nil {
+		fmt.Println(string(out))
+		fmt.Println(err)
+		return err
+	} else {
+		return nil
+	}
 }

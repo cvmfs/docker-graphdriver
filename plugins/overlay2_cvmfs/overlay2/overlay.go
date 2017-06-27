@@ -739,7 +739,7 @@ func (d *Driver) Diff(id, parent string) (io.ReadCloser, error) {
 
 	if isThin {
 		thin := util.ReadThinFile(path.Join(parent_thin_path, "diff", ".thin"))
-		newLayer, _ := util.UploadNewLayer(diffPath, d.cvmfsManager)
+		newLayer, _ := d.cvmfsManager.UploadNewLayer(diffPath)
 		thin.AddLayer(newLayer)
 		newThinLayer, _ = util.WriteThinFile(thin)
 		exportPath = newThinLayer

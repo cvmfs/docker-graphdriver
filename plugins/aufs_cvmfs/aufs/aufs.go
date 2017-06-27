@@ -449,7 +449,7 @@ func (a *Driver) Diff(id, parent string) (io.ReadCloser, error) {
 		orig := a.getDiffPath(id)
 
 		fmt.Printf("Orig diffpath: %s\n", orig)
-		newLayer, err := util.UploadNewLayer(orig, a.cvmfsManager)
+		newLayer, err := a.cvmfsManager.UploadNewLayer(orig)
 		if err != nil {
 			fmt.Printf("error on UploadNewLayer(): %s", err.Error())
 			return nil, err

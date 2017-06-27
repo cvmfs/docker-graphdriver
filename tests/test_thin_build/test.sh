@@ -5,7 +5,7 @@ BUILD_DIR="$PWD/docker_build_scratch"
 mkdir "$BUILD_DIR"
 cd "$BUILD_DIR"
 
-cp "$ROOT_DIR/data/Dockerfile" .
+cp "$ROOT_DIR/data/thin_build/Dockerfile" .
 echo "Hello world" > test_file
 
 cd "$SCRATCH"

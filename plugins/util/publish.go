@@ -128,7 +128,7 @@ func upload(src, h string) error {
 	return nil
 }
 
-func UploadNewLayer(orig string, cvmfsManager ICvmfsManager) (layer ThinImageLayer, err error) {
+func (cm *cvmfsManager) UploadNewLayer(orig string) (layer ThinImageLayer, err error) {
 	tarFileName, err := tar(orig)
 
 	if err != nil {
@@ -147,7 +147,7 @@ func UploadNewLayer(orig string, cvmfsManager ICvmfsManager) (layer ThinImageLay
 		return layer, err
 	}
 
-	if err := cvmfsManager.Remount(minioConfig.CvmfsRepo); err != nil {
+	if err := cm.Remount(minioConfig.CvmfsRepo); err != nil {
 		fmt.Printf("Failed to remount cvmfs repo: %s\n", err.Error())
 		return layer, err
 	}
