@@ -87,6 +87,8 @@ type Driver struct {
 // An error is returned if AUFS is not supported.
 func Init(root string, options []string, uidMaps, gidMaps []idtools.IDMap) (graphdriver.Driver, error) {
 	os.MkdirAll(root, os.ModePerm)
+	os.MkdirAll("/dev/shm", os.ModePerm)
+	exec.Command("mount", "-t", "tmpfs", "shmfs", "/dev/shm").Run()
 
 	fsMagic, err := graphdriver.GetFSMagic(root)
 	if err != nil {
@@ -641,6 +643,8 @@ func (a *Driver) Cleanup() error {
 		a.cvmfsManager.PutAll()
 	}
 
+	exec.Command("umount", "/dev/shm").Run()
+
 	var dirs []string
 	if err := filepath.Walk(a.mntPath(), func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -689,8 +693,7 @@ func (a *Driver) aufsMount(ro []string, rw, target, mountLabel string) (err erro
 		bp += copy(b[bp:], layer)
 	}
 
-	// opts := "dio,xino=/dev/shm/aufs.xino"
-	opts := "dio"
+	opts := "dio,xino=/dev/shm/aufs.xino"
 	if useDirperm() {
 		opts += ",dirperm1"
 	}
@@ -728,8 +731,7 @@ func useDirperm() bool {
 		}
 		defer os.RemoveAll(union)
 
-		// opts := fmt.Sprintf("br:%s,dirperm1,xino=/dev/shm/aufs.xino", base)
-		opts := fmt.Sprintf("br:%s,dirperm1", base)
+		opts := fmt.Sprintf("br:%s,dirperm1,xino=/dev/shm/aufs.xino", base)
 		if err := mount("none", union, "aufs", 0, opts); err != nil {
 			return
 		}
