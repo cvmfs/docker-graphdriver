@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"sync"
 	"time"
 )
 
@@ -45,7 +46,6 @@ func GetCvmfsLayerPaths(layers []ThinImageLayer, cvmfsMountPath string) []string
 
 	for i, layer := range layers {
 		root := cvmfsMountPath
-		// repo := cvmfsDefaultRepo
 		repo := layer.Repo
 		location := "layers"
 		digest := layer.Digest
@@ -122,9 +122,7 @@ func WriteThinFile(thin ThinImage) (string, error) {
 }
 
 type ICvmfsManager interface {
-	Get(repo string) error
 	GetLayers(layers ...ThinImageLayer) error
-	Put(repo string) error
 	PutLayers(layers ...ThinImageLayer) error
 	PutAll() error
 	Remount(repo string) error
@@ -134,6 +132,7 @@ type ICvmfsManager interface {
 type cvmfsManager struct {
 	mountPath string
 	ctr       map[string]int
+	mux       sync.Mutex
 }
 
 func NewCvmfsManager(cvmfsMountPath, cvmfsMountMethod string) ICvmfsManager {
@@ -207,7 +206,7 @@ func (cm *cvmfsManager) isConfigured(repo string) error {
 	return nil
 }
 
-func (cm *cvmfsManager) Get(repo string) error {
+func (cm *cvmfsManager) get(repo string) error {
 	// TODO: maybe delegate this check to the mount call itself?
 	if err := cm.isConfigured(repo); err != nil {
 		return err
@@ -227,7 +226,7 @@ func (cm *cvmfsManager) Get(repo string) error {
 	return nil
 }
 
-func (cm *cvmfsManager) Put(repo string) error {
+func (cm *cvmfsManager) put(repo string) error {
 	if _, ok := cm.ctr[repo]; !ok {
 		return nil
 	}
@@ -243,6 +242,9 @@ func (cm *cvmfsManager) Put(repo string) error {
 }
 
 func (cm *cvmfsManager) PutAll() error {
+	cm.mux.Lock()
+	defer cm.mux.Unlock()
+
 	for k := range cm.ctr {
 		cm.umount(k)
 		cm.ctr[k] = 0
@@ -251,23 +253,35 @@ func (cm *cvmfsManager) PutAll() error {
 }
 
 func (cm *cvmfsManager) GetLayers(layers ...ThinImageLayer) error {
+	cm.mux.Lock()
+
 	for i, l := range layers {
-		if err := cm.Get(l.Repo); err != nil {
+		if err := cm.get(l.Repo); err != nil {
+			cm.mux.Unlock()
+
 			cm.PutLayers(layers[:i]...)
 			return err
 		}
 	}
+
+	cm.mux.Unlock()
 	return nil
 }
 
 func (cm *cvmfsManager) PutLayers(layers ...ThinImageLayer) error {
+	cm.mux.Lock()
+	defer cm.mux.Unlock()
+
 	for _, l := range layers {
-		cm.Put(l.Repo)
+		cm.put(l.Repo)
 	}
 	return nil
 }
 
 func (cm *cvmfsManager) Remount(repo string) error {
+	cm.mux.Lock()
+	defer cm.mux.Unlock()
+
 	if _, ok := cm.ctr[repo]; !ok {
 		return nil
 	}
