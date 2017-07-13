@@ -181,6 +181,10 @@ func (cm *cvmfsManager) UploadNewLayer(orig string) (layer ThinImageLayer, err e
 		return layer, err
 	}
 
+	if err := os.Remove(tarFileName); err != nil {
+		fmt.Printf("Couldn't remove the uploaded tmp tar.")
+	}
+
 	fmt.Println("Wait for it!")
 	waitForPublishing(h)
 
