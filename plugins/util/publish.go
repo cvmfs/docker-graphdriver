@@ -149,12 +149,25 @@ func waitForPublishing(hash string) {
 		buf, err := ioutil.ReadAll(resp.Body)
 		body := string(buf)
 
+		if resp.StatusCode != 200 {
+			fmt.Println("Request failed, abort.")
+			fmt.Println(body)
+			return
+		}
+
 		if body == "publishing" {
+			fmt.Println("Still publishing...")
 			time.Sleep(1 * time.Second)
 		} else if body == "done" {
+			fmt.Println("Publishing done!")
 			break
 		} else if body == "unknown" {
 			fmt.Println("Unknown publish status, abort.")
+			fmt.Println("EXPERIMENTAL: just try to wait.")
+			time.Sleep(1 * time.Second)
+		} else {
+			fmt.Println("Unknown reponse, abort.")
+			fmt.Println(body)
 			break
 		}
 
