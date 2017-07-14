@@ -1,5 +1,5 @@
 #!/bin/bash
-GRAPHDRIVER_ROOTFS_URL="https://cernbox.cern.ch/index.php/s/9XwhGJOZlQJwQ80/download"
+GRAPHDRIVER_ROOTFS_URL="https://cernbox.cern.ch/index.php/s/5Gv8Pobuv9e9YdX/download"
 
 function download_rootfs() {
     mkdir -p "$CACHE/data" > /dev/null
