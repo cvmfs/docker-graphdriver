@@ -289,7 +289,6 @@ func (cm *cvmfsManager) Remount(repo string) error {
 	if cm.ctr[repo] == 0 {
 		return nil
 	}
-	l
 	cmd := "cvmfs_talk"
 	args := []string{"-i", repo, "remount", "sync"}
 
