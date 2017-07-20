@@ -16,15 +16,15 @@ type WebhookPayload struct {
 	Records   []StoredObjectRecord
 }
 
-type Object struct {
+type PublishingObject struct {
 	Bucket string
 	Key    string
 }
 
-func (p *WebhookPayload) Object() Object {
+func (p *WebhookPayload) Object() PublishingObject {
 	s3 := p.Records[0].S3
 
-	return Object{
+	return PublishingObject{
 		Bucket: s3.Bucket.Name,
 		Key:    s3.Object.Key,
 	}

@@ -7,7 +7,7 @@ import (
 	"net/http"
 )
 
-func decodePayload(r *http.Request) (obj Object, err error) {
+func decodePayload(r *http.Request) (obj PublishingObject, err error) {
 	buf := new(bytes.Buffer)
 	buf.ReadFrom(r.Body)
 
