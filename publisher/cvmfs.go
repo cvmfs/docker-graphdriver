@@ -56,7 +56,6 @@ func (cm CvmfsManager) PublishTransaction() error {
 		return err
 	} else {
 		fmt.Println("Published transaction!")
-		fmt.Println(string(out))
 		return nil
 	}
 }
@@ -75,10 +74,14 @@ func (cm CvmfsManager) AbortTransaction() error {
 
 func (cm CvmfsManager) LookupLayer(hash string) bool {
 	dst := path.Join("/cvmfs", cm.CvmfsRepo, "layers", hash)
+	fmt.Printf("Layer lookup path: %s\n", dst)
 
 	if _, err := os.Stat(dst); err == nil {
 		return true
+	} else if os.IsNotExist(err) {
+		return false
 	} else {
+		fmt.Println(err)
 		return false
 	}
 }

@@ -130,7 +130,7 @@ func upload(src, h string) error {
 	return nil
 }
 
-func waitForPublishing(hash string) {
+func waitForPublishing(hash string) (err error) {
 	for {
 		target := minioConfig.PublishStatusURL + "/" + hash
 		fmt.Println("waiting for publish.....")
@@ -142,20 +142,32 @@ func waitForPublishing(hash string) {
 
 		if err != nil {
 			fmt.Println(err)
-			return
+			return err
 		}
 
 		defer resp.Body.Close()
 		buf, err := ioutil.ReadAll(resp.Body)
 		body := string(buf)
 
+		if resp.StatusCode != 200 {
+			fmt.Println("Request failed, abort.")
+			fmt.Println(body)
+			return fmt.Errorf("status request failed, abort.")
+		}
+
 		if body == "publishing" {
+			fmt.Println("Still publishing...")
 			time.Sleep(1 * time.Second)
 		} else if body == "done" {
-			break
+			fmt.Println("Publishing done!")
+			return nil
 		} else if body == "unknown" {
 			fmt.Println("Unknown publish status, abort.")
-			break
+			return fmt.Errorf("Unknown publish status, abort.")
+		} else {
+			fmt.Println("Unknown reponse, abort.")
+			fmt.Println(body)
+			return fmt.Errorf("Unknown publish status response, abort.")
 		}
 
 	}
@@ -186,7 +198,9 @@ func (cm *cvmfsManager) UploadNewLayer(orig string) (layer ThinImageLayer, err e
 	}
 
 	fmt.Println("Wait for it!")
-	waitForPublishing(h)
+	if err := waitForPublishing(h); err != nil {
+		return layer, err
+	}
 
 	if err := cm.Remount(minioConfig.CvmfsRepo); err != nil {
 		fmt.Printf("Failed to remount cvmfs repo: %s\n", err.Error())
