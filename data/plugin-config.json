@@ -45,7 +45,7 @@
 	  "Destination": "/minio_ext_config",
 	  "Type": "none",
 	  "Options": ["bind", "ro"],
-	  "Settable": ["Source"]
+	  "Settable": ["source"]
 	}
   ],
   "Network": {"type": "host"}
