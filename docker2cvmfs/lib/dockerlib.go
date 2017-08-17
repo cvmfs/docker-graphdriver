@@ -50,6 +50,7 @@ func printUsage() {
 
 func getManifest(image string) Manifest {
 	imageUrl := createImageUrl(image)
+	fmt.Println(imageUrl)
 
 	resp, _ := http.Get(imageUrl)
 
@@ -154,11 +155,14 @@ func getToken(authParams map[string]string) string {
 }
 
 func createImageUrl(image string) string {
-	s := strings.Split(image, "/")
+	i := strings.Split(image, ":")
+	tag := i[1]
+
+	s := strings.Split(i[0], "/")
 	repo := s[0]
 	name := strings.Join(s[1:], "/")
 
-	arr := []string{dockerRegistryUrl, repo, name, "manifests", "latest"}
+	arr := []string{dockerRegistryUrl, repo, name, "manifests", tag}
 	return strings.Join(arr, "/")
 }
 
@@ -172,12 +176,13 @@ func PullLayers(args []string) {
 		return
 	}
 
-	image := args[0]
-	manifest := getManifest(image)
+	reference := args[0]
+	manifest := getManifest(reference)
+
+	image := strings.Split(reference, ":")[0]
 
 	os.Mkdir("/tmp/layers", 0755)
 	for idx, layer := range manifest.Layers {
-
 		fmt.Printf("%2d: %s\n", idx, layer.Digest)
 		getLayer(image, layer.Digest)
 	}

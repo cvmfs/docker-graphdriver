@@ -26,7 +26,7 @@ type MinioConfig struct {
 	PublishStatusURL string
 }
 
-var minioConfig = readConfig()
+var minioConfig MinioConfig
 
 func readConfig() (config MinioConfig) {
 	fmt.Println("reading minio config")
@@ -180,6 +180,7 @@ func waitForPublishing(hash string) (err error) {
 
 func (cm *cvmfsManager) UploadNewLayer(orig string) (layer ThinImageLayer, err error) {
 	tarFileName, err := tar(orig)
+	minioConfig = readConfig()
 
 	if err != nil {
 		fmt.Printf("Failed to create tar: %s\n", err.Error())
