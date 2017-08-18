@@ -17,7 +17,10 @@ var CreateThinImage = &cobra.Command{
 		}
 		repo := args[1]
 
-		manifest, _ := lib.GetManifest(args[:1])
+		flag := cmd.Flags().Lookup("registry")
+		var registry string = string(flag.Value.String())
+
+		manifest, _ := lib.GetManifest(registry, args[:1])
 		thin := lib.MakeThinImage(manifest, repo)
 		j, _ := json.MarshalIndent(thin, "", "  ")
 		fmt.Println(string(j))

@@ -7,6 +7,8 @@ var PrintConfig = &cobra.Command{
 	Use:   "config",
 	Short: "Print image config",
 	Run: func(cmd *cobra.Command, args []string) {
-		lib.GetConfig(args)
+		flag := cmd.Flags().Lookup("registry")
+		var registry string = string(flag.Value.String())
+		lib.GetConfig(registry, args)
 	},
 }
