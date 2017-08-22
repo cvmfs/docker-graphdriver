@@ -17,7 +17,7 @@ approach and CernVM-FS [3], only a fraction of the image is initially
 transferred and containers start instantly.
 
 This project is presented at ACAT 2017 in Seattle. You can get the poster in PDF
-here: Making Containers Lazy with Docker and CernVM-FS.
+here: [Making Containers Lazy with Docker and CernVM-FS](https://cernbox.cern.ch/index.php/s/ztVY6EgRua5IxIj).
 
 # Quickstart
 
