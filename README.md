@@ -46,8 +46,8 @@ nikola.hardi@cern.ch (link sends e-mail).
 
 # References
 
-  1. Slacker: Fast Distribution with Lazy Docker Containers (link is external)
-  2. https://github.com/cvmfs/docker-graphdriver (link is external)
-  3. The Evolution of Global Scale Filesystems for Scientific Software Distribution (link is external)
+  1. [Slacker: Fast Distribution with Lazy Docker Containers](https://www.usenix.org/node/194431)
+  2. https://github.com/cvmfs/docker-graphdriver
+  3. [The Evolution of Global Scale Filesystems for Scientific Software Distribution](http://ieeexplore.ieee.org/document/7310920/?arnumber=7310920)
   4. https://gitlab.cern.ch/cloud-infrastructure/docker-volume-cvmfs/
-  5. http://singularity.lbl.gov (link is external)
+  5. http://singularity.lbl.gov
