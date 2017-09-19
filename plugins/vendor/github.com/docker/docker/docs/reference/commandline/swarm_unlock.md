@@ -41,4 +41,8 @@ Please enter unlock key:
 ## Related commands
 
 * [swarm init](swarm_init.md)
+* [swarm join](swarm_join.md)
+* [swarm join-token](swarm_join_token.md)
+* [swarm leave](swarm_leave.md)
+* [swarm unlock-key](swarm_unlock_key.md)
 * [swarm update](swarm_update.md)

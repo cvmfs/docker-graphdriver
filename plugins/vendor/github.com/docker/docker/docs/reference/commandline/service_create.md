@@ -21,51 +21,65 @@ Usage:  docker service create [OPTIONS] IMAGE [COMMAND] [ARG...]
 Create a new service
 
 Options:
-      --constraint list                  Placement constraints (default [])
-      --container-label list             Container labels (default [])
-      --dns list                         Set custom DNS servers (default [])
-      --dns-option list                  Set DNS options (default [])
-      --dns-search list                  Set custom DNS search domains (default [])
-      --endpoint-mode string             Endpoint mode (vip or dnsrr)
-  -e, --env list                         Set environment variables (default [])
-      --env-file list                    Read in a file of environment variables (default [])
-      --group list                       Set one or more supplementary user groups for the container (default [])
-      --health-cmd string                Command to run to check health
-      --health-interval duration         Time between running the check (ns|us|ms|s|m|h)
-      --health-retries int               Consecutive failures needed to report unhealthy
-      --health-timeout duration          Maximum time to allow one check to run (ns|us|ms|s|m|h)
-      --help                             Print usage
-      --host list                        Set one or more custom host-to-IP mappings (host:ip) (default [])
-      --hostname string                  Container hostname
-  -l, --label list                       Service labels (default [])
-      --limit-cpu decimal                Limit CPUs (default 0.000)
-      --limit-memory bytes               Limit Memory (default 0 B)
-      --log-driver string                Logging driver for service
-      --log-opt list                     Logging driver options (default [])
-      --mode string                      Service mode (replicated or global) (default "replicated")
-      --mount mount                      Attach a filesystem mount to the service
-      --name string                      Service name
-      --network list                     Network attachments (default [])
-      --no-healthcheck                   Disable any container-specified HEALTHCHECK
-  -p, --publish port                     Publish a port as a node port
-      --replicas uint                    Number of tasks
-      --reserve-cpu decimal              Reserve CPUs (default 0.000)
-      --reserve-memory bytes             Reserve Memory (default 0 B)
-      --restart-condition string         Restart when condition is met (none, on-failure, or any)
-      --restart-delay duration           Delay between restart attempts (ns|us|ms|s|m|h)
-      --restart-max-attempts uint        Maximum number of restarts before giving up
-      --restart-window duration          Window used to evaluate the restart policy (ns|us|ms|s|m|h)
-      --secret secret                    Specify secrets to expose to the service
-      --stop-grace-period duration       Time to wait before force killing a container (ns|us|ms|s|m|h)
-  -t, --tty                              Allocate a pseudo-TTY
-      --update-delay duration            Delay between updates (ns|us|ms|s|m|h) (default 0s)
-      --update-failure-action string     Action on update failure (pause|continue) (default "pause")
-      --update-max-failure-ratio float   Failure rate to tolerate during an update
-      --update-monitor duration          Duration after each task update to monitor for failure (ns|us|ms|s|m|h) (default 0s)
-      --update-parallelism uint          Maximum number of tasks updated simultaneously (0 to update all at once) (default 1)
-  -u, --user string                      Username or UID (format: <name|uid>[:<group|gid>])
-      --with-registry-auth               Send registry authentication details to swarm agents
-  -w, --workdir string                   Working directory inside the container
+      --constraint list                    Placement constraints
+      --container-label list               Container labels
+  -d, --detach                             Exit immediately instead of waiting for the service to converge (default true)
+      --dns list                           Set custom DNS servers
+      --dns-option list                    Set DNS options
+      --dns-search list                    Set custom DNS search domains
+      --endpoint-mode string               Endpoint mode (vip or dnsrr) (default "vip")
+      --entrypoint command                 Overwrite the default ENTRYPOINT of the image
+  -e, --env list                           Set environment variables
+      --env-file list                      Read in a file of environment variables
+      --group list                         Set one or more supplementary user groups for the container
+      --health-cmd string                  Command to run to check health
+      --health-interval duration           Time between running the check (ns|us|ms|s|m|h)
+      --health-retries int                 Consecutive failures needed to report unhealthy
+      --health-start-period duration       Start period for the container to initialize before counting retries towards unstable (ns|us|ms|s|m|h)
+      --health-timeout duration            Maximum time to allow one check to run (ns|us|ms|s|m|h)
+      --help                               Print usage
+      --host list                          Set one or more custom host-to-IP mappings (host:ip)
+      --hostname string                    Container hostname
+  -l, --label list                         Service labels
+      --limit-cpu decimal                  Limit CPUs
+      --limit-memory bytes                 Limit Memory
+      --log-driver string                  Logging driver for service
+      --log-opt list                       Logging driver options
+      --mode string                        Service mode (replicated or global) (default "replicated")
+      --mount mount                        Attach a filesystem mount to the service
+      --name string                        Service name
+      --network list                       Network attachments
+      --no-healthcheck                     Disable any container-specified HEALTHCHECK
+      --placement-pref pref                Add a placement preference
+  -p, --publish port                       Publish a port as a node port
+  -q, --quiet                              Suppress progress output
+      --read-only                          Mount the container's root filesystem as read only
+      --replicas uint                      Number of tasks
+      --reserve-cpu decimal                Reserve CPUs
+      --reserve-memory bytes               Reserve Memory
+      --restart-condition string           Restart when condition is met ("none"|"on-failure"|"any") (default "any")
+      --restart-delay duration             Delay between restart attempts (ns|us|ms|s|m|h) (default 5s)
+      --restart-max-attempts uint          Maximum number of restarts before giving up
+      --restart-window duration            Window used to evaluate the restart policy (ns|us|ms|s|m|h)
+      --rollback-delay duration            Delay between task rollbacks (ns|us|ms|s|m|h) (default 0s)
+      --rollback-failure-action string     Action on rollback failure ("pause"|"continue") (default "pause")
+      --rollback-max-failure-ratio float   Failure rate to tolerate during a rollback (default 0)
+      --rollback-monitor duration          Duration after each task rollback to monitor for failure (ns|us|ms|s|m|h) (default 5s)
+      --rollback-order string              Rollback order ("start-first"|"stop-first") (default "stop-first")
+      --rollback-parallelism uint          Maximum number of tasks rolled back simultaneously (0 to roll back all at once) (default 1)
+      --secret secret                      Specify secrets to expose to the service
+      --stop-grace-period duration         Time to wait before force killing a container (ns|us|ms|s|m|h) (default 10s)
+      --stop-signal string                 Signal to stop the container
+  -t, --tty                                Allocate a pseudo-TTY
+      --update-delay duration              Delay between updates (ns|us|ms|s|m|h) (default 0s)
+      --update-failure-action string       Action on update failure ("pause"|"continue"|"rollback") (default "pause")
+      --update-max-failure-ratio float     Failure rate to tolerate during an update (default 0)
+      --update-monitor duration            Duration after each task update to monitor for failure (ns|us|ms|s|m|h) (default 5s)
+      --update-order string                Update order ("start-first"|"stop-first") (default "stop-first")
+      --update-parallelism uint            Maximum number of tasks updated simultaneously (0 to update all at once) (default 1)
+  -u, --user string                        Username or UID (format: <name|uid>[:<group|gid>])
+      --with-registry-auth                 Send registry authentication details to swarm agents
+  -w, --workdir string                     Working directory inside the container
 ```
 
 ## Description
@@ -310,8 +324,21 @@ volumes in a service:
       </ul></p>
     </td>
   </tr>
+  <tr>
+    <td><b>consistency</b></td>
+    <td></td>
+    <td>
+      <p>The consistency requirements for the mount; one of
+         <ul>
+           <li><tt>default</tt>: Equivalent to <tt>consistent</tt>.</li>
+           <li><tt>consistent</tt>: Full consistency.  The container runtime and the host maintain an identical view of the mount at all times.</li>
+           <li><tt>cached</tt>: The host's view of the mount is authoritative.  There may be delays before updates made on the host are visible within a container.</li>
+           <li><tt>delegated</tt>: The container runtime's view of the mount is authoritative.  There may be delays before updates made in a container are are visible on the host.</li>
+        </ul>
+     </p>
+    </td>
+  </tr>
 </table>
-
 
 #### Bind Propagation
 
@@ -401,7 +428,7 @@ The following options can only be used for named volumes (`type=volume`);
       Options specific to a given volume driver, which will be passed to the
       driver when creating the volume. Options are provided as a comma-separated
       list of key/value pairs, for example,
-      <tt>volume-opt=some-option=some-value,some-other-option=some-other-value</tt>.
+      <tt>volume-opt=some-option=some-value,volume-opt=some-other-option=some-other-value</tt>.
       For available options for a given driver, refer to that driver's
       documentation.
     </td>
@@ -579,6 +606,77 @@ $ docker service create \
   --constraint 'node.labels.type == queue' \
   redis:3.0.6
 ```
+
+### Specify service placement preferences (--placement-pref)
+
+You can set up the service to divide tasks evenly over different categories of
+nodes. One example of where this can be useful is to balance tasks over a set
+of datacenters or availability zones. The example below illustrates this:
+
+```bash
+$ docker service create \
+  --replicas 9 \
+  --name redis_2 \
+  --placement-pref 'spread=node.labels.datacenter' \
+  redis:3.0.6
+```
+
+This uses `--placement-pref` with a `spread` strategy (currently the only
+supported strategy) to spread tasks evenly over the values of the `datacenter`
+node label. In this example, we assume that every node has a `datacenter` node
+label attached to it. If there are three different values of this label among
+nodes in the swarm, one third of the tasks will be placed on the nodes
+associated with each value. This is true even if there are more nodes with one
+value than another. For example, consider the following set of nodes:
+
+- Three nodes with `node.labels.datacenter=east`
+- Two nodes with `node.labels.datacenter=south`
+- One node with `node.labels.datacenter=west`
+
+Since we are spreading over the values of the `datacenter` label and the
+service has 9 replicas, 3 replicas will end up in each datacenter. There are
+three nodes associated with the value `east`, so each one will get one of the
+three replicas reserved for this value. There are two nodes with the value
+`south`, and the three replicas for this value will be divided between them,
+with one receiving two replicas and another receiving just one. Finally, `west`
+has a single node that will get all three replicas reserved for `west`.
+
+If the nodes in one category (for example, those with
+`node.labels.datacenter=south`) can't handle their fair share of tasks due to
+constraints or resource limitations, the extra tasks will be assigned to other
+nodes instead, if possible.
+
+Both engine labels and node labels are supported by placement preferences. The
+example above uses a node label, because the label is referenced with
+`node.labels.datacenter`. To spread over the values of an engine label, use
+`--placement-pref spread=engine.labels.<labelname>`.
+
+It is possible to add multiple placement preferences to a service. This
+establishes a hierarchy of preferences, so that tasks are first divided over
+one category, and then further divided over additional categories. One example
+of where this may be useful is dividing tasks fairly between datacenters, and
+then splitting the tasks within each datacenter over a choice of racks. To add
+multiple placement preferences, specify the `--placement-pref` flag multiple
+times. The order is significant, and the placement preferences will be applied
+in the order given when making scheduling decisions.
+
+The following example sets up a service with multiple placement preferences.
+Tasks are spread first over the various datacenters, and then over racks
+(as indicated by the respective labels):
+
+```bash
+$ docker service create \
+  --replicas 9 \
+  --name redis_2 \
+  --placement-pref 'spread=node.labels.datacenter' \
+  --placement-pref 'spread=node.labels.rack' \
+  redis:3.0.6
+```
+
+When updating a service with `docker service update`, `--placement-pref-add`
+appends a new placement preference after all existing placement preferences.
+`--placement-pref-rm` removes an existing placement preference that matches the
+argument.
 
 ### Attach a service to an existing network (--network)
 

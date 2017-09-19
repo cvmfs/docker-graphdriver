@@ -74,6 +74,7 @@ The currently supported filters are:
 * id (network's id)
 * label (`label=<key>` or `label=<key>=<value>`)
 * name (network's name)
+* scope (`swarm|global|local`)
 * type (`custom|builtin`)
 
 #### Driver
@@ -157,6 +158,30 @@ NETWORK ID          NAME                DRIVER       SCOPE
 06e7eef0a170        foobar              bridge       local
 ```
 
+#### Scope
+
+The `scope` filter matches networks based on their scope.
+
+The following example matches networks with the `swarm` scope:
+
+```bash
+$ docker network ls --filter scope=swarm
+NETWORK ID          NAME                DRIVER              SCOPE
+xbtm0v4f1lfh        ingress             overlay             swarm
+ic6r88twuu92        swarmnet            overlay             swarm
+```
+
+The following example matches networks with the `local` scope:
+
+```bash
+$ docker network ls --filter scope=local
+NETWORK ID          NAME                DRIVER              SCOPE
+e85227439ac7        bridge              bridge              local
+0ca0e19443ed        host                host                local
+ca13cc149a36        localnet            bridge              local
+f9e115d2de35        none                null                local
+```
+
 #### Type
 
 The `type` filter supports two values; `builtin` displays predefined networks
@@ -188,16 +213,17 @@ using a Go template.
 
 Valid placeholders for the Go template are listed below:
 
-Placeholder | Description
-------------|------------------------------------------------------------------------------------------
-`.ID`       | Network ID
-`.Name`     | Network name
-`.Driver`   | Network driver
-`.Scope`    | Network scope (local, global)
-`.IPv6`     | Whether IPv6 is enabled on the network or not.
-`.Internal` | Whether the network is internal or not.
-`.Labels`   | All labels assigned to the network.
-`.Label`    | Value of a specific label for this network. For example `{{.Label "project.version"}}`
+Placeholder  | Description
+-------------|------------------------------------------------------------------------------------------
+`.ID`        | Network ID
+`.Name`      | Network name
+`.Driver`    | Network driver
+`.Scope`     | Network scope (local, global)
+`.IPv6`      | Whether IPv6 is enabled on the network or not.
+`.Internal`  | Whether the network is internal or not.
+`.Labels`    | All labels assigned to the network.
+`.Label`     | Value of a specific label for this network. For example `{{.Label "project.version"}}`
+`.CreatedAt` | Time when the network was created
 
 When using the `--format` option, the `network ls` command will either
 output the data exactly as the template declares or, when using the

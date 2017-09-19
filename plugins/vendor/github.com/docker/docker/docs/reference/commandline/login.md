@@ -69,7 +69,9 @@ you can download them from:
 - Microsoft Windows Credential Manager: https://github.com/docker/docker-credential-helpers/releases
 
 You need to specify the credentials store in `$HOME/.docker/config.json`
-to tell the docker engine to use it:
+to tell the docker engine to use it. The value of the config property should be
+the suffix of the program to use (i.e. everything after `docker-credential-`).
+For example, to use `docker-credential-osxkeychain`:
 
 ```json
 {

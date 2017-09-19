@@ -30,7 +30,7 @@ Options:
   -D, --debug              Enable debug mode
       --help               Print usage
   -H, --host value         Daemon socket(s) to connect to (default [])
-  -l, --log-level string   Set the logging level ("debug", "info", "warn", "error", "fatal") (default "info")
+  -l, --log-level string   Set the logging level ("debug"|"info"|"warn"|"error"|"fatal") (default "info")
       --tls                Use TLS; implied by --tlsverify
       --tlscacert string   Trust certs signed only by this CA (default "/root/.docker/ca.pem")
       --tlscert string     Path to TLS certificate file (default "/root/.docker/cert.pem")
@@ -133,6 +133,19 @@ Docker's client uses this property. If this property is not set, the client
 falls back to the default table format. For a list of supported formatting
 directives, see the [**Formatting** section in the `docker images` documentation](images.md)
 
+The property `pluginsFormat` specifies the default format for `docker plugin ls` output.
+When the `--format` flag is not provided with the `docker plugin ls` command,
+Docker's client uses this property. If this property is not set, the client
+falls back to the default table format. For a list of supported formatting
+directives, see the [**Formatting** section in the `docker plugin ls` documentation](plugin_ls.md)
+
+The property `servicesFormat` specifies the default format for `docker
+service ls` output. When the `--format` flag is not provided with the
+`docker service ls` command, Docker's client uses this property. If this
+property is not set, the client falls back to the default json format. For a
+list of supported formatting directives, see the
+[**Formatting** section in the `docker service ls` documentation](service_ls.md)
+
 The property `serviceInspectFormat` specifies the default format for `docker
 service inspect` output. When the `--format` flag is not provided with the
 `docker service inspect` command, Docker's client uses this property. If this
@@ -146,6 +159,33 @@ stats` output. When the `--format` flag is not provided with the
 property is not set, the client falls back to the default table
 format. For a list of supported formatting directives, see
 [**Formatting** section in the `docker stats` documentation](stats.md)
+
+The property `secretFormat` specifies the default format for `docker
+secret ls` output. When the `--format` flag is not provided with the
+`docker secret ls` command, Docker's client uses this property. If this
+property is not set, the client falls back to the default table
+format. For a list of supported formatting directives, see
+[**Formatting** section in the `docker secret ls` documentation](secret_ls.md)
+
+The property `nodesFormat` specifies the default format for `docker node ls` output.
+When the `--format` flag is not provided with the `docker node ls` command,
+Docker's client uses the value of `nodesFormat`. If the value of `nodesFormat` is not set,
+the client uses the default table format. For a list of supported formatting
+directives, see the [**Formatting** section in the `docker node ls` documentation](node_ls.md)
+
+The property `credsStore` specifies an external binary to serve as the default
+credential store. When this property is set, `docker login` will attempt to
+store credentials in the binary specified by `docker-credential-<value>` which
+is visible on `$PATH`. If this property is not set, credentials will be stored
+in the `auths` property of the config. For more information, see the
+[**Credentials store** section in the `docker login` documentation](login.md#credentials-store)
+
+The property `credHelpers` specifies a set of credential helpers to use
+preferentially over `credsStore` or `auths` when storing and retrieving
+credentials for specific registries. If this property is set, the binary
+`docker-credential-<value>` will be used when storing or retrieving credentials
+for a specific registry. For more information, see the
+[**Credential helpers** section in the `docker login` documentation](login.md#credential-helpers)
 
 Once attached to a container, users detach from it and leave it running using
 the using `CTRL-p CTRL-q` key sequence. This detach key sequence is customizable
@@ -174,8 +214,12 @@ Following is a sample `config.json` file:
   },
   "psFormat": "table {{.ID}}\\t{{.Image}}\\t{{.Command}}\\t{{.Labels}}",
   "imagesFormat": "table {{.ID}}\\t{{.Repository}}\\t{{.Tag}}\\t{{.CreatedAt}}",
+  "pluginsFormat": "table {{.ID}}\t{{.Name}}\t{{.Enabled}}",
   "statsFormat": "table {{.Container}}\t{{.CPUPerc}}\t{{.MemUsage}}",
+  "servicesFormat": "table {{.ID}}\t{{.Name}}\t{{.Mode}}",
+  "secretFormat": "table {{.ID}}\t{{.Name}}\t{{.CreatedAt}}\t{{.UpdatedAt}}",
   "serviceInspectFormat": "pretty",
+  "nodesFormat": "table {{.ID}}\t{{.Hostname}}\t{{.Availability}}",
   "detachKeys": "ctrl-e,e",
   "credsStore": "secretservice",
   "credHelpers": {

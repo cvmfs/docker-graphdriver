@@ -16,9 +16,9 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/docker/docker/api"
 	"github.com/docker/docker/pkg/idtools"
 	"github.com/docker/docker/pkg/mount"
-	"github.com/docker/docker/utils"
 	"github.com/docker/docker/volume"
 )
 
@@ -36,7 +36,7 @@ var (
 	// volumeNameRegex ensures the name assigned for the volume is valid.
 	// This name is used to create the bind directory, so we need to avoid characters that
 	// would make the path to escape the root directory.
-	volumeNameRegex = utils.RestrictedNamePattern
+	volumeNameRegex = api.RestrictedNamePattern
 )
 
 type validationError struct {
@@ -277,7 +277,7 @@ func (r *Root) validateName(name string) error {
 		return validationError{fmt.Errorf("volume name is too short, names should be at least two alphanumeric characters")}
 	}
 	if !volumeNameRegex.MatchString(name) {
-		return validationError{fmt.Errorf("%q includes invalid characters for a local volume name, only %q are allowed. If you intented to pass a host directory, use absolute path", name, utils.RestrictedNameChars)}
+		return validationError{fmt.Errorf("%q includes invalid characters for a local volume name, only %q are allowed. If you intended to pass a host directory, use absolute path", name, api.RestrictedNameChars)}
 	}
 	return nil
 }
@@ -353,7 +353,7 @@ func (v *localVolume) Unmount(id string) error {
 
 func (v *localVolume) unmount() error {
 	if v.opts != nil {
-		if err := unmount(v.path); err != nil {
+		if err := mount.Unmount(v.path); err != nil {
 			if mounted, mErr := mount.Mounted(v.path); mounted || mErr != nil {
 				return errors.Wrapf(err, "error while unmounting volume path '%s'", v.path)
 			}

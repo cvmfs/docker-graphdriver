@@ -54,12 +54,11 @@ func main() {
 | :---                                              | :---                                                | :---                                        | :---                                          | :---                                                          | :---                                                  |
 | [`MakeBucket`](#MakeBucket)                       | [`GetObject`](#GetObject)                           | [`NewSymmetricKey`](#NewSymmetricKey)       | [`PresignedGetObject`](#PresignedGetObject)   | [`SetBucketPolicy`](#SetBucketPolicy)                         | [`SetAppInfo`](#SetAppInfo)                           |
 | [`ListBuckets`](#ListBuckets)                     | [`PutObject`](#PutObject)                           | [`NewAsymmetricKey`](#NewAsymmetricKey)     | [`PresignedPutObject`](#PresignedPutObject)   | [`GetBucketPolicy`](#GetBucketPolicy)                         | [`SetCustomTransport`](#SetCustomTransport)           |
-| [`BucketExists`](#BucketExists)                   | [`PutObjectStreaming`](#PutObjectStreaming)         | [`GetEncryptedObject`](#GetEncryptedObject) | [`PresignedPostPolicy`](#PresignedPostPolicy) | [`ListBucketPolicies`](#ListBucketPolicies)                   | [`TraceOn`](#TraceOn)                                 |
-| [`RemoveBucket`](#RemoveBucket)                   | [`CopyObject`](#CopyObject)                         | [`PutEncryptedObject`](#PutEncryptedObject) |                                               | [`SetBucketNotification`](#SetBucketNotification)             | [`TraceOff`](#TraceOff)                               |
-| [`ListObjects`](#ListObjects)                     | [`StatObject`](#StatObject)                         | [`NewSSEInfo`](#NewSSEInfo)                 |                                               | [`GetBucketNotification`](#GetBucketNotification)             | [`SetS3TransferAccelerate`](#SetS3TransferAccelerate) |
-| [`ListObjectsV2`](#ListObjectsV2)                 | [`RemoveObject`](#RemoveObject)                     |                                             |                                               | [`RemoveAllBucketNotification`](#RemoveAllBucketNotification) |                                                       |
-| [`ListIncompleteUploads`](#ListIncompleteUploads) | [`RemoveObjects`](#RemoveObjects)                   |                                             |                                               | [`ListenBucketNotification`](#ListenBucketNotification)       |                                                       |
-|                                                   | [`RemoveIncompleteUpload`](#RemoveIncompleteUpload) |                                             |                                               |                                                               |                                                       |
+| [`BucketExists`](#BucketExists)                   | [`CopyObject`](#CopyObject)                         | [`GetEncryptedObject`](#GetEncryptedObject) | [`PresignedPostPolicy`](#PresignedPostPolicy) | [`ListBucketPolicies`](#ListBucketPolicies)                   | [`TraceOn`](#TraceOn)                                 |
+| [`RemoveBucket`](#RemoveBucket)                   | [`StatObject`](#StatObject)                         | [`PutObjectStreaming`](#PutObjectStreaming) |                                               | [`SetBucketNotification`](#SetBucketNotification)             | [`TraceOff`](#TraceOff)                               |
+| [`ListObjects`](#ListObjects)                     | [`RemoveObject`](#RemoveObject)                     | [`PutEncryptedObject`](#PutEncryptedObject) |                                               | [`GetBucketNotification`](#GetBucketNotification)             | [`SetS3TransferAccelerate`](#SetS3TransferAccelerate) |
+| [`ListObjectsV2`](#ListObjectsV2)                 | [`RemoveObjects`](#RemoveObjects)                   | [`NewSSEInfo`](#NewSSEInfo)                 |                                               | [`RemoveAllBucketNotification`](#RemoveAllBucketNotification) |                                                       |
+| [`ListIncompleteUploads`](#ListIncompleteUploads) | [`RemoveIncompleteUpload`](#RemoveIncompleteUpload) |                                             |                                               | [`ListenBucketNotification`](#ListenBucketNotification)       |                                                       |
 |                                                   | [`FPutObject`](#FPutObject)                         |                                             |                                               |                                                               |                                                       |
 |                                                   | [`FGetObject`](#FGetObject)                         |                                             |                                               |                                                               |                                                       |
 |                                                   | [`ComposeObject`](#ComposeObject)                   |                                             |                                               |                                                               |                                                       |
@@ -532,13 +531,9 @@ __Example__
 src := minio.NewSourceInfo("my-sourcebucketname", "my-sourceobjectname", nil)
 
 // Destination object
-dst, err := minio.NewDestinationInfo("my-bucketname", "my-objectname", nil, nil)
-if err != nil {
-    fmt.Println(err)
-    return
-}
+dst := minio.NewDestinationInfo("my-bucketname", "my-objectname", nil, nil)
 
-// Copy object call
+/ Copy object call
 err = s3Client.CopyObject(dst, src)
 if err != nil {
     fmt.Println(err)
@@ -567,13 +562,9 @@ src.SetUnmodifiedSinceCond(time.Date(2014, time.April, 23, 0, 0, 0, 0, time.UTC)
 src.SetRange(0, 1024*1024-1)
 
 // Destination object
-dst, err := minio.NewDestinationInfo("my-bucketname", "my-objectname", nil, nil)
-if err != nil {
-    fmt.Println(err)
-    return
-}
+dst := minio.NewDestinationInfo("my-bucketname", "my-objectname", nil, nil)
 
-// Copy object call
+/ Copy object call
 err = s3Client.CopyObject(dst, src)
 if err != nil {
     fmt.Println(err)
@@ -657,7 +648,7 @@ src := NewSourceInfo("bucket", "object", decKey)
 ```
 
 <a name="NewDestinationInfo"></a>
-### NewDestinationInfo(bucket, object string, encryptSSEC *SSEInfo, userMeta map[string]string) (DestinationInfo, error)
+### NewDestinationInfo(bucket, object string, encryptSSEC *SSEInfo, userMeta map[string]string) DestinationInfo
 
 Construct a `DestinationInfo` object that can be used as the destination object for server-side copying operations like `CopyObject` and `ComposeObject`.
 
@@ -674,11 +665,11 @@ __Example__
 
 ``` go
 // No encryption parameter.
-dst, err := NewDestinationInfo("bucket", "object", nil, nil)
+src := NewDestinationInfo("bucket", "object", nil, nil)
 
 // With encryption parameter.
 encKey := NewSSEKey([]byte{1,2,3}, "")
-dst, err := NewDecryptionInfo("bucket", "object", encKey, nil)
+src := NewDecryptionInfo("bucket", "object", encKey, nil)
 ```
 
 
@@ -1068,6 +1059,8 @@ Generates a presigned URL for HTTP PUT operations. Browsers/Mobile clients may p
 
 NOTE: you can upload to S3 only with specified object name.
 
+
+
 __Parameters__
 
 
@@ -1092,43 +1085,13 @@ if err != nil {
 fmt.Println(presignedURL)
 ```
 
-<a name="PresignedHeadObject"></a>
-### PresignedHeadObject(bucketName, objectName string, expiry time.Duration, reqParams url.Values) (*url.URL, error)
-
-Generates a presigned URL for HTTP HEAD operations. Browsers/Mobile clients may point to this URL to directly get metadata from objects even if the bucket is private. This presigned URL can have an associated expiration time in seconds after which it is no longer operational. The default expiry is set to 7 days.
-
-__Parameters__
-
-|Param   |Type   |Description   |
-|:---|:---| :---|
-|`bucketName`  | _string_  |Name of the bucket   |
-|`objectName` | _string_  |Name of the object   |
-|`expiry` | _time.Duration_  |Expiry of presigned URL in seconds   |
-|`reqParams` | _url.Values_  |Additional response header overrides supports _response-expires_, _response-content-type_, _response-cache-control_, _response-content-disposition_.  |
-
-
-__Example__
-
-
-```go
-// Set request parameters for content-disposition.
-reqParams := make(url.Values)
-reqParams.Set("response-content-disposition", "attachment; filename=\"your-filename.txt\"")
-
-// Generates a presigned url which expires in a day.
-presignedURL, err := minioClient.PresignedHeadObject("mybucket", "myobject", time.Second * 24 * 60 * 60, reqParams)
-if err != nil {
-    fmt.Println(err)
-    return
-}
-```
-
 <a name="PresignedPostPolicy"></a>
 ### PresignedPostPolicy(PostPolicy) (*url.URL, map[string]string, error)
 
 Allows setting policy conditions to a presigned URL for POST operations. Policies such as bucket name to receive object uploads, key name prefixes, expiry policy may be set.
 
 Create policy :
+
 
 ```go
 policy := minio.NewPostPolicy()
@@ -1157,7 +1120,9 @@ if err != nil {
 }
 ```
 
+
 POST your content from the command line using `curl`:
+
 
 ```go
 fmt.Printf("curl ")

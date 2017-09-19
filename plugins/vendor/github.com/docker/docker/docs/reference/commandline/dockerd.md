@@ -35,6 +35,7 @@ Options:
       --containerd string                     Path to containerd socket
       --cpu-rt-period int                     Limit the CPU real-time period in microseconds
       --cpu-rt-runtime int                    Limit the CPU real-time runtime in microseconds
+      --data-root string                      Root directory of persistent Docker state (default "/var/lib/docker")
   -D, --debug                                 Enable debug mode
       --default-gateway ip                    Container default gateway IPv4 address
       --default-gateway-v6 ip                 Container default gateway IPv6 address
@@ -49,7 +50,6 @@ Options:
       --experimental                          Enable experimental features
       --fixed-cidr string                     IPv4 subnet for fixed IPs
       --fixed-cidr-v6 string                  IPv6 subnet for fixed IPs
-  -g, --graph string                          Root of the Docker runtime (default "/var/lib/docker")
   -G, --group string                          Group for the unix socket (default "docker")
       --help                                  Print usage
   -H, --host list                             Daemon socket(s) to connect to (default [])
@@ -723,7 +723,7 @@ with the `--exec-opt` flag. All the flag's options have the `native` prefix. A
 single `native.cgroupdriver` option is available.
 
 The `native.cgroupdriver` option specifies the management of the container's
-cgroups. You can specify only specify `cgroupfs` or `systemd`. If you specify
+cgroups. You can only specify `cgroupfs` or `systemd`. If you specify
 `systemd` and it is not available, the system errors out. If you omit the
 `native.cgroupdriver` option,` cgroupfs` is used.
 
@@ -738,8 +738,8 @@ Setting this option applies to all containers the daemon launches.
 Also Windows Container makes use of `--exec-opt` for special purpose. Docker user
 can specify default container isolation technology with this, for example:
 
-```bash
-$ sudo dockerd --exec-opt isolation=hyperv
+```console
+> dockerd --exec-opt isolation=hyperv
 ```
 
 Will make `hyperv` the default isolation technology on Windows. If no isolation
@@ -753,7 +753,6 @@ To set the DNS server for all Docker containers, use:
 ```bash
 $ sudo dockerd --dns 8.8.8.8
 ```
-
 
 To set the DNS search domain for all Docker containers, use:
 
@@ -1140,6 +1139,7 @@ This is a full example of the allowed configuration options on Linux:
 ```json
 {
 	"authorization-plugins": [],
+	"data-root": "",
 	"dns": [],
 	"dns-opts": [],
 	"dns-search": [],
@@ -1154,12 +1154,12 @@ This is a full example of the allowed configuration options on Linux:
 	"log-opts": {},
 	"mtu": 0,
 	"pidfile": "",
-	"graph": "",
 	"cluster-store": "",
 	"cluster-store-opts": {},
 	"cluster-advertise": "",
 	"max-concurrent-downloads": 3,
 	"max-concurrent-uploads": 5,
+	"default-shm-size": "64M",
 	"shutdown-timeout": 15,
 	"debug": true,
 	"hosts": [],
@@ -1197,6 +1197,7 @@ This is a full example of the allowed configuration options on Linux:
 	"seccomp-profile": "",
 	"insecure-registries": [],
 	"disable-legacy-registry": false,
+	"no-new-privileges": false,
 	"default-runtime": "runc",
 	"oom-score-adjust": -500,
 	"runtimes": {
@@ -1231,6 +1232,7 @@ This is a full example of the allowed configuration options on Windows:
 ```json
 {
     "authorization-plugins": [],
+    "data-root": "",
     "dns": [],
     "dns-opts": [],
     "dns-search": [],
@@ -1242,7 +1244,6 @@ This is a full example of the allowed configuration options on Windows:
     "log-driver": "",
     "mtu": 0,
     "pidfile": "",
-    "graph": "",
     "cluster-store": "",
     "cluster-advertise": "",
     "max-concurrent-downloads": 3,
@@ -1293,6 +1294,7 @@ The list of currently supported options that can be reconfigured is this:
   be used to run containers
 - `authorization-plugin`: specifies the authorization plugins to use.
 - `insecure-registries`: it replaces the daemon insecure registries with a new set of insecure registries. If some existing insecure registries in daemon's configuration are not in newly reloaded insecure resgitries, these existing ones will be removed from daemon's config.
+- `registry-mirrors`: it replaces the daemon registry mirrors with a new set of registry mirrors. If some existing registry mirrors in daemon's configuration are not in newly reloaded registry mirrors, these existing ones will be removed from daemon's config.
 
 Updating and reloading the cluster configurations such as `--cluster-store`,
 `--cluster-advertise` and `--cluster-store-opts` will take effect only if
@@ -1319,7 +1321,7 @@ The following daemon options must be configured for each daemon:
 ```none
 -b, --bridge=                          Attach containers to a network bridge
 --exec-root=/var/run/docker            Root of the Docker execdriver
--g, --graph=/var/lib/docker            Root of the Docker runtime
+--data-root=/var/lib/docker            Root of persisted Docker data
 -p, --pidfile=/var/run/docker.pid      Path to use for daemon PID file
 -H, --host=[]                          Daemon socket(s) to connect to
 --iptables=true                        Enable addition of iptables rules
@@ -1336,8 +1338,9 @@ It is very important to properly understand the meaning of those options and to 
 If you are not using the default, you must create and configure the bridge manually or just set it to 'none': `--bridge=none`
 - `--exec-root` is the path where the container state is stored. The default value is `/var/run/docker`. Specify the path for
 your running daemon here.
-- `--graph` is the path where images are stored. The default value is `/var/lib/docker`. To avoid any conflict with other daemons
-set this parameter separately for each daemon.
+- `--data-root` is the path where persisted data such as images, volumes, and
+cluster state are stored. The default value is `/var/lib/docker`. To avoid any
+conflict with other daemons, set this parameter separately for each daemon.
 - `-p, --pidfile=/var/run/docker.pid` is the path where the process ID of the daemon is stored. Specify the path for your
 pid file here.
 - `--host=[]` specifies where the Docker daemon will listen for client connections. If unspecified, it defaults to `/var/run/docker.sock`.
@@ -1363,6 +1366,6 @@ $ sudo dockerd \
         --iptables=false \
         --ip-masq=false \
         --bridge=none \
-        --graph=/var/lib/docker-bootstrap \
+        --data-root=/var/lib/docker-bootstrap \
         --exec-root=/var/run/docker-bootstrap
 ```

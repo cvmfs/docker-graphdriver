@@ -23,7 +23,7 @@ Display detailed information on one or more services
 Options:
   -f, --format string   Format the output using the given Go template
       --help            Print usage
-      --pretty          Print the information in a human friendly format.
+      --pretty          Print the information in a human friendly format
 ```
 
 ## Description
@@ -129,15 +129,18 @@ Service Mode:	REPLICATED
 Placement:
 UpdateConfig:
  Parallelism:	0
+ On failure:	pause
+ Max failure ratio:	0
 ContainerSpec:
  Image:		nginx:alpine
 Resources:
+Networks:	net1
 Endpoint Mode:  vip
 Ports:
- Name =
- Protocol = tcp
- TargetPort = 443
  PublishedPort = 4443
+  Protocol = tcp
+  TargetPort = 443
+  PublishMode = ingress
 ```
 
 You can also use `--format pretty` for the same effect.

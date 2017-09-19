@@ -27,7 +27,7 @@
 
 [[constraint]]
   name = "github.com/docker/docker"
-  version = "v17.03.2-ce"
+  version = "=v17.05.0-ce"
 
 [[constraint]]
   branch = "master"
@@ -39,7 +39,7 @@
 
 [[constraint]]
   name = "github.com/minio/minio-go"
-  version = "3.0.3"
+  version = "3.0.0"
 
 [[constraint]]
   name = "github.com/opencontainers/selinux"
