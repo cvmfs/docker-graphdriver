@@ -9,7 +9,10 @@ var PrintManifest = &cobra.Command{
 	Use:   "manifest",
 	Short: "Show manifest",
 	Run: func(cmd *cobra.Command, args []string) {
-		manifest, _ := lib.GetManifest(args)
+		flag := cmd.Flags().Lookup("registry")
+		var registry string = string(flag.Value.String())
+
+		manifest, _ := lib.GetManifest(registry, args)
 		buffer, _ := json.MarshalIndent(manifest, "", " ")
 		fmt.Println(string(buffer))
 	},

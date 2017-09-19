@@ -26,7 +26,7 @@ type MinioConfig struct {
 	PublishStatusURL string
 }
 
-var minioConfig = readConfig()
+var minioConfig MinioConfig
 
 func readConfig() (config MinioConfig) {
 	fmt.Println("reading minio config")
@@ -121,13 +121,17 @@ func upload(src, h string) error {
 		return err
 	}
 
-	_, err = minioClient.FPutObject("layers", h, src, "application/x-gzip")
-	if err != nil {
-		fmt.Println("Failed call to FPutObject()")
-		return err
+	for i := 0; i < 5; i++ {
+		_, err = minioClient.FPutObject("layers", h, src, "application/x-gzip")
+		if err != nil {
+			fmt.Printf("Failed FPutObject(), this was attempt %d\n", i)
+		} else {
+			fmt.Printf("Upload successful, attempt %d\n!", i)
+			return nil
+		}
 	}
 
-	return nil
+	return fmt.Errorf("Failed to upload layer %s with hash %s\n", src, h)
 }
 
 func waitForPublishing(hash string) (err error) {
@@ -176,6 +180,7 @@ func waitForPublishing(hash string) (err error) {
 
 func (cm *cvmfsManager) UploadNewLayer(orig string) (layer ThinImageLayer, err error) {
 	tarFileName, err := tar(orig)
+	minioConfig = readConfig()
 
 	if err != nil {
 		fmt.Printf("Failed to create tar: %s\n", err.Error())
@@ -188,6 +193,7 @@ func (cm *cvmfsManager) UploadNewLayer(orig string) (layer ThinImageLayer, err e
 		return layer, err
 	}
 
+	fmt.Printf("Uploading file: %s\n", tarFileName)
 	if err := upload(tarFileName, h); err != nil {
 		fmt.Printf("Failed to upload: %s\n", err.Error())
 		return layer, err

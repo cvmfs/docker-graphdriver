@@ -26,7 +26,7 @@ function init() {
   export GOPATH="$CACHE/gopath"
 
   export GRAPHDRIVERS_REPO_URL="github.com/cvmfs/docker-graphdriver"
-  export GRAPH_PLUGIN_ROOTFS_TAR="$CACHE/data/ubuntu_cvmfs-2.4.x_rootfs.tar.bz2"
+  export GRAPH_PLUGIN_ROOTFS_TAR="$CACHE/data/ubuntu_cvmfs-2.4.x_rootfs-2.tar.bz2"
   export GRAPH_PLUGIN_CONFIG="$CACHE/data/config.json"
   export DOCKERHUB_URL="nhardi-cc7-ansible.cern.ch"
 

@@ -14,9 +14,9 @@ import (
 )
 
 const (
-	dockerAuthUrl     = "https://auth.docker.io"
-	dockerRegistryUrl = "https://registry-1.docker.io/v2"
-	thinImageVersion  = "0.1"
+	dockerAuthUrl = "https://auth.docker.io"
+	// dockerRegistryUrl = ""
+	thinImageVersion = "0.1"
 )
 
 type TokenMessage struct {
@@ -48,8 +48,9 @@ func printUsage() {
 	fmt.Println("You need to specify a docker image to download!")
 }
 
-func getManifest(image string) Manifest {
-	imageUrl := createImageUrl(image)
+func getManifest(dockerRegistryUrl, image string) Manifest {
+	imageUrl := createImageUrl(dockerRegistryUrl, image)
+	fmt.Println(imageUrl)
 
 	resp, _ := http.Get(imageUrl)
 
@@ -73,7 +74,7 @@ func getManifest(image string) Manifest {
 	return manifest
 }
 
-func getLayer(repo, digest string) {
+func getLayer(dockerRegistryUrl, repo, digest string) {
 	filename := "/tmp/layers/" + strings.Split(digest, ":")[1] + ".tar.gz"
 
 	file, _ := os.Create(filename)
@@ -153,12 +154,15 @@ func getToken(authParams map[string]string) string {
 	return m.Token
 }
 
-func createImageUrl(image string) string {
-	s := strings.Split(image, "/")
+func createImageUrl(dockerRegistryUrl, image string) string {
+	i := strings.Split(image, ":")
+	tag := i[1]
+
+	s := strings.Split(i[0], "/")
 	repo := s[0]
 	name := strings.Join(s[1:], "/")
 
-	arr := []string{dockerRegistryUrl, repo, name, "manifests", "latest"}
+	arr := []string{dockerRegistryUrl, repo, name, "manifests", tag}
 	return strings.Join(arr, "/")
 }
 
@@ -166,37 +170,38 @@ func checkImageName(image string) bool {
 	return false
 }
 
-func PullLayers(args []string) {
+func PullLayers(dockerRegistryUrl string, args []string) {
 	if len(args) != 1 {
 		printUsage()
 		return
 	}
 
-	image := args[0]
-	manifest := getManifest(image)
+	reference := args[0]
+	manifest := getManifest(dockerRegistryUrl, reference)
+
+	image := strings.Split(reference, ":")[0]
 
 	os.Mkdir("/tmp/layers", 0755)
 	for idx, layer := range manifest.Layers {
-
 		fmt.Printf("%2d: %s\n", idx, layer.Digest)
-		getLayer(image, layer.Digest)
+		getLayer(dockerRegistryUrl, image, layer.Digest)
 	}
 }
 
-func GetManifest(args []string) (Manifest, error) {
+func GetManifest(dockerRegistryUrl string, args []string) (Manifest, error) {
 	var manifest Manifest
 
 	if len(args) != 1 {
 		printUsage()
 		return manifest, errors.New("Not enough arguments...")
 	} else {
-		manifest = getManifest(args[0])
+		manifest = getManifest(dockerRegistryUrl, args[0])
 		return manifest, nil
 	}
 }
 
-func GetConfig(args []string) {
-	manifest, _ := GetManifest(args)
+func GetConfig(dockerRegistryUrl string, args []string) {
+	manifest, _ := GetManifest(dockerRegistryUrl, args)
 	repo := args[0]
 
 	config_digest := manifest.Config.Digest

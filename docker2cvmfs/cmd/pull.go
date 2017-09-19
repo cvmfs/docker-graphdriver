@@ -7,6 +7,8 @@ var PullLayers = &cobra.Command{
 	Use:   "pull layers",
 	Short: "pull the layers",
 	Run: func(cmd *cobra.Command, args []string) {
-		lib.PullLayers(args)
+		flag := cmd.Flags().Lookup("registry")
+		var registry string = string(flag.Value.String())
+		lib.PullLayers(registry, args)
 	},
 }
