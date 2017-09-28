@@ -1,0 +1,8 @@
+{
+	"AccessKey": "xxxxxxxxxxxxxxxxxx",
+	"AccessSecret": "xxxxxxxxxxxxxxx",
+	"CvmfsRepo": "cvmfs-repo.example.com",
+	"Host": "cvmfs-server.example.com:9000",
+	"SSL": false,
+	"PublishStatusURL": "http://cvmfs-server.example.com:3000/status"
+}
