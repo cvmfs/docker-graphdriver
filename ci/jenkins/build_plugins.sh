@@ -8,11 +8,10 @@ die() {
 }
 
 [ "x$GOROOT" != x ] || die "GOROOT missing"
-[ "x$WORKSPACE" != x ] || die "WORKSPACE missing"
 [ "x$CVMFS_SOURCE_LOCATION" != x ] || die "CVMFS_SOURCE_LOCATION missing"
 [ "x$CVMFS_BUILD_LOCATION" != x ] || die "CVMFS_BUILD_LOCATION missing"
 
-export GOPATH="$WORKSPACE"
+export GOPATH="$CVMFS_SOURCE_LOCATION/.."
 PLUGINS_ROOT="github.com/cvmfs/docker-graphdriver/plugins"
 
 cd $CVMFS_BUILD_LOCATION
