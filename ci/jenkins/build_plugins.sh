@@ -13,9 +13,7 @@ die() {
 
 export GOPATH="$CVMFS_SOURCE_LOCATION/.."
 PLUGINS_ROOT="github.com/cvmfs/docker-graphdriver/plugins"
-
-cd $CVMFS_SOURCE_LOCATION
-GIT_COMMIT=$(git rev-parse HEAD)
+GIT_COMMIT=$(cd $CVMFS_SOURCE_LOCATION/$PLUGINS_ROOT && git rev-parse HEAD)
 
 cd $CVMFS_BUILD_LOCATION
 for plugin in aufs_cvmfs overlay2_cvmfs; do
