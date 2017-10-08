@@ -1,0 +1,70 @@
+# Builds the CernVM-FS graphdriver plugin container for Docker
+# Requires a Debian based distribution with debootstrap, fakeroot, fakechroot
+
+IMAGE_NAME = cvmfs-graphdriver-plugin
+IMAGE_ARCH = amd64
+IMAGE_DISTRO = stretch
+IMAGE_VERSION = 0.1
+IMAGE_TARBALL = $(IMAGE_NAME)-$(IMAGE_VERSION).tar.bz2
+CVMFS_VERSION = 2.4.1
+CVMFS_RELEASE = 1+debian9.1
+GRAPHDRIVER_AUFS_VERSION = 0.1
+GRAPHDRIVER_OVERLAY2_VERSION = 0.1
+
+CVMFS_BASE_URL = https://ecsft.cern.ch/dist/cvmfs/cvmfs-$(CVMFS_VERSION)
+GRAPHDRIVER_AUFS_BASE_URL = https://ecsft.cern.ch/dist/cvmfs/docker-graphdriver/aufs_cvmfs
+GRAPHDRIVER_OVERLAY2_BASE_URL = https://ecsft.cern.ch/dist/cvmfs/docker-graphdriver/aufs_cvmfs
+
+CVMFS_SRC = $(CVMFS_BASE_URL)/cvmfs_$(CVMFS_VERSION)~$(CVMFS_RELEASE)_$(IMAGE_ARCH).deb
+CVMFS_CONFIG_SRC = https://ecsft.cern.ch/dist/cvmfs/cvmfs-config/cvmfs-config-none_1.0-2_all.deb
+GRAPHDRIVER_AUFS_SRC = $(GRAPHDRIVER_AUFS_BASE_URL)/$(GRAPHDRIVER_AUFS_VERSION)/aufs_cvmfs
+GRAPHDRIVER_OVERLAY2_SRC = $(GRAPHDRIVER_OVERLAY2_BASE_URL)/$(GRAPHDRIVER_OVERLAY2_VERSION)/overlay2_cvmfs
+
+ROOTFS = $(IMAGE_NAME)-$(IMAGE_VERSION)/rootfs
+
+all: $(IMAGE_TARBALL)
+
+clean:
+	rm -f $(IMAGE_TARBALL)
+	rm -rf $(IMAGE_NAME)-$(IMAGE_VERSION)
+
+$(IMAGE_TARBALL): $(ROOTFS)/CONTENTS
+	tar cfJ $@ $(IMAGE_NAME)-$(IMAGE_VERSION)
+	rm -rf $(IMAGE_NAME)-$(IMAGE_VERSION)
+
+$(ROOTFS)/CONTENTS: $(ROOTFS)/usr/bin/cvmfs2 \
+  $(ROOTFS)/usr/local/bin/cvmfs_aufs \
+  $(ROOTFS)/usr/local/bin/cvmfs_overlay2
+	cat /dev/null > $(ROOTFS)/.cvmfs.deb
+	cat /dev/null > $(ROOTFS)/.cvmfs-config.deb
+	fakechroot fakeroot chroot $(ROOTFS) apt-get clean
+	echo "$(IMAGE_DISTRO)" >> $@
+	echo "$(CVMFS_CONFIG_SRC)" >> $@
+	echo "$(CVMFS_SRC)" >> $@
+	echo "$(GRAPHDRIVER_AUFS_SRC)" >> $@
+	echo "$(GRAPHDRIVER_OVERLAY2_SRC)" >> $@
+
+$(ROOTFS)/.done_minbase:
+	mkdir $(IMAGE_NAME)-$(IMAGE_VERSION)
+	fakechroot fakeroot debootstrap --variant=minbase $(IMAGE_DISTRO) $(ROOTFS)
+	touch $(ROOTFS)/.done_minbase
+
+$(ROOTFS)/.cvmfs-config.deb: $(ROOTFS)/.done_minbase
+	curl -o $@ $(CVMFS_CONFIG_SRC)
+
+$(ROOTFS)/.cvmfs.deb: $(ROOTFS)/.done_minbase
+	curl -o $@ $(CVMFS_SRC)
+
+$(ROOTFS)/usr/bin/cvmfs2: | $(ROOTFS)/.cvmfs-config.deb $(ROOTFS)/.cvmfs.deb
+	fakechroot fakeroot chroot $(ROOTFS) dpkg -i .cvmfs-config.deb 
+	fakechroot fakeroot chroot $(ROOTFS) dpkg -i .cvmfs.deb || true
+	fakechroot fakeroot chroot $(ROOTFS) apt-get install -fy
+
+$(ROOTFS)/usr/local/bin/cvmfs_aufs: $(ROOTFS)/.done_minbase
+	curl -o $@ $(GRAPHDRIVER_AUFS_SRC)
+	chmod +x $@
+
+$(ROOTFS)/usr/local/bin/cvmfs_overlay2: $(ROOTFS)/.done_minbase
+	curl -o $@ $(GRAPHDRIVER_OVERLAY2_SRC)
+	chmod +x $@
+
