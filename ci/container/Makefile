@@ -8,15 +8,18 @@ IMAGE_VERSION = 0.1
 IMAGE_TARBALL = $(IMAGE_NAME)-$(IMAGE_VERSION).tar.bz2
 CVMFS_VERSION = 2.4.1
 CVMFS_RELEASE = 1+debian9.1
+CVMFS_CONFIG_VERSION = 1.0
+CVMFS_CONFIG_RELEASE = 1
 GRAPHDRIVER_AUFS_VERSION = 0.1
 GRAPHDRIVER_OVERLAY2_VERSION = 0.1
 
 CVMFS_BASE_URL = https://ecsft.cern.ch/dist/cvmfs/cvmfs-$(CVMFS_VERSION)
+CVMFS_CONFIG_BASE_URL = https://ecsft.cern.ch/dist/cvmfs/cvmfs-config
 GRAPHDRIVER_AUFS_BASE_URL = https://ecsft.cern.ch/dist/cvmfs/docker-graphdriver/aufs_cvmfs
 GRAPHDRIVER_OVERLAY2_BASE_URL = https://ecsft.cern.ch/dist/cvmfs/docker-graphdriver/aufs_cvmfs
 
 CVMFS_SRC = $(CVMFS_BASE_URL)/cvmfs_$(CVMFS_VERSION)~$(CVMFS_RELEASE)_$(IMAGE_ARCH).deb
-CVMFS_CONFIG_SRC = https://ecsft.cern.ch/dist/cvmfs/cvmfs-config/cvmfs-config-none_1.0-2_all.deb
+CVMFS_CONFIG_SRC = $(CVMFS_CONFIG_BASE_URL)/cvmfs-config-graphdriver_$(CVMFS_CONFIG_VERSION)-$(CVMFS_CONFIG_RELEASE)_all.deb
 GRAPHDRIVER_AUFS_SRC = $(GRAPHDRIVER_AUFS_BASE_URL)/$(GRAPHDRIVER_AUFS_VERSION)/aufs_cvmfs
 GRAPHDRIVER_OVERLAY2_SRC = $(GRAPHDRIVER_OVERLAY2_BASE_URL)/$(GRAPHDRIVER_OVERLAY2_VERSION)/overlay2_cvmfs
 
