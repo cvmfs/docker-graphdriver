@@ -7,7 +7,6 @@ die() {
   exit 1
 }
 
-[ "x$GOROOT" != x ] || die "GOROOT missing"
 [ "x$CVMFS_SOURCE_LOCATION" != x ] || die "CVMFS_SOURCE_LOCATION missing"
 [ "x$CVMFS_BUILD_LOCATION" != x ] || die "CVMFS_BUILD_LOCATION missing"
 
@@ -22,7 +21,7 @@ for plugin in aufs_cvmfs overlay2_cvmfs; do
   VERSION=$(cat $CVMFS_SOURCE_LOCATION/$PLUGINS_ROOT/$plugin/VERSION)
   mkdir -p $plugin/$VERSION
   pushd $plugin/$VERSION
-  PATH=$GOROOT/bin:$PATH go build \
+  go build \
     -ldflags="-X main.version=$VERSION -X main.git_hash=$GIT_COMMIT" \
     -v "$PLUGINS_ROOT/$plugin"
   popd
