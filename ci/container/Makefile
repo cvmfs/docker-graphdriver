@@ -38,17 +38,18 @@ $(ROOTFS)/CONTENTS: $(ROOTFS)/usr/bin/cvmfs2 \
 	cat /dev/null > $(ROOTFS)/.cvmfs.deb
 	cat /dev/null > $(ROOTFS)/.cvmfs-config.deb
 	fakechroot fakeroot chroot $(ROOTFS) apt-get clean
-	echo "Image version: $(IMAGE_VERSION)" >> $@
-	echo "Revision: TODO" >> $@
-	echo "$(IMAGE_DISTRO)" >> $@
-	echo "$(CVMFS_CONFIG_SRC)" >> $@
-	echo "$(CVMFS_SRC)" >> $@
-	echo "$(GRAPHDRIVER_AUFS_SRC)" >> $@
-	echo "$(GRAPHDRIVER_OVERLAY2_SRC)" >> $@
+	echo "Image version:            $(IMAGE_VERSION)" >> $@
+	echo "Git revision:             TODO" >> $@
+	echo "Debian distribution:      $(IMAGE_DISTRO)" >> $@
+	echo "CernVM-FS configuration:  $(CVMFS_CONFIG_SRC)" >> $@
+	echo "CernVM-FS version:        $(CVMFS_SRC)" >> $@
+	echo "AUFS graph driver:        $(GRAPHDRIVER_AUFS_SRC)" >> $@
+	echo "Overlay2 graph driver:    $(GRAPHDRIVER_OVERLAY2_SRC)" >> $@
 
 $(ROOTFS)/.done_minbase:
 	mkdir $(IMAGE_NAME)-$(IMAGE_VERSION)
 	fakechroot fakeroot debootstrap --variant=minbase $(IMAGE_DISTRO) $(ROOTFS)
+	fakechroot fakeroot chroot $(ROOTFS) ln -sf /bin/kmod /sbin/modprobe
 	touch $(ROOTFS)/.done_minbase
 
 $(ROOTFS)/.cvmfs-config.deb: $(ROOTFS)/.done_minbase
