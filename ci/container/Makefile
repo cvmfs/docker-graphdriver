@@ -38,6 +38,8 @@ $(ROOTFS)/CONTENTS: $(ROOTFS)/usr/bin/cvmfs2 \
 	cat /dev/null > $(ROOTFS)/.cvmfs.deb
 	cat /dev/null > $(ROOTFS)/.cvmfs-config.deb
 	fakechroot fakeroot chroot $(ROOTFS) apt-get clean
+	echo "Image version: $(IMAGE_VERSION)" >> $@
+	echo "Revision: TODO" >> $@
 	echo "$(IMAGE_DISTRO)" >> $@
 	echo "$(CVMFS_CONFIG_SRC)" >> $@
 	echo "$(CVMFS_SRC)" >> $@
