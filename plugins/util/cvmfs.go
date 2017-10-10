@@ -31,6 +31,17 @@ func (t *ThinImage) AddLayer(newLayer ThinImageLayer) {
 	t.Layers = append([]ThinImageLayer{newLayer}, t.Layers...)
 }
 
+func reverse(in []ThinImageLayer) []ThinImageLayer {
+	l := len(in)
+	out := make([]ThinImageLayer, l)
+
+	for i, v := range in {
+		out[l-i-1] = v
+	}
+
+	return out
+}
+
 func IsThinImageLayer(diffPath string) bool {
 	magic_file_path := path.Join(diffPath, ".thin")
 	_, err := os.Stat(magic_file_path)
@@ -74,7 +85,7 @@ func GetNestedLayerIDs(diffPath string) []ThinImageLayer {
 	var thin ThinImage
 	json.Unmarshal(content, &thin)
 
-	return thin.Layers
+	return reverse(thin.Layers)
 }
 
 func ParseOptions(options []string) (map[string]string, error) {
