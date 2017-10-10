@@ -1,5 +1,5 @@
 # Builds the CernVM-FS graphdriver plugin container for Docker
-# Requires a Debian based distribution with 
+# Requires a Debian based distribution with
 # git, debootstrap, fakeroot, fakechroot
 
 IMAGE_NAME = cvmfs-graphdriver-plugin
@@ -56,10 +56,6 @@ $(ROOTFS)/CONTENTS: $(ROOTFS)/usr/bin/cvmfs2 \
 $(ROOTFS)/.done_minbase:
 	mkdir $(IMAGE_NAME)-$(IMAGE_VERSION)
 	fakechroot fakeroot debootstrap --variant=minbase $(IMAGE_DISTRO) $(ROOTFS)
-	ln -sf /bin/kmod $(ROOTFS)/sbin/modprobe
-	ln -sf /lib/x86_64-linux-gnu/ld-2.24.so $(ROOTFS)/lib64/ld-linux-x86-64.so.2
-	ln -sf /run $(ROOTFS)/var/run
-	mkdir $(ROOTFS)/var/run/cvmfs
 	touch $(ROOTFS)/.done_minbase
 
 $(MANIFEST): $(ROOTFS)/.done_minbase
@@ -75,9 +71,13 @@ $(ROOTFS)/.cvmfs.deb: $(ROOTFS)/.done_minbase
 	curl -o $@ $(CVMFS_SRC)
 
 $(ROOTFS)/usr/bin/cvmfs2: | $(ROOTFS)/.cvmfs-config.deb $(ROOTFS)/.cvmfs.deb
-	fakechroot fakeroot chroot $(ROOTFS) dpkg -i .cvmfs-config.deb 
+	fakechroot fakeroot chroot $(ROOTFS) dpkg -i .cvmfs-config.deb
 	fakechroot fakeroot chroot $(ROOTFS) dpkg -i .cvmfs.deb || true
 	fakechroot fakeroot chroot $(ROOTFS) apt-get install -fy
+	ln -sf /bin/kmod $(ROOTFS)/sbin/modprobe
+	ln -sf /lib/x86_64-linux-gnu/ld-2.24.so $(ROOTFS)/lib64/ld-linux-x86-64.so.2
+	ln -sf /run $(ROOTFS)/var/run
+	mkdir $(ROOTFS)/var/run/cvmfs
 
 $(ROOTFS)/usr/local/bin/aufs_cvmfs: $(ROOTFS)/.done_minbase
 	curl -o $@ $(GRAPHDRIVER_AUFS_SRC)
