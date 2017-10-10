@@ -78,7 +78,7 @@ $(ROOTFS)/usr/bin/cvmfs2: | $(ROOTFS)/.cvmfs-config.deb $(ROOTFS)/.cvmfs.deb
 	ln -sf /lib/x86_64-linux-gnu/ld-2.24.so $(ROOTFS)/lib64/ld-linux-x86-64.so.2
 	rm -f $(ROOTFS)/var/run
 	ln -s /run $(ROOTFS)/var/run
-	mkdir $(ROOTFS)/var/run/cvmfs
+	mkdir $(ROOTFS)/run/cvmfs
 	chmod 0755 $(ROOTFS)/bin/mount
 	chmod 0755 $(ROOTFS)/bin/umount
 	chmod 0755 $(ROOTFS)/bin/fusermount
