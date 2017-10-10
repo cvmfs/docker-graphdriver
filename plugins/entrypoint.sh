@@ -18,9 +18,9 @@ function run_binary() {
     echo "runing binary: $driver"
 
     if [ x"$driver" == x"overlay" ]; then
-        $PLUGINS_DIR/overlay2_cvmfs
+        exec $PLUGINS_DIR/overlay2_cvmfs
     elif [ x"$driver" == x"aufs" ]; then
-        $PLUGINS_DIR/aufs_cvmfs
+        exec $PLUGINS_DIR/aufs_cvmfs
     fi
 }
 
