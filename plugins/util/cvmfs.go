@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"strings"
 	"sync"
 	"time"
 )
@@ -182,6 +183,10 @@ func (cm *cvmfsManager) umount(repo string) error {
 }
 
 func (cm *cvmfsManager) isConfigured(repo string) error {
+	if strings.HasSuffix(repo, ".cern.ch") {
+		return nil
+	}
+
 	fmt.Println("isConfigured()")
 
 	confPath := "/etc/cvmfs/config.d"
