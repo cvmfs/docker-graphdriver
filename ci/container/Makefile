@@ -40,7 +40,8 @@ $(IMAGE_TARBALL): $(ROOTFS)/CONTENTS $(MANIFEST)
 
 $(ROOTFS)/CONTENTS: $(ROOTFS)/usr/bin/cvmfs2 \
   $(ROOTFS)/usr/local/bin/cvmfs_aufs \
-  $(ROOTFS)/usr/local/bin/cvmfs_overlay2
+  $(ROOTFS)/usr/local/bin/cvmfs_overlay2 \
+  $(ROOTFS)/usr/local/bin/entrypoint.sh
 	cat /dev/null > $(ROOTFS)/.cvmfs.deb
 	cat /dev/null > $(ROOTFS)/.cvmfs-config.deb
 	fakechroot fakeroot chroot $(ROOTFS) apt-get clean
@@ -60,6 +61,9 @@ $(ROOTFS)/.done_minbase:
 
 $(MANIFEST): $(ROOTFS)/.done_minbase
 	cp $(GIT_SRC)/data/plugin-config.json $@
+
+$(ROOTFS)/usr/local/bin/entrypoint.sh: $(ROOTFS)/.done_minbase
+	cp $(GIT_SRC)/plugins/entrypoint.sh $@
 
 $(ROOTFS)/.cvmfs-config.deb: $(ROOTFS)/.done_minbase
 	curl -o $@ $(CVMFS_CONFIG_SRC)
