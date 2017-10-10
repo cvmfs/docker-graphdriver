@@ -79,6 +79,8 @@ $(ROOTFS)/usr/bin/cvmfs2: | $(ROOTFS)/.cvmfs-config.deb $(ROOTFS)/.cvmfs.deb
 	rm -f $(ROOTFS)/var/run
 	ln -s /run $(ROOTFS)/var/run
 	mkdir $(ROOTFS)/var/run/cvmfs
+	chmod 0755 $(ROOTFS)/bin/mount
+	chmod 0755 $(ROOTFS)/bin/fusermount
 
 $(ROOTFS)/usr/local/bin/aufs_cvmfs: $(ROOTFS)/.done_minbase
 	curl -o $@ $(GRAPHDRIVER_AUFS_SRC)
