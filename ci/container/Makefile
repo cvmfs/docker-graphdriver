@@ -5,7 +5,7 @@
 IMAGE_NAME = cvmfs-graphdriver-plugin
 IMAGE_ARCH = amd64
 IMAGE_DISTRO = stretch
-IMAGE_VERSION = 0.2
+IMAGE_VERSION = 0.3
 IMAGE_TARBALL = $(IMAGE_NAME)-$(IMAGE_VERSION).tar.bz2
 CVMFS_VERSION = 2.4.1
 CVMFS_RELEASE = 1+debian9.1
@@ -76,7 +76,8 @@ $(ROOTFS)/usr/bin/cvmfs2: | $(ROOTFS)/.cvmfs-config.deb $(ROOTFS)/.cvmfs.deb
 	fakechroot fakeroot chroot $(ROOTFS) apt-get install -fy
 	ln -sf /bin/kmod $(ROOTFS)/sbin/modprobe
 	ln -sf /lib/x86_64-linux-gnu/ld-2.24.so $(ROOTFS)/lib64/ld-linux-x86-64.so.2
-	ln -sf /run $(ROOTFS)/var/run
+	rm -f $(ROOTFS)/var/run
+	ln -s /run $(ROOTFS)/var/run
 	mkdir $(ROOTFS)/var/run/cvmfs
 
 $(ROOTFS)/usr/local/bin/aufs_cvmfs: $(ROOTFS)/.done_minbase
