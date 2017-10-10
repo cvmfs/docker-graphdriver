@@ -1,0 +1,37 @@
+#!/bin/bash
+
+PLUGINS_DIR="/usr/local/bin"
+
+function test_unionfs() {
+    driver=$1
+    cat /proc/filesystems | grep $driver > /dev/null
+}
+
+function load_unionfs() {
+    driver=$1
+    /sbin/modprobe $driver > /dev/null
+}
+
+function run_binary() {
+    driver=$1
+
+    echo "runing binary: $driver"
+
+    if [ x"$driver" == x"overlay" ]; then
+        $PLUGINS_DIR/overlay2_cvmfs
+    elif [ x"$driver" == x"aufs" ]; then
+        $PLUGINS_DIR/aufs_cvmfs
+    fi
+}
+
+function fail() {
+	  echo "ERROR: aufs and overlayfs modules not available!"
+    exit 1
+}
+
+function start_plugin() {
+    driver=$1
+    (test_unionfs $driver || load_unionfs $driver) && run_binary $driver
+}
+
+start_plugin "overlay" || start_plugin "aufs" || fail
