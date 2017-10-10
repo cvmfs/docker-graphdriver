@@ -14,13 +14,20 @@ var (
 		"Refer to https://github.com/cvmfs/docker-graphdriver for further details."
 )
 
-func print_info() {
+func print_info() bool {
+	if len(os.Args) < 2 {
+		return false
+	}
+
 	switch arg := os.Args[1]; arg {
 	case "-v":
 		fmt.Println("Version: ", version)
 		fmt.Println("Commit:  ", git_hash)
+		return true
+
 	case "-h":
 		fmt.Println(help_msg)
+		return true
 	}
-	return
+	return false
 }
