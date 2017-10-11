@@ -676,10 +676,10 @@ func (d *Driver) ApplyDiff(id string, parent string, diff io.Reader) (size int64
 
 	// TODO: check if thin layer had any regular parents
 	if util.IsThinImageLayer(applyDir) {
-		thinDescriptor := util.ReadThinFile(path.Join(applyDir, ".thin"))
-		lowers := make([]string, len(thinDescriptor.Layers))
+		thin_layers := util.GetNestedLayerIDs(applyDir)
+		lowers := make([]string, len(thin_layers))
 
-		for i, layer := range thinDescriptor.Layers {
+		for i, layer := range thin_layers {
 			lid := generateID(idLength)
 
 			digest := layer.Digest
