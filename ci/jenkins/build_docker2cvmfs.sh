@@ -22,6 +22,6 @@ mkdir -p docker2cvmfs/$VERSION
 pushd docker2cvmfs/$VERSION
 go build \
   -ldflags="-X main.version=$VERSION -X main.git_hash=$GIT_COMMIT" \
-  -v "$PLUGINS_ROOT/$plugin"
+  -v "$D2C_ROOT"
 popd
 
