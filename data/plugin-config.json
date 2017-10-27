@@ -34,14 +34,14 @@
   ],
   "Mounts": [
 	{ "Name": "cvmfs_ext_config",
-	  "Source": "/etc/cvmfs/graphdriver",
+	  "Source": "/etc/cvmfs",
 	  "Destination": "/cvmfs_ext_config",
 	  "Type": "none",
 	  "Options": ["bind", "ro"],
 	  "Settable": ["source"]
 	},
 	{ "Name": "minio_ext_config",
-	  "Source": "/etc/cvmfs/graphdriver",
+	  "Source": "/etc/cvmfs",
 	  "Destination": "/minio_ext_config",
 	  "Type": "none",
 	  "Options": ["bind", "ro"],
