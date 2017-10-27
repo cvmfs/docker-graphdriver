@@ -18,8 +18,8 @@ cd $CVMFS_BUILD_LOCATION
 echo "Building docker2cvmfs"
 
 VERSION=$(cat $CVMFS_SOURCE_LOCATION/$D2C_ROOT/VERSION)
-mkdir -p docker2cvmfs/$VERSION
-pushd docker2cvmfs/$VERSION
+mkdir -p $VERSION
+pushd $VERSION
 go build \
   -ldflags="-X main.version=$VERSION -X main.git_hash=$GIT_COMMIT" \
   -v "$D2C_ROOT"
