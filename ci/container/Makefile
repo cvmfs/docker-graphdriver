@@ -4,15 +4,15 @@
 
 IMAGE_NAME = cvmfs-graphdriver-plugin
 IMAGE_ARCH = amd64
-IMAGE_VERSION = 0.9
+IMAGE_VERSION = 0.10
 IMAGE_TARBALL = $(IMAGE_NAME)-$(IMAGE_VERSION).tar.bz2
 BB_VERSION = 1.23.2
 CVMFS_VERSION = 2.4.2
 CVMFS_RELEASE = 1+debian9.1
 CVMFS_CONFIG_VERSION = 1.1
 CVMFS_CONFIG_RELEASE = 1
-GRAPHDRIVER_AUFS_VERSION = 0.4
-GRAPHDRIVER_OVERLAY2_VERSION = 0.4
+GRAPHDRIVER_AUFS_VERSION = 0.5
+GRAPHDRIVER_OVERLAY2_VERSION = 0.5
 
 BB_BASE_URL = http://ecsft.cern.ch/dist/cernvm
 CVMFS_BASE_URL = https://ecsft.cern.ch/dist/cvmfs/cvmfs-$(CVMFS_VERSION)
@@ -85,7 +85,6 @@ $(ROOTFS)/.done_minbase: $(ROOTFS)/busybox
 	mkdir -p $(ROOTFS)/var/log
 	mkdir -p $(ROOTFS)/var/run/cvmfs
 	ln -fs lib $(ROOTFS)/lib64
-	ln -fs ../bin $(ROOTFS)/usr/bin
 	for CMD in $(shell $(ROOTFS)/busybox --list | sort -u); do \
 	    ln -fvs /busybox $(ROOTFS)/bin/$$CMD; \
 	  done

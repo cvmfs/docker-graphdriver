@@ -34,4 +34,9 @@ start_plugin() {
     (test_unionfs $driver || load_unionfs $driver) && run_binary $driver
 }
 
+init_config() {
+    cp -a /cvmfs_ext_config/* /etc/cvmfs/
+}
+
+init_config
 start_plugin "overlay" || start_plugin "aufs" || fail
