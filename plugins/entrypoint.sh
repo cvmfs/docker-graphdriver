@@ -1,18 +1,18 @@
 #!/bin/sh
 
-PLUGINS_DIR="/bin"
+PLUGINS_DIR="/usr/bin"
 
-function test_unionfs() {
+test_unionfs() {
     driver=$1
     cat /proc/filesystems | grep $driver > /dev/null
 }
 
-function load_unionfs() {
+load_unionfs() {
     driver=$1
     modprobe $driver > /dev/null
 }
 
-function run_binary() {
+run_binary() {
     driver=$1
 
     echo "runing binary: $driver"
@@ -24,12 +24,12 @@ function run_binary() {
     fi
 }
 
-function fail() {
+fail() {
 	  echo "ERROR: aufs and overlayfs modules not available!"
     exit 1
 }
 
-function start_plugin() {
+start_plugin() {
     driver=$1
     (test_unionfs $driver || load_unionfs $driver) && run_binary $driver
 }

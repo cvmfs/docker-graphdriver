@@ -2,7 +2,7 @@
   "Description": "CernVM-FS graphdriver as a plugin",
   "Documentation": "-",
   "Entrypoint": [
-    "/usr/local/bin/entrypoint.sh"
+    "/usr/bin/entrypoint.sh"
   ],
   "Interface": {
     "Socket": "plugin.sock",

@@ -4,15 +4,15 @@
 
 IMAGE_NAME = cvmfs-graphdriver-plugin
 IMAGE_ARCH = amd64
-IMAGE_VERSION = 0.7
+IMAGE_VERSION = 0.8
 IMAGE_TARBALL = $(IMAGE_NAME)-$(IMAGE_VERSION).tar.bz2
 BB_VERSION = 1.23.2
 CVMFS_VERSION = 2.4.2
 CVMFS_RELEASE = 1+debian9.1
 CVMFS_CONFIG_VERSION = 1.1
 CVMFS_CONFIG_RELEASE = 1
-GRAPHDRIVER_AUFS_VERSION = 0.2
-GRAPHDRIVER_OVERLAY2_VERSION = 0.2
+GRAPHDRIVER_AUFS_VERSION = 0.3
+GRAPHDRIVER_OVERLAY2_VERSION = 0.3
 
 BB_BASE_URL = http://ecsft.cern.ch/dist/cernvm
 CVMFS_BASE_URL = https://ecsft.cern.ch/dist/cvmfs/cvmfs-$(CVMFS_VERSION)
@@ -41,9 +41,9 @@ $(IMAGE_TARBALL): $(ROOTFS)/CONTENTS $(MANIFEST)
 	rm -rf $(IMAGE_NAME)-$(IMAGE_VERSION)
 
 $(ROOTFS)/CONTENTS: $(ROOTFS)/usr/bin/cvmfs2 \
-  $(ROOTFS)/bin/aufs_cvmfs \
-  $(ROOTFS)/bin/overlay2_cvmfs \
-  $(ROOTFS)/bin/entrypoint.sh
+  $(ROOTFS)/usr/bin/aufs_cvmfs \
+  $(ROOTFS)/usr/bin/overlay2_cvmfs \
+  $(ROOTFS)/usr/bin/entrypoint.sh
 	cat /dev/null > $(ROOTFS)/.cvmfs.deb
 	cat /dev/null > $(ROOTFS)/.cvmfs-config.deb
 	cat /dev/null > $(ROOTFS)/.busybox-$(BB_VERSION).tar.gz
@@ -73,13 +73,17 @@ $(ROOTFS)/busybox: | $(ROOTFS)/.busybox-$(BB_VERSION)
 
 $(ROOTFS)/.done_minbase: $(ROOTFS)/busybox
 	mkdir -p $(ROOTFS)/bin
+	mkdir -p $(ROOTFS)/cvmfs_ext_config
+	mkdir -p $(ROOTFS)/minio_ext_config
 	mkdir -p $(ROOTFS)/dev
 	mkdir -p $(ROOTFS)/lib/modules
+	mkdir -p $(ROOTFS)/mnt
 	mkdir -p $(ROOTFS)/proc
 	mkdir -p $(ROOTFS)/tmp
-	mkdir -p $(ROOTFS)/usr
-	mkdir -p $(ROOTFS)/var/run/cvmfs
+	mkdir -p $(ROOTFS)/usr/bin
 	mkdir -p $(ROOTFS)/var/lib/cvmfs
+	mkdir -p $(ROOTFS)/var/log
+	mkdir -p $(ROOTFS)/var/run/cvmfs
 	ln -fs lib $(ROOTFS)/lib64
 	ln -fs ../bin $(ROOTFS)/usr/bin
 	for CMD in $(shell $(ROOTFS)/busybox --list | sort -u); do \
@@ -90,7 +94,7 @@ $(ROOTFS)/.done_minbase: $(ROOTFS)/busybox
 $(MANIFEST): $(ROOTFS)/.done_minbase
 	cp $(GIT_SRC)/data/plugin-config.json $@
 
-$(ROOTFS)/bin/entrypoint.sh: $(ROOTFS)/.done_minbase
+$(ROOTFS)/usr/bin/entrypoint.sh: $(ROOTFS)/.done_minbase
 	cp $(GIT_SRC)/plugins/entrypoint.sh $@
 
 $(ROOTFS)/.cvmfs-config.deb: | $(ROOTFS)
@@ -112,11 +116,11 @@ $(ROOTFS)/usr/bin/cvmfs2: $(ROOTFS)/.done_minbase | $(ROOTFS)/.cvmfs-config.deb 
 	$(GIT_SRC)/ci/container/libs.sh $(ROOTFS)
 	ldconfig -r $(ROOTFS)
 
-$(ROOTFS)/bin/aufs_cvmfs: $(ROOTFS)/.done_minbase
+$(ROOTFS)/usr/bin/aufs_cvmfs: $(ROOTFS)/.done_minbase
 	curl -o $@ $(GRAPHDRIVER_AUFS_SRC)
 	chmod +x $@
 
-$(ROOTFS)/bin/overlay2_cvmfs: $(ROOTFS)/.done_minbase
+$(ROOTFS)/usr/bin/overlay2_cvmfs: $(ROOTFS)/.done_minbase
 	curl -o $@ $(GRAPHDRIVER_OVERLAY2_SRC)
 	chmod +x $@
 
