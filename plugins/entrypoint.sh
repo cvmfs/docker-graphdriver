@@ -1,6 +1,6 @@
-#!/bin/bash
+#!/bin/sh
 
-PLUGINS_DIR="/usr/local/bin"
+PLUGINS_DIR="/bin"
 
 function test_unionfs() {
     driver=$1
@@ -9,7 +9,7 @@ function test_unionfs() {
 
 function load_unionfs() {
     driver=$1
-    /sbin/modprobe $driver > /dev/null
+    modprobe $driver > /dev/null
 }
 
 function run_binary() {
