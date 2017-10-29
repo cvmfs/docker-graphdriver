@@ -759,7 +759,7 @@ func (a *Driver) configureCvmfs(options []string) error {
 	a.cvmfsMountPath = path.Join(a.root, "cvmfs")
 	os.MkdirAll(a.cvmfsMountPath, os.ModePerm)
 
-	exec.Command("cp", "-a", "/cvmfs_ext_config", "/etc/cvmfs").Run()
+	exec.Command("cp", "-a", "/cvmfs_ext_config/*", "/etc/cvmfs/").Run()
 
 	return nil
 }
