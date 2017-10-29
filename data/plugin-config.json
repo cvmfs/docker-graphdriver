@@ -14,7 +14,8 @@
     "Capabilities": [
       "CAP_SYS_ADMIN",
       "CAP_MKNOD",
-      "CAP_SYS_RESOURCE"
+      "CAP_SYS_RESOURCE",
+      "CAP_SYS_MODULE"
     ],
     "Devices": [
         { "Path": "/dev/fuse" }
@@ -44,6 +45,13 @@
 	{ "Name": "minio_ext_config",
 	  "Source": "/etc/cvmfs",
 	  "Destination": "/minio_ext_config",
+	  "Type": "none",
+	  "Options": ["bind", "ro"],
+	  "Settable": ["source"]
+  },
+  { "Name": "modules",
+	  "Source": "/lib/modules",
+	  "Destination": "/lib/modules",
 	  "Type": "none",
 	  "Options": ["bind", "ro"],
 	  "Settable": ["source"]
