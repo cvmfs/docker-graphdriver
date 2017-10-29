@@ -106,7 +106,7 @@ $(ROOTFS)/usr/bin/cvmfs2: $(ROOTFS)/.done_minbase | $(ROOTFS)/.cvmfs-config.deb 
 	rm -rf $(ROOTFS)/usr/share
 	rm -f $(ROOTFS)/usr/bin/cvmfs_talk \
 	  $(ROOTFS)/usr/bin/cvmfs_config \
-	  $(ROOTFS)/usr/sbin/mount.cvmfs \
+	  $(ROOTFS)/sbin/mount.cvmfs \
 	  $(ROOTFS)/etc/auto.cvmfs \
 	  $(ROOTFS)/usr/libexec/auto.cvmfs
 	$(GIT_SRC)/ci/container/libs.sh $(ROOTFS)
