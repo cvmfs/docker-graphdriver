@@ -13,7 +13,8 @@
   "Linux": {
     "Capabilities": [
       "CAP_SYS_ADMIN",
-      "CAP_MKNOD"
+      "CAP_MKNOD",
+      "CAP_SYS_RESOURCE"
     ],
     "Devices": [
         { "Path": "/dev/fuse" }
