@@ -162,9 +162,9 @@ func (cm *cvmfsManager) mount(repo string) error {
 	mountTarget := path.Join(cm.mountPath, repo)
 	os.MkdirAll(mountTarget, os.ModePerm)
 
-	cmd := "cvmfs2 -o rw,fsname=cvmfs2,allow_other,grab_mountpoint"
-	cmd += " " + repo
-	cmd += " " + mountTarget
+	cmd := "cvmfs2 -o rw,fsname=cvmfs2,allow_other,grab_mountpoint,cvmfs_suid"
+	cmd += " '" + repo + "'"
+	cmd += " '" + mountTarget + "'"
 
 	// TODO: check for errors!
 	out, err := exec.Command("bash", "-x", "-c", cmd).CombinedOutput()
