@@ -214,7 +214,7 @@ func (cm *cvmfsManager) UploadNewLayer(orig string) (layer ThinImageLayer, err e
 	}
 
 	layer.Digest = h
-	layer.Repo = minioConfig.CvmfsRepo
+	layer.Url = "cvmfs://" + minioConfig.CvmfsRepo + "/layers/" + h
 
 	return layer, nil
 }

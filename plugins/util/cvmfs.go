@@ -16,8 +16,7 @@ import (
 
 type ThinImageLayer struct {
 	Digest   string `json:"digest"`
-	Repo     string `json:"repo,omitempty"`
-	Location string `json:"location,omitempty"`
+	Url      string `json:"url,omitempty"`
 }
 
 type ThinImage struct {
@@ -53,16 +52,32 @@ func IsThinImageLayer(diffPath string) bool {
 	return false
 }
 
+
+func ParseThinUrl(url string) (schema string, location string) {
+	tokens := strings.Split(url, "://")
+	if tokens[0] != "cvmfs" {
+		fmt.Println("layer's url schema " + tokens[0] + " unsupported!" +
+			          " [" + url + "]")
+	}
+	return tokens[0], strings.Join(tokens[1:], "://")
+}
+
+
+func ParseCvmfsLocation(location string) (repo string, folder string) {
+	tokens := strings.Split(location, "/")
+	return tokens[0], strings.Join(tokens[1:], "/")
+}
+
+
 func GetCvmfsLayerPaths(layers []ThinImageLayer, cvmfsMountPath string) []string {
 	ret := make([]string, len(layers))
 
 	for i, layer := range layers {
 		root := cvmfsMountPath
-		repo := layer.Repo
-		location := "layers"
-		digest := layer.Digest
+		_, location := ParseThinUrl(layer.Url)
+		repo, folder := ParseCvmfsLocation(location)
 
-		ret[i] = path.Join(root, repo, location, digest)
+		ret[i] = path.Join(root, repo, folder)
 	}
 
 	return ret
@@ -182,6 +197,7 @@ func (cm *cvmfsManager) mount(repo string) error {
 
 func (cm *cvmfsManager) umount(repo string) error {
 	// TODO: check for errors!
+	fmt.Println("CernVM-FS: mounting %s", repo)
 	mountTarget := path.Join(cm.mountPath, repo)
 	cmd := exec.Command("umount", mountTarget)
 
@@ -272,7 +288,9 @@ func (cm *cvmfsManager) GetLayers(layers ...ThinImageLayer) error {
 	cm.mux.Lock()
 
 	for i, l := range layers {
-		if err := cm.get(l.Repo); err != nil {
+		_, location := ParseThinUrl(l.Url)
+		repo, _ := ParseCvmfsLocation(location)
+		if err := cm.get(repo); err != nil {
 			cm.mux.Unlock()
 
 			cm.PutLayers(layers[:i]...)
@@ -289,7 +307,9 @@ func (cm *cvmfsManager) PutLayers(layers ...ThinImageLayer) error {
 	defer cm.mux.Unlock()
 
 	for _, l := range layers {
-		cm.put(l.Repo)
+		_, location := ParseThinUrl(l.Url)
+		repo, _ := ParseCvmfsLocation(location)
+		cm.put(repo)
 	}
 	return nil
 }
@@ -305,6 +325,7 @@ func (cm *cvmfsManager) Remount(repo string) error {
 	if cm.ctr[repo] == 0 {
 		return nil
 	}
+	// TODO(jblomer): use net cat, cvmfs_talk unavailable in new image
 	cmd := "cvmfs_talk"
 	args := []string{"-i", repo, "remount", "sync"}
 

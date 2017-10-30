@@ -585,7 +585,8 @@ func (d *Driver) Get(id string, mountLabel string) (s string, err error) {
 	}
 
 	if err := mount("overlay", mountTarget, "overlay", 0, mountData); err != nil {
-		return "", fmt.Errorf("error creating overlay mount to %s: %v", mergedDir, err)
+		return "", fmt.Errorf("error creating overlay mount to %s: %v [%s, %s]",
+		                      mergedDir, err, mountTarget, mountData)
 	}
 
 	// chown "workdir/work" to the remapped root UID/GID. Overlay fs inside a
@@ -682,10 +683,9 @@ func (d *Driver) ApplyDiff(id string, parent string, diff io.Reader) (size int64
 		for i, layer := range thin_layers {
 			lid := generateID(idLength)
 
-			digest := layer.Digest
-			repo := layer.Repo
-			location := "layers"
-			cvmfsPath := path.Join("..", "cvmfs", repo, location, digest)
+			_, location := util.ParseThinUrl(layer.Url)
+			repo, folder := util.ParseCvmfsLocation(location)
+			cvmfsPath := path.Join("..", "cvmfs", repo, folder)
 
 			os.Symlink(cvmfsPath, path.Join(d.home, linkDir, lid))
 
