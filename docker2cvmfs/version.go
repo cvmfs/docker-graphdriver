@@ -11,6 +11,7 @@ var (
 	help_msg = "This program is part of the CernVM File System\n" +
 		"The docker2cvmfs utility extracts layers from an image in a\n" +
 		"Docker registry and creates the thin image (descriptor).\n\n" +
+		"Use `docker2cvmfs help` for a list of commands.\n\n" +
 		"Refer to https://github.com/cvmfs/docker-graphdriver for further details."
 )
 

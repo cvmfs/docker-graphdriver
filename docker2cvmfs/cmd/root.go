@@ -7,9 +7,9 @@ var RootCmd = &cobra.Command{
 	Use:   "docker2cvmfs",
 	Short: "Human friendly interaction with the docker hub...",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("Hello world!")
-
-		fmt.Println(cmd.PersistentFlags().Lookup("registry").Value.String())
+		fmt.Println("Use `docker2cvmfs help` for a list of supported commands.")
+		fmt.Println("Registry: ")
+		fmt.Println("    " + cmd.PersistentFlags().Lookup("registry").Value.String())
 	},
 }
 

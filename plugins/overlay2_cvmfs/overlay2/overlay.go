@@ -526,7 +526,7 @@ func (d *Driver) Get(id string, mountLabel string) (s string, err error) {
 	}
 
 	if thinParent := d.getThinParent(id); d.cvmfsMountMethod == "internal" && thinParent != "" {
-		f := path.Join(d.getDiffPath(thinParent), ".thin")
+		f := path.Join(d.getDiffPath(thinParent), ".thin.json")
 		t := util.ReadThinFile(f)
 		d.cvmfsManager.GetLayers(t.Layers...)
 	}
@@ -606,7 +606,7 @@ func (d *Driver) Get(id string, mountLabel string) (s string, err error) {
 func (d *Driver) Put(id string) error {
 	p := d.getDiffPath(id)
 	if util.IsThinImageLayer(p) && d.cvmfsMountMethod == "internal" {
-		f := path.Join(p, ".thin")
+		f := path.Join(p, ".thin.json")
 		t := util.ReadThinFile(f)
 		d.cvmfsManager.PutLayers(t.Layers...)
 	}
@@ -738,7 +738,7 @@ func (d *Driver) Diff(id, parent string) (io.ReadCloser, error) {
 	parent_thin_path := d.dir(thin_parent_id)
 
 	if isThin {
-		thin := util.ReadThinFile(path.Join(parent_thin_path, "diff", ".thin"))
+		thin := util.ReadThinFile(path.Join(parent_thin_path, "diff", ".thin.json"))
 		newLayer, _ := d.cvmfsManager.UploadNewLayer(diffPath)
 		thin.AddLayer(newLayer)
 		newThinLayer, _ = util.WriteThinFile(thin)
