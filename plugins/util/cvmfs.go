@@ -43,7 +43,7 @@ func reverse(in []ThinImageLayer) []ThinImageLayer {
 }
 
 func IsThinImageLayer(diffPath string) bool {
-	magic_file_path := path.Join(diffPath, ".thin.json")
+	magic_file_path := path.Join(diffPath, "thin.json")
 	_, err := os.Stat(magic_file_path)
 
 	if err == nil {
@@ -79,7 +79,7 @@ func ExpandCvmfsLayerPaths(oldArray []string, newArray []string, i int) (result 
 }
 
 func GetNestedLayerIDs(diffPath string) []ThinImageLayer {
-	magic_file_path := path.Join(diffPath, ".thin.json")
+	magic_file_path := path.Join(diffPath, "thin.json")
 	content, _ := ioutil.ReadFile(magic_file_path)
 
 	var thin ThinImage
@@ -117,7 +117,7 @@ func WriteThinFile(thin ThinImage) (string, error) {
 	tmp := path.Join(os.TempDir(), fmt.Sprintf("dlcg-%d", rand.Int()))
 	os.MkdirAll(tmp, os.ModePerm)
 
-	p := path.Join(tmp, ".thin.json")
+	p := path.Join(tmp, "thin.json")
 
 	j, err := json.Marshal(thin)
 	if err != nil {
