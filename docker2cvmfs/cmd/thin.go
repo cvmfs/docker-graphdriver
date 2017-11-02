@@ -12,16 +12,18 @@ var CreateThinImage = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) != 2 {
 			fmt.Println("Error: invalid arguments.")
-			fmt.Println("  [docker image] [cvmfs repository]")
+			fmt.Println("  [docker image] [cvmfs repository + path prefix]")
+			fmt.Println("  Example: library/ubuntu:latest images.cern.ch/layers")
 			return
 		}
-		repo := args[1]
+		repoLocation := args[1]
 
 		flag := cmd.Flags().Lookup("registry")
 		var registry string = string(flag.Value.String())
 
 		manifest, _ := lib.GetManifest(registry, args[:1])
-		thin := lib.MakeThinImage(manifest, repo)
+		origin := args[0] + "@" + registry
+		thin := lib.MakeThinImage(manifest, repoLocation, origin)
 		j, _ := json.MarshalIndent(thin, "", "  ")
 		fmt.Println(string(j))
 	},

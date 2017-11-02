@@ -22,6 +22,7 @@ type ThinImageLayer struct {
 type ThinImage struct {
 	Version    string           `json:"version"`
 	MinVersion string           `json:"min_version,omitempty"`
+	Origin     string           `json:"origin,omitempty"`
 	Layers     []ThinImageLayer `json:"layers"`
 	Comment    string           `json:"comment,omitempty"`
 }

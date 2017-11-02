@@ -5,7 +5,7 @@ import (
 )
 
 const (
-	thinImageVersion = "0.1"
+	thinImageVersion = "1.0"
 )
 
 var token string
