@@ -17,6 +17,10 @@ var backendChan = make(chan PublishingObject, 32)
 var controlChan = make(chan string)
 
 func main() {
+	if print_info() {
+		return
+	}
+
 	if len(os.Args) < 2 {
 		fmt.Println("Specify path to config file as first argument.")
 		os.Exit(-1)
