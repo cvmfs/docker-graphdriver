@@ -1,5 +1,5 @@
 [Unit]
-Description=CernVM-FS Portal for %i 
+Description=CernVM-FS Portal for %i
 Documentation=https://cvmfs.readthedocs.io
 After=network-online.target
 Wants=network-online.target
@@ -9,12 +9,11 @@ Wants=network-online.target
 [Service]
 EnvironmentFile=/etc/cvmfs/repositories.d/%i/env.conf
 Type=simple
-ExecStart=/bin/su ${CVMFS_PORTAL_USER} -c "\
+ExecStart=/usr/bin/cvmfs_runas ${CVMFS_PORTAL_USER} \
   /usr/bin/cvmfs_minio server \
   --config-dir /etc/cvmfs/repositories.d/%i \
   --address 127.0.0.1:${CVMFS_PORTAL_PORT} \
-  ${CVMFS_PORTAL_SPOOL_DIR}"
-# TODO(jblomer): clean stop
+  ${CVMFS_PORTAL_SPOOL_DIR}
 
 [Install]
 WantedBy=multi-user.target
