@@ -31,8 +31,8 @@ func (p *WebhookPayload) Object() PublishingObject {
 }
 
 type PublisherConfig struct {
-	CvmfsRepo        string
-	MinioStoragePath string
+	fqrn             string
+	localPayloadPath string
 }
 
 type StatusRequest struct {

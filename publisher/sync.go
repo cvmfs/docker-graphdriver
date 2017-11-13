@@ -17,7 +17,7 @@ func backendWorker() {
 			continue
 		}
 
-		filepath := path.Join(publisherConfig.MinioStoragePath, obj.Bucket, obj.Key)
+		filepath := path.Join(publisherConfig.localPayloadPath, obj.Bucket, obj.Key)
 		if err := cm.ImportTarball(filepath, obj.Key); err != nil {
 			fmt.Println(err)
 			cm.AbortTransaction()

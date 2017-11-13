@@ -8,11 +8,11 @@ import (
 )
 
 type CvmfsManager struct {
-	CvmfsRepo string
+	fqrn string
 }
 
 func (cm CvmfsManager) StartTransaction() error {
-	cmd := exec.Command("cvmfs_server", "transaction", publisherConfig.CvmfsRepo)
+	cmd := exec.Command("cvmfs_server", "transaction", publisherConfig.fqrn)
 	if out, err := cmd.CombinedOutput(); err != nil {
 		fmt.Println("ERROR: failed to open transaction!")
 		fmt.Println(err)
@@ -24,7 +24,7 @@ func (cm CvmfsManager) StartTransaction() error {
 }
 
 func (cm CvmfsManager) ImportTarball(src, digest string) error {
-	dst := path.Join("/cvmfs", cm.CvmfsRepo, "layers", digest)
+	dst := path.Join("/cvmfs", cm.fqrn, "layers", digest)
 	fmt.Println("Import tarball destination: " + dst)
 
 	if err := os.MkdirAll(dst, os.ModePerm); err != nil {
@@ -48,7 +48,7 @@ func (cm CvmfsManager) ImportTarball(src, digest string) error {
 }
 
 func (cm CvmfsManager) PublishTransaction() error {
-	cmd := exec.Command("cvmfs_server", "publish")
+	cmd := exec.Command("cvmfs_server", "publish", publisherConfig.fqrn)
 	if out, err := cmd.CombinedOutput(); err != nil {
 		fmt.Println("ERROR: failed to publish!")
 		fmt.Println(err)
@@ -63,7 +63,7 @@ func (cm CvmfsManager) PublishTransaction() error {
 func (cm CvmfsManager) AbortTransaction() error {
 	fmt.Println("Aborting transaction!")
 
-	out, err := exec.Command("cvmfs_server", "abort", "-f").CombinedOutput()
+	out, err := exec.Command("cvmfs_server", "abort", "-f", publisherConfig.fqrn).CombinedOutput()
 	if err != nil {
 		fmt.Println(string(out))
 		return err
@@ -73,7 +73,7 @@ func (cm CvmfsManager) AbortTransaction() error {
 }
 
 func (cm CvmfsManager) LookupLayer(hash string) bool {
-	dst := path.Join("/cvmfs", cm.CvmfsRepo, "layers", hash)
+	dst := path.Join("/cvmfs", cm.fqrn, "layers", hash)
 	fmt.Printf("Layer lookup path: %s\n", dst)
 
 	if _, err := os.Stat(dst); err == nil {

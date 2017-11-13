@@ -33,7 +33,7 @@ func main() {
 		os.Exit(-2)
 	}
 
-	cm = CvmfsManager{CvmfsRepo: publisherConfig.CvmfsRepo}
+	cm = CvmfsManager{fqrn: publisherConfig.fqrn}
 
 	go frontendWorker()
 	go backendWorker()
