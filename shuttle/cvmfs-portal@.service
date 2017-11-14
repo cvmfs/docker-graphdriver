@@ -1,7 +1,8 @@
 [Unit]
 Description=CernVM-FS Portal for %i
 Documentation=https://cvmfs.readthedocs.io
-After=network-online.target
+Requires=cvmfs-shuttle@%i.service
+After=network-online.target cvmfs-shuttle@%i.service
 Wants=network-online.target
 # We can't use socket activation because we cannot template the port number
 # Requires=cvmfs-portal@%i.socket
@@ -17,4 +18,3 @@ ExecStart=/usr/bin/cvmfs_runas ${CVMFS_PORTAL_USER} \
 
 [Install]
 WantedBy=multi-user.target
-
