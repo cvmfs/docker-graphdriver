@@ -39,4 +39,7 @@ init_config() {
 }
 
 init_config
+if uname -r | grep cernvm; then
+  start_plugin "aufs" || fail
+fi
 start_plugin "overlay" || start_plugin "aufs" || fail
