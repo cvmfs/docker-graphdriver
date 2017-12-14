@@ -39,6 +39,9 @@ import (
 var (
 	// untar defines the untar method
 	untar = chrootarchive.UntarUncompressed
+	// The colon is used to separate lower dirs but it can also be part of the
+	// lower dir path names
+	sanitizer = strings.NewReplacer(`:`, `\:`)
 )
 
 // This backend uses the overlay union filesystem for containers
@@ -548,7 +551,7 @@ func (d *Driver) Get(id string, mountLabel string) (s string, err error) {
 	absLowers := make([]string, len(splitLowers))
 
 	for i, s := range splitLowers {
-		absLowers[i] = path.Join(d.home, s)
+		absLowers[i] = sanitizer.Replace(path.Join(d.home, s))
 	}
 
 	opts := fmt.Sprintf("lowerdir=%s,upperdir=%s,workdir=%s", strings.Join(absLowers, ":"), path.Join(dir, "diff"), path.Join(dir, "work"))
