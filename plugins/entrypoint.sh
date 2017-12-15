@@ -1,6 +1,7 @@
 #!/bin/sh
 
 PLUGINS_DIR="/usr/bin"
+DRIVER_GUARD="/driver"
 
 test_unionfs() {
     driver=$1
@@ -15,7 +16,16 @@ load_unionfs() {
 run_binary() {
     driver=$1
 
+    if [ -f $DRIVER_GUARD ]; then
+      if [ x"$(cat $DRIVER_GUARD)" != x"$driver" ]; then
+        echo "This plugin was used with driver $(cat $DRIVER_GUARD) before."
+        echo "Cannot switch to $driver, exiting"
+        return 1
+      fi
+    fi
+
     echo "runing binary: $driver"
+    echo "$driver" > $DRIVER_GUARD
 
     if [ x"$driver" == x"overlay" ]; then
         exec $PLUGINS_DIR/overlay2_cvmfs
