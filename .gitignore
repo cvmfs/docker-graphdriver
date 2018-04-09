@@ -34,3 +34,5 @@ _testmain.go
 
 site.retry
 secrets
+
+vendor/
