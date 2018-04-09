@@ -38,10 +38,6 @@
   version = "0.3.2"
 
 [[constraint]]
-  name = "github.com/gorilla/mux"
-  version = "1.5.0"
-
-[[constraint]]
   name = "github.com/minio/minio-go"
   version = "3.0.0"
 
