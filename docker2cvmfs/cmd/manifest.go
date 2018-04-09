@@ -1,9 +1,11 @@
 package cmd
 
-import "github.com/spf13/cobra"
-import "github.com/cvmfs/docker-graphdriver/docker2cvmfs/lib"
-import "fmt"
-import "encoding/json"
+import (
+	"encoding/json"
+	"fmt"
+	"github.com/cvmfs/docker-graphdriver/docker2cvmfs/lib"
+	"github.com/spf13/cobra"
+)
 
 var PrintManifest = &cobra.Command{
 	Use:   "manifest",
