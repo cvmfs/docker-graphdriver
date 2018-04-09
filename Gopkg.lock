@@ -21,20 +21,66 @@
 
 [[projects]]
   name = "github.com/docker/docker"
-  packages = ["api/types","api/types/blkiodev","api/types/container","api/types/filters","api/types/mount","api/types/network","api/types/registry","api/types/strslice","api/types/swarm","api/types/versions","daemon/graphdriver","daemon/graphdriver/graphtest","daemon/graphdriver/overlayutils","daemon/graphdriver/quota","oci","pkg/archive","pkg/chrootarchive","pkg/directory","pkg/fileutils","pkg/fsutils","pkg/idtools","pkg/ioutils","pkg/locker","pkg/longpath","pkg/mount","pkg/parsers","pkg/parsers/kernel","pkg/plugingetter","pkg/plugins","pkg/plugins/transport","pkg/pools","pkg/promise","pkg/random","pkg/reexec","pkg/stringid","pkg/system","plugin/v2"]
+  packages = [
+    "api/types",
+    "api/types/blkiodev",
+    "api/types/container",
+    "api/types/filters",
+    "api/types/mount",
+    "api/types/network",
+    "api/types/registry",
+    "api/types/strslice",
+    "api/types/swarm",
+    "api/types/versions",
+    "daemon/graphdriver",
+    "daemon/graphdriver/graphtest",
+    "daemon/graphdriver/overlayutils",
+    "daemon/graphdriver/quota",
+    "oci",
+    "pkg/archive",
+    "pkg/chrootarchive",
+    "pkg/directory",
+    "pkg/fileutils",
+    "pkg/fsutils",
+    "pkg/idtools",
+    "pkg/ioutils",
+    "pkg/locker",
+    "pkg/longpath",
+    "pkg/mount",
+    "pkg/parsers",
+    "pkg/parsers/kernel",
+    "pkg/plugingetter",
+    "pkg/plugins",
+    "pkg/plugins/transport",
+    "pkg/pools",
+    "pkg/promise",
+    "pkg/random",
+    "pkg/reexec",
+    "pkg/stringid",
+    "pkg/system",
+    "plugin/v2"
+  ]
   revision = "89658bed64c2a8fe05a978e5b87dbec409d57a0f"
   version = "v17.05.0-ce"
 
 [[projects]]
   name = "github.com/docker/go-connections"
-  packages = ["nat","sockets","tlsconfig"]
+  packages = [
+    "nat",
+    "sockets",
+    "tlsconfig"
+  ]
   revision = "3ede32e2033de7505e6500d6c868c2b9ed9f169d"
   version = "v0.3.0"
 
 [[projects]]
   branch = "master"
   name = "github.com/docker/go-plugins-helpers"
-  packages = ["graphdriver","graphdriver/shim","sdk"]
+  packages = [
+    "graphdriver",
+    "graphdriver/shim",
+    "sdk"
+  ]
   revision = "bd8c600f0cdd76c7a57ff6aa86bd2b423868c688"
 
 [[projects]]
@@ -48,18 +94,6 @@
   packages = ["."]
   revision = "20b96f641a5ea98f2f8619ff4f3e061cff4833bd"
   version = "v1.28.2"
-
-[[projects]]
-  name = "github.com/gorilla/context"
-  packages = ["."]
-  revision = "1ea25387ff6f684839d82767c1733ff4d4d15d0a"
-  version = "v1.1"
-
-[[projects]]
-  name = "github.com/gorilla/mux"
-  packages = ["."]
-  revision = "24fca303ac6da784b9e8269f724ddeb0b2eea5e7"
-  version = "v1.5.0"
 
 [[projects]]
   name = "github.com/inconshreveable/mousetrap"
@@ -77,11 +111,19 @@
   branch = "master"
   name = "github.com/minio/go-homedir"
   packages = ["."]
-  revision = "21304a94172ae3a09dee2cd86a12fb6f842138c7"
+  revision = "4d76aabb80b22bad8695d3904e943f1fb5e6199f"
 
 [[projects]]
   name = "github.com/minio/minio-go"
-  packages = [".","pkg/credentials","pkg/encrypt","pkg/policy","pkg/s3signer","pkg/s3utils","pkg/set"]
+  packages = [
+    ".",
+    "pkg/credentials",
+    "pkg/encrypt",
+    "pkg/policy",
+    "pkg/s3signer",
+    "pkg/s3utils",
+    "pkg/set"
+  ]
   revision = "5ca66c9a35ba1cd674484be99dc97aa0973afe12"
   version = "v3.0.0"
 
@@ -93,7 +135,12 @@
 
 [[projects]]
   name = "github.com/opencontainers/runc"
-  packages = ["libcontainer/configs","libcontainer/devices","libcontainer/system","libcontainer/user"]
+  packages = [
+    "libcontainer/configs",
+    "libcontainer/devices",
+    "libcontainer/system",
+    "libcontainer/user"
+  ]
   revision = "baf6536d6259209c3edfa2b22237af82942d3dfa"
   version = "v0.1.1"
 
@@ -105,7 +152,10 @@
 
 [[projects]]
   name = "github.com/opencontainers/selinux"
-  packages = ["go-selinux","go-selinux/label"]
+  packages = [
+    "go-selinux",
+    "go-selinux/label"
+  ]
   revision = "ba1aefe8057f1d0cfb8e88d0ec1dc85925ef987d"
   version = "v1.0.0-rc1"
 
@@ -142,18 +192,24 @@
 [[projects]]
   branch = "master"
   name = "golang.org/x/net"
-  packages = ["context","proxy"]
+  packages = [
+    "context",
+    "proxy"
+  ]
   revision = "a04bdaca5b32abe1c069418fb7088ae607de5bd0"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/sys"
-  packages = ["unix","windows"]
+  packages = [
+    "unix",
+    "windows"
+  ]
   revision = "ebfc5b4631820b793c9010c87fd8fef0f39eb082"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "e56bc8d0c242bda6b90d43685bb50795fa62e3a9c1c2665f6a37a12523439967"
+  inputs-digest = "37f97d8189b0c3d0efc624462666b2a928540407df07cee6387c41f027b59068"
   solver-name = "gps-cdcl"
   solver-version = 1
