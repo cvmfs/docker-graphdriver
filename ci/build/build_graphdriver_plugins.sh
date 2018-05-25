@@ -1,5 +1,5 @@
 #!/bin/bash
-if [ x"$GOPATH" == x"" ]; then
+if [ x"$GOPATH" = x"" ]; then
 	echo "GOPATH is not set!"
 	exit -1
 fi

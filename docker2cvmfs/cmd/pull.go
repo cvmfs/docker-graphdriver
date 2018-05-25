@@ -9,6 +9,7 @@ var PullLayers = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		flag := cmd.Flags().Lookup("registry")
 		var registry string = string(flag.Value.String())
-		lib.PullLayers(registry, args)
+		inputReference := args[0]
+		lib.PullLayers(registry, inputReference, "docker.cern.ch", "layers/")
 	},
 }

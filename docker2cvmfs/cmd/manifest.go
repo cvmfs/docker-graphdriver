@@ -14,7 +14,7 @@ var PrintManifest = &cobra.Command{
 		flag := cmd.Flags().Lookup("registry")
 		var registry string = string(flag.Value.String())
 
-		manifest, _ := lib.GetManifest(registry, args)
+		manifest, _ := lib.GetManifest(registry, args[0])
 		buffer, _ := json.MarshalIndent(manifest, "", " ")
 		fmt.Println(string(buffer))
 	},

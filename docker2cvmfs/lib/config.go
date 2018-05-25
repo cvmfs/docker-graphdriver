@@ -25,7 +25,7 @@ func getConfig(url string) []byte {
 }
 
 func GetConfig(dockerRegistryUrl string, args []string) {
-	manifest, _ := GetManifest(dockerRegistryUrl, args)
+	manifest, _ := GetManifest(dockerRegistryUrl, args[0])
 	repo := strings.Split(args[0], ":")[0]
 
 	config_digest := manifest.Config.Digest
