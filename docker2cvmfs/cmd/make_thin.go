@@ -31,7 +31,7 @@ var MakeThin = &cobra.Command{
 		manifest, err := lib.GetManifest(registry, inputReference)
 		origin := inputReference + "@" + registry
 		thinImage := lib.MakeThinImage(manifest, repository+"/"+strings.TrimSuffix(subdirectory, "/"), origin)
-		thinImageJson, err := json.MarshalIndent(thinImage, "", "\t")
+		thinImageJson, err := json.MarshalIndent(thinImage, "", "  ")
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -40,7 +40,7 @@ var MakeThin = &cobra.Command{
 
 		var imageTarFileStorange bytes.Buffer
 		tarFile := tar.NewWriter(&imageTarFileStorange)
-		header := &tar.Header{Name: "thin-image.json",
+		header := &tar.Header{Name: "thin.json",
 			Mode: 0600,
 			Size: int64(len(thinImageJson)),
 		}

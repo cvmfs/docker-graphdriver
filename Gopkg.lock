@@ -20,18 +20,33 @@
   version = "v17"
 
 [[projects]]
+  name = "github.com/docker/distribution"
+  packages = [
+    "digest",
+    "reference"
+  ]
+  revision = "48294d928ced5dd9b378f7fd7c6f5da3ff3f2c89"
+  version = "v2.6.2"
+
+[[projects]]
   name = "github.com/docker/docker"
   packages = [
+    "api",
     "api/types",
     "api/types/blkiodev",
     "api/types/container",
+    "api/types/events",
     "api/types/filters",
+    "api/types/image",
     "api/types/mount",
     "api/types/network",
     "api/types/registry",
     "api/types/strslice",
     "api/types/swarm",
+    "api/types/time",
     "api/types/versions",
+    "api/types/volume",
+    "client",
     "daemon/graphdriver",
     "daemon/graphdriver/graphtest",
     "daemon/graphdriver/overlayutils",
@@ -58,6 +73,7 @@
     "pkg/reexec",
     "pkg/stringid",
     "pkg/system",
+    "pkg/tlsconfig",
     "plugin/v2"
   ]
   revision = "89658bed64c2a8fe05a978e5b87dbec409d57a0f"
@@ -88,6 +104,12 @@
   packages = ["."]
   revision = "47565b4f722fb6ceae66b95f853feed578a4a51c"
   version = "v0.3.3"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/docker/libtrust"
+  packages = ["."]
+  revision = "aabc10ec26b754e797f9028f4589c5b7bd90dc20"
 
 [[projects]]
   name = "github.com/go-ini/ini"
@@ -194,6 +216,7 @@
   name = "golang.org/x/net"
   packages = [
     "context",
+    "context/ctxhttp",
     "internal/socks",
     "proxy"
   ]
@@ -211,6 +234,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "37f97d8189b0c3d0efc624462666b2a928540407df07cee6387c41f027b59068"
+  inputs-digest = "836f7e366c3017d129458767a283a722190393fa0bb25a69431c5b9a168442e7"
   solver-name = "gps-cdcl"
   solver-version = 1
