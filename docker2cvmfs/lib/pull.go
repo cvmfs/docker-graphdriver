@@ -20,9 +20,7 @@ func PullLayers(dockerRegistryUrl, inputReference, repository, subdirectory stri
 	destDir := "/home/simo/tmp/layers"
 
 	os.Mkdir(destDir, 0755)
-	for idx, layer := range manifest.Layers {
-		fmt.Printf("%2d: %s\n", idx, layer.Digest)
-
+	for _, layer := range manifest.Layers {
 		// TODO make use of cvmfsRepo and cvmfsSubDirectory
 		err := getLayer(dockerRegistryUrl, image, layer.Digest, destDir, repository, subdirectory)
 		if err != nil {
@@ -30,6 +28,14 @@ func PullLayers(dockerRegistryUrl, inputReference, repository, subdirectory stri
 		}
 	}
 	return nil
+}
+
+func MakeRequestToRegistry(dockerRegistryUrl, repository, digest string) (*http.Response, error) {
+	url := dockerRegistryUrl + "/" + repository + "/blobs/" + digest
+	req, _ := http.NewRequest("GET", url, nil)
+	req.Header.Add("Authorization", "Bearer "+token)
+	var client http.Client
+	return client.Do(req)
 }
 
 func getLayer(dockerRegistryUrl, repository, digest, destDir, cvmfsRepo, cvmfsSubDirectory string) error {
@@ -41,15 +47,8 @@ func getLayer(dockerRegistryUrl, repository, digest, destDir, cvmfsRepo, cvmfsSu
 		fmt.Println("Impossible to create the file: ", filename, "\nerr: ", err)
 		return err
 	}
-	fmt.Println(filename)
 
-	url := dockerRegistryUrl + "/" + repository + "/blobs/" + digest
-	req, _ := http.NewRequest("GET", url, nil)
-
-	req.Header.Add("Authorization", "Bearer "+token)
-
-	var client http.Client
-	resp, err := client.Do(req)
+	resp, err := MakeRequestToRegistry(dockerRegistryUrl, repository, digest)
 
 	if err != nil {
 		fmt.Println(err)
@@ -59,13 +58,11 @@ func getLayer(dockerRegistryUrl, repository, digest, destDir, cvmfsRepo, cvmfsSu
 	var buf bytes.Buffer
 	tee := io.TeeReader(resp.Body, &buf)
 
-	nc, err := io.Copy(file, tee)
+	_, err = io.Copy(file, tee)
 	if err != nil {
 		fmt.Println(err)
 		return err
 	}
-
-	fmt.Println("Duplicated ", nc, " bytes")
 
 	uncompressed, err := gzip.NewReader(&buf)
 	if err != nil {
@@ -88,14 +85,10 @@ func getLayer(dockerRegistryUrl, repository, digest, destDir, cvmfsRepo, cvmfsSu
 	err = cmd.Start()
 
 	go func() {
-		//fmt.Println("About to copying to stdin")
 		_, err := io.Copy(stdin, uncompressed)
-		//fmt.Println("Finish copying to stdin")
 		if err != nil {
 			fmt.Println("Error in writing to stdin: ", err)
-			//log.Fatal(err)
 		}
-		//fmt.Sprintln("Copied %d bytes in stdin", n)
 	}()
 
 	if err != nil {

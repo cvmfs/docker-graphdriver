@@ -29,14 +29,46 @@ var MakeThin = &cobra.Command{
 			log.Fatal(err)
 		}
 		manifest, err := lib.GetManifest(registry, inputReference)
+
+		changes := []string{"ENV CVMFS_IMAGE true"}
+		configString, err := lib.GetConfig(registry, inputReference)
+		if err != nil {
+			log.Println("Unable to get the configuration for the image")
+		} else {
+			var config map[string]interface{}
+			json.Unmarshal([]byte(configString), &config)
+			configConfigInterface, ok := config["config"]
+			if ok {
+				configConfig := configConfigInterface.(map[string]interface{})
+				envInterface, okEnv := configConfig["Env"]
+				if okEnv {
+					env := envInterface.([]interface{})
+					for e := range env {
+						envStr := interface{}(env[e]).(string)
+						changes = append(changes,
+							fmt.Sprintf("ENV %s", envStr))
+					}
+				}
+				cmdInterface, okCmd := configConfig["Cmd"]
+
+				if okCmd {
+					cmd := cmdInterface.([]interface{})
+					for c := range cmd {
+						cmdStr := interface{}(cmd[c].(string))
+						changes = append(changes,
+							fmt.Sprintf("CMD %s", cmdStr))
+					}
+				}
+
+			}
+		}
+
 		origin := inputReference + "@" + registry
 		thinImage := lib.MakeThinImage(manifest, repository+"/"+strings.TrimSuffix(subdirectory, "/"), origin)
 		thinImageJson, err := json.MarshalIndent(thinImage, "", "  ")
 		if err != nil {
 			log.Fatal(err)
 		}
-
-		fmt.Println(string(thinImageJson))
 
 		var imageTarFileStorange bytes.Buffer
 		tarFile := tar.NewWriter(&imageTarFileStorange)
@@ -65,7 +97,13 @@ var MakeThin = &cobra.Command{
 			Source:     bytes.NewBuffer(imageTarFileStorange.Bytes()),
 			SourceName: "-",
 		}
-		importResult, err := dockerClient.ImageImport(context.Background(), image, outputReference, types.ImageImportOptions{})
+
+		options := types.ImageImportOptions{
+			Tag:     "",
+			Message: "",
+			Changes: changes,
+		}
+		importResult, err := dockerClient.ImageImport(context.Background(), image, outputReference, options)
 		if err != nil {
 			log.Fatal("Error in importing the images: ", err)
 		} else {
@@ -73,6 +111,5 @@ var MakeThin = &cobra.Command{
 		}
 		importResultBuffer := new(bytes.Buffer)
 		importResultBuffer.ReadFrom(importResult)
-		fmt.Printf(importResultBuffer.String())
 	},
 }
