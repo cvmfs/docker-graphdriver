@@ -2,7 +2,6 @@ package lib
 
 import (
 	"encoding/json"
-	"errors"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -42,14 +41,7 @@ func getManifest(dockerRegistryUrl, image string) Manifest {
 	return manifest
 }
 
-func GetManifest(dockerRegistryUrl string, args []string) (Manifest, error) {
-	var manifest Manifest
-
-	if len(args) != 1 {
-		printUsage()
-		return manifest, errors.New("Not enough arguments...")
-	} else {
-		manifest = getManifest(dockerRegistryUrl, args[0])
-		return manifest, nil
-	}
+func GetManifest(dockerRegistryUrl, image string) (Manifest, error) {
+	manifest := getManifest(dockerRegistryUrl, image)
+	return manifest, nil
 }

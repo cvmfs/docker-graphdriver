@@ -1,37 +1,45 @@
 package lib
 
 import (
-	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"strings"
 )
 
-func getBlob(url string) []byte {
+func getBlob(url string) ([]byte, error) {
 	req, _ := http.NewRequest("GET", url, nil)
 	req.Header.Add("Authorization", "Bearer "+token)
 
 	var client http.Client
-	resp, _ := client.Do(req)
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Println("Error in making the request to the registry.")
+		return nil, err
+	}
 
-	body, _ := ioutil.ReadAll(resp.Body)
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Println("Error in reading the request.")
+		return nil, err
+	}
 	resp.Body.Close()
 
-	return body
+	return body, nil
 }
 
-func getConfig(url string) []byte {
+func getConfig(url string) ([]byte, error) {
 	return getBlob(url)
 }
 
-func GetConfig(dockerRegistryUrl string, args []string) {
-	manifest, _ := GetManifest(dockerRegistryUrl, args)
-	repo := strings.Split(args[0], ":")[0]
+func GetConfig(dockerRegistryUrl string, imageReference string) (string, error) {
+	manifest, _ := GetManifest(dockerRegistryUrl, imageReference)
+	repo := strings.Split(imageReference, ":")[0]
 
 	config_digest := manifest.Config.Digest
 	url := dockerRegistryUrl + "/" + repo + "/blobs/" + config_digest
 
-	resp := getConfig(url)
+	resp, err := getConfig(url)
 
-	fmt.Println(string(resp))
+	return string(resp), err
 }

@@ -1,60 +1,109 @@
 package lib
 
 import (
+	"bytes"
+	"compress/gzip"
 	"fmt"
 	"io"
+	"io/ioutil"
+	//"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"strings"
 )
 
-func PullLayers(dockerRegistryUrl string, args []string) {
-	if len(args) < 1 {
-		printUsage()
-		return
-	}
+func PullLayers(dockerRegistryUrl, inputReference, repository, subdirectory string) error {
+	manifest := getManifest(dockerRegistryUrl, inputReference)
+	image := strings.Split(inputReference, ":")[0]
 
-	reference := args[0]
-	manifest := getManifest(dockerRegistryUrl, reference)
-	image := strings.Split(reference, ":")[0]
-
-	destDir := "/tmp/layers"
-	if len(args) > 1 {
-		destDir = args[1]
-	}
+	destDir := "/home/simo/tmp/layers"
 
 	os.Mkdir(destDir, 0755)
-	for idx, layer := range manifest.Layers {
-		fmt.Printf("%2d: %s\n", idx, layer.Digest)
-		getLayer(dockerRegistryUrl, image, layer.Digest, destDir)
+	for _, layer := range manifest.Layers {
+		// TODO make use of cvmfsRepo and cvmfsSubDirectory
+		err := getLayer(dockerRegistryUrl, image, layer.Digest, destDir, repository, subdirectory)
+		if err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
-func getLayer(dockerRegistryUrl, repo, digest string, destDir string) {
-	filename := destDir + "/" + strings.Split(digest, ":")[1] + ".tar.gz"
-
-	file, _ := os.Create(filename)
-	fmt.Println(filename)
-
-	url := dockerRegistryUrl + "/" + repo + "/blobs/" + digest
+func MakeRequestToRegistry(dockerRegistryUrl, repository, digest string) (*http.Response, error) {
+	url := dockerRegistryUrl + "/" + repository + "/blobs/" + digest
 	req, _ := http.NewRequest("GET", url, nil)
-
 	req.Header.Add("Authorization", "Bearer "+token)
-
 	var client http.Client
-	resp, err := client.Do(req)
+	return client.Do(req)
+}
+
+func getLayer(dockerRegistryUrl, repository, digest, destDir, cvmfsRepo, cvmfsSubDirectory string) error {
+	hash := strings.Split(digest, ":")[1]
+	filename := hash + ".tar.gz"
+
+	file, err := os.Create(destDir + "/" + filename)
+	if err != nil {
+		fmt.Println("Impossible to create the file: ", filename, "\nerr: ", err)
+		return err
+	}
+
+	resp, err := MakeRequestToRegistry(dockerRegistryUrl, repository, digest)
 
 	if err != nil {
 		fmt.Println(err)
-		panic(err)
+		return err
 	}
 
-	_, err = io.Copy(file, resp.Body)
+	var buf bytes.Buffer
+	tee := io.TeeReader(resp.Body, &buf)
+
+	_, err = io.Copy(file, tee)
 	if err != nil {
 		fmt.Println(err)
-		panic(err)
+		return err
 	}
 
+	uncompressed, err := gzip.NewReader(&buf)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+	cmd := exec.Command("cvmfs_server", "ingest", "-t", "-", "-b", cvmfsSubDirectory+hash, cvmfsRepo)
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		return err
+	}
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return err
+	}
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		return err
+	}
+	err = cmd.Start()
+
+	go func() {
+		_, err := io.Copy(stdin, uncompressed)
+		if err != nil {
+			fmt.Println("Error in writing to stdin: ", err)
+		}
+	}()
+
+	if err != nil {
+		return err
+	}
+
+	slurpOut, err := ioutil.ReadAll(stdout)
+
+	slurpErr, err := ioutil.ReadAll(stderr)
+
+	err = cmd.Wait()
+	fmt.Println("STDOUT: ", string(slurpOut))
+	fmt.Println("STDERR: ", string(slurpErr))
+	fmt.Println("Wrote file to: ", filename)
 	file.Close()
 	resp.Body.Close()
+	return nil
 }

@@ -589,7 +589,7 @@ func (d *Driver) Get(id string, mountLabel string) (s string, err error) {
 
 	if err := mount("overlay", mountTarget, "overlay", 0, mountData); err != nil {
 		return "", fmt.Errorf("error creating overlay mount to %s: %v [%s, %s]",
-		                      mergedDir, err, mountTarget, mountData)
+			mergedDir, err, mountTarget, mountData)
 	}
 
 	// chown "workdir/work" to the remapped root UID/GID. Overlay fs inside a
