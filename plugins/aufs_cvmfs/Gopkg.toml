@@ -1,0 +1,63 @@
+# Gopkg.toml example
+#
+# Refer to https://github.com/golang/dep/blob/master/docs/Gopkg.toml.md
+# for detailed Gopkg.toml documentation.
+#
+# required = ["github.com/user/thing/cmd/thing"]
+# ignored = ["github.com/user/project/pkgX", "bitbucket.org/user/project/pkgA/pkgY"]
+#
+# [[constraint]]
+#   name = "github.com/user/project"
+#   version = "1.0.0"
+#
+# [[constraint]]
+#   name = "github.com/user/project2"
+#   branch = "dev"
+#   source = "github.com/myfork/project2"
+#
+# [[override]]
+#   name = "github.com/x/y"
+#   version = "2.4.0"
+#
+# [prune]
+#   non-go = false
+#   go-tests = true
+#   unused-packages = true
+
+
+[[constraint]]
+  name = "github.com/Sirupsen/logrus"
+  version = "1.0.5"
+
+[[constraint]]
+  branch = "devel"
+  name = "github.com/cvmfs/docker-graphdriver"
+
+# this constraint force the ovveride bellow of github.com/opencontainers/runtime-spec
+# if we change this we should re-check the override.
+# version = "17.5.0-ce"
+[[constraint]]
+  name = "github.com/docker/docker"
+  version = "17.5.0-ce"
+
+# this is necessary since is required by github.com/docker/docker
+# revision = "1c7c27d043c2a5e513a44084d2b10d77d1402b8c"
+[[override]]
+  name = "github.com/opencontainers/runtime-spec"
+  revision = "1c7c27d043c2a5e513a44084d2b10d77d1402b8c"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/docker/go-plugins-helpers"
+
+[[constraint]]
+  name = "github.com/opencontainers/selinux"
+  version = "1.0.0-rc1"
+
+[[constraint]]
+  name = "github.com/vbatts/tar-split"
+  version = "0.10.2"
+
+[prune]
+  go-tests = true
+  unused-packages = true
