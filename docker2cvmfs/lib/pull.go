@@ -14,7 +14,10 @@ import (
 )
 
 func PullLayers(dockerRegistryUrl, inputReference, repository, subdirectory string) error {
-	manifest := getManifest(dockerRegistryUrl, inputReference)
+	manifest, err := getManifest(dockerRegistryUrl, inputReference)
+	if err != nil {
+		return err
+	}
 	image := strings.Split(inputReference, ":")[0]
 
 	destDir, err := ioutil.TempDir("", "docker2cvmfs_layers")

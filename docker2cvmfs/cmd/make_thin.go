@@ -29,6 +29,9 @@ var MakeThin = &cobra.Command{
 			log.Fatal(err)
 		}
 		manifest, err := lib.GetManifest(registry, inputReference)
+		if err != nil {
+			log.Fatal(err)
+		}
 
 		changes := []string{"ENV CVMFS_IMAGE true"}
 		configString, err := lib.GetConfig(registry, inputReference)
