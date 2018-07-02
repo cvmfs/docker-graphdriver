@@ -17,9 +17,11 @@ func PullLayers(dockerRegistryUrl, inputReference, repository, subdirectory stri
 	manifest := getManifest(dockerRegistryUrl, inputReference)
 	image := strings.Split(inputReference, ":")[0]
 
-	destDir := "/home/simo/tmp/layers"
+	destDir, err := ioutil.TempDir("", "docker2cvmfs_layers")
+	if err != nil {
+		return err
+	}
 
-	os.Mkdir(destDir, 0755)
 	for _, layer := range manifest.Layers {
 		// TODO make use of cvmfsRepo and cvmfsSubDirectory
 		err := getLayer(dockerRegistryUrl, image, layer.Digest, destDir, repository, subdirectory)
