@@ -1,7 +1,12 @@
 package cmd
 
 import (
+	"fmt"
+	"os"
+
 	"github.com/spf13/cobra"
+
+	"github.com/cvmfs/docker-graphdriver/daemon/lib"
 )
 
 var (
@@ -24,5 +29,17 @@ func init() {
 var addDesiderataCmd = &cobra.Command{
 	Use:   "add-desiderata",
 	Short: "Add a desiderata triplet",
-	Run:   func(cmd *cobra.Command, args []string) {},
+	Run: func(cmd *cobra.Command, args []string) {
+		inputImg, err := lib.ParseImage(inputImage)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+		outputImg, err := lib.ParseImage(outputImage)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+		fmt.Println(inputImg, outputImg)
+	},
 }

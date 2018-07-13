@@ -12,6 +12,28 @@ type Image struct {
 	Repository string
 	Tag        string
 	Digest     string
+	IsThin     bool
+}
+
+func (i Image) WholeName() string {
+	root := fmt.Sprintf("%s://%s/%s", i.Scheme, i.Registry, i.Repository)
+	if i.Tag != "" {
+		root = fmt.Sprintf("%s:%s", root, i.Tag)
+	}
+	if i.Digest != "" {
+		root = fmt.Sprintf("%s@%s", root, i.Digest)
+	}
+	return root
+}
+
+func (i Image) GetManifestUrl() string {
+	url := fmt.Sprintf("%s://%s/v2/%s/manifests/", i.Scheme, i.Registry, i.Repository)
+	if i.Digest != "" {
+		url = fmt.Sprintf("%s@%s", url, i.Digest)
+	} else {
+		url = fmt.Sprintf("%s%s", url, i.Tag)
+	}
+	return url
 }
 
 func ParseImage(image string) (img Image, err error) {

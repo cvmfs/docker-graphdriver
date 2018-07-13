@@ -1,0 +1,9 @@
+package lib
+
+import (
+	log "github.com/sirupsen/logrus"
+)
+
+func LogE(err error) *log.Entry {
+	return log.WithFields(log.Fields{"error": err})
+}

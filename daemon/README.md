@@ -77,15 +77,64 @@ layers could break some images actually running.
 
 Here follow the list of commands that the converter understand.
 
-### add-desiderata
+### __add-desiderata__
 
 **add-desiderata** --input-image $INPUT\_IMAGE --output-image $OUTPUT\_IMAGE --repository $CVMFS\_REPO
 
 Will add a new `desiderata` to the internal database, then it will try to
 convert the regular image into a thin image.
 
-### check-image
+### add-image
+
+**add-image** $IMAGE
+
+Will add the image to the internal database
+
+### check-image-syntax
 
 **check-image-syntax** $IMAGE
 
 Will parse your image and output what it is been able to parse.
+
+### image-in-database
+
+**image-in-database** $IMAGE
+
+Check if an image is already inside the database, if it is return such image.
+
+### list-images
+
+**list-images**
+
+List all the images in the database
+
+### migrate-database
+
+**migrate-database**
+
+Apply all the migration to the database up to the newest version of the
+software
+
+### download-manifest
+
+**download-manifest** $IMAGE
+
+Will try to download the manifest of the image from the repository, if
+successful it will print the manifest itself, otherwise it will display the
+error. The same internal procedure is used in order to actually convert the
+images.
+
+## add-desiderata workflow
+
+This section will go into the detail of what happens when you try to add a
+desiderata.
+
+The very first step is the parse of both the input and output image, if any of
+those parse fails the whole command fail and we immediately return an error.
+
+Then we check if the desiderata we are trying to add is already in the
+database, if it is we are not going to add it again and we simply return an
+error.
+
+
+
