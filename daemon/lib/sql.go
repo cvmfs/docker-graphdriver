@@ -68,6 +68,7 @@ func GetAllImagesInDatabase() ([]Image, error) {
 		var n_is_thin sql.NullBool
 		err = rows.Scan(&n_scheme, &n_registry, &n_repository, &n_tag, &n_digest, &n_is_thin)
 		if err != nil {
+			LogE(err).Info("Error in getting the images")
 			return []Image{}, err
 		}
 
@@ -119,7 +120,7 @@ func GetAllImagesInDatabase() ([]Image, error) {
 
 var addImage = `
 INSERT INTO image(scheme, registry, repository, tag, digest, is_thin) 
-	VALUES(:scheme, :registry, :repository, :tag, :digest, 0)
+	VALUES(:scheme, :registry, :repository, :tag, :digest, 0);
 `
 
 func AddImage(img Image) error {
