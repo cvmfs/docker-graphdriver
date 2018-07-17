@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"database/sql"
 	"fmt"
 	"os"
 
@@ -41,5 +42,27 @@ var addDesiderataCmd = &cobra.Command{
 			os.Exit(1)
 		}
 		fmt.Println(inputImg, outputImg)
+		inputImgDb, errIn := lib.GetImage(inputImg)
+		outputImgDb, errOut := lib.GetImage(outputImg)
+
+		// some error, that is not because the image is not in the db
+		if errIn != nil && errIn != sql.ErrNoRows {
+			lib.LogE(errIn).Fatal("Error in querying the database for the input image")
+		}
+		if errOut != nil && errOut != sql.ErrNoRows {
+			lib.LogE(errOut).Fatal("Error in querying the database for the output image")
+		}
+
+		// both images are already in our database
+		// check if also the desiderata itself is already in the database
+		if errIn == nil && errOut == nil {
+			inputId := inputImgDb.Id
+			outputId := outputImgDb.Id
+			_, err := lib.GetDesiderata(inputId, outputId, cvmfsRepo)
+			if err == nil {
+				lib.LogE(err).Fatal("Desiderata is already in the database")
+			}
+		}
+
 	},
 }

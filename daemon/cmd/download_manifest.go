@@ -3,7 +3,6 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
@@ -37,44 +36,23 @@ var downloadManifestCmd = &cobra.Command{
 		if img.Tag == "" && img.Digest == "" {
 			log.Fatal("Please provide either the image tag or the image digest")
 		}
-		url := img.GetManifestUrl()
-		resp, err := http.Get(url)
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-		defer resp.Body.Close()
-		if resp.StatusCode != 401 {
-			log.WithFields(log.Fields{
-				"status code": resp.StatusCode,
-			}).Info("Expected status code 401, print body anyway.")
-			body, err := ioutil.ReadAll(resp.Body)
-			if err != nil {
-				lib.LogE(err).Fatal("Error in reading the first http response")
-			}
-			fmt.Println(string(body))
-			os.Exit(1)
-		}
-		WwwAuthenticate := resp.Header["Www-Authenticate"][0]
-		token, err := requestAuthToken(WwwAuthenticate)
-		if err != nil {
-			lib.LogE(err).Fatal("Error in getting the authentication token")
-		}
 
-		client := &http.Client{}
-		req, err := http.NewRequest("GET", url, nil)
-		if err != nil {
-			lib.LogE(err).Fatal("Impossible to create a http request")
+		passChanell := make(chan string, 1)
+		tokenChanell := make(chan string, 1)
+		manifestRequest := lib.ManifestRequest{
+			Anonymous: user == "",
+			Password:  passChanell,
+			Token:     tokenChanell,
 		}
-
-		req.Header.Set("Authorization", token)
-		req.Header.Set("Accept", "application/vnd.docker.distribution.manifest.v2+json")
-
-		resp, err = client.Do(req)
-		defer resp.Body.Close()
-		body, err := ioutil.ReadAll(resp.Body)
+		if user != "" {
+			img.User = user
+		}
+		if user != "" && pass != "" {
+			passChanell <- pass
+		}
+		body, err := img.GetManifest(manifestRequest)
 		if err != nil {
-			lib.LogE(err).Fatal("Error in reading the second http response")
+			lib.LogE(err).Fatal("Error in getting the manifest")
 		}
 		fmt.Println(string(body))
 	},

@@ -4,13 +4,14 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 
 	"github.com/cvmfs/docker-graphdriver/daemon/lib"
 )
 
 func init() {
+	addImageCmd.Flags().StringVarP(&user, "username", "u", "", "username to use to log in into the registry.")
+	addImageCmd.Flags().StringVarP(&pass, "password", "p", "", "password to use to log in into the registry.")
 	addImageCmd.Flags().BoolVarP(&machineFriendly, "machine-friendly", "z", false, "produce machine friendly output, one line of csv")
 	rootCmd.AddCommand(addImageCmd)
 }
@@ -30,21 +31,7 @@ var addImageCmd = &cobra.Command{
 			fmt.Println(err)
 			os.Exit(1)
 		}
-		if machineFriendly {
-			fmt.Printf("scheme,registry,repository,tag,digest,is_thin\n")
-			fmt.Printf("%s,%s,%s,%s,%s\n", img.Scheme, img.Registry, img.Repository, img.Tag, img.Digest, img.IsThin)
-		} else {
-			table := tablewriter.NewWriter(os.Stdout)
-			table.SetAlignment(tablewriter.ALIGN_LEFT)
-			table.SetHeader([]string{"Key", "Value"})
-			table.Append([]string{"Scheme", img.Scheme})
-			table.Append([]string{"Registry", img.Registry})
-			table.Append([]string{"Repository", img.Repository})
-			table.Append([]string{"Tag", img.Tag})
-			table.Append([]string{"Digest", img.Digest})
-			table.Append([]string{"IsThin", fmt.Sprint(img.IsThin)})
-			table.Render()
-		}
+		img.PrintImage(machineFriendly, true)
 		os.Exit(0)
 	},
 }

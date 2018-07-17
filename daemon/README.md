@@ -136,5 +136,6 @@ Then we check if the desiderata we are trying to add is already in the
 database, if it is we are not going to add it again and we simply return an
 error.
 
-
+The next step is trying to download the input image manifest, if we are not
+able to access the manifest we emit a warning.
 

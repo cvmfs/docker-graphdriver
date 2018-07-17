@@ -18,10 +18,26 @@ func init() {
 var migrations = &migrate.MemoryMigrationSource{
 	Migrations: []*migrate.Migration{
 		&migrate.Migration{
+			Id:   "enable foreign key",
+			Up:   []string{`PRAGMA foreign_keys = ON;`},
+			Down: []string{`PRAGMA foreign_keys = OFF;`},
+		},
+		&migrate.Migration{
 			Id: "desiderata and converted table",
 			Up: []string{
+				`CREATE TABLE credential(
+					user STRING NOT NULL,
+					registry STRING NOT NULL,
+					refresh_token STRING,
+					
+					PRIMARY KEY(
+						user,
+						registry
+					)
+				);`,
 				`CREATE TABLE image(
 					id INTEGER PRIMARY KEY,
+					user STRING,
 					scheme STRING NOT NULL,
 					registry STRING NOT NULL,
 					repository STRING NOT NULL,
@@ -40,20 +56,24 @@ var migrations = &migrate.MemoryMigrationSource{
 					CONSTRAINT at_least_tag_or_digest
 						CHECK (COALESCE(tag, digest) NOT NULL),
 					UNIQUE(
+						user,
 						registry,
 						repository,
 						tag
 					),
 					UNIQUE(
+						user,
 						registry, 
 						repository, 
 						digest
-					)
+					),
+					FOREIGN KEY (user, registry)
+						REFERENCES credential(user, rgistry)
 				);`,
 				`CREATE TABLE desiderata(
 					id INTEGER PRIMARY KEY,
-					input_image INTEGER,
-					output_image INTEGER,
+					input_image INTEGER NOT NULL,
+					output_image INTEGER NOT NULL,
 					cvmfs_repo STRING NOT NULL,
 
 					CONSTRAINT unique_desiderata 
@@ -75,10 +95,44 @@ var migrations = &migrate.MemoryMigrationSource{
 				);`,
 			},
 			Down: []string{
-				`DROP TABLE image`,
+				`DROP TABLE credential;`,
+				`DROP TABLE image;`,
 				`DROP TABLE desiderata;`,
-				`DROP TABLE converted`,
+				`DROP TABLE converted;`,
 			},
+		},
+		&migrate.Migration{
+			Id: "Add view for image_name",
+			Up: []string{
+				`
+				-- if there is not tag, we print an empty string, 
+				-- then we will remove the ":" with the trim function, 
+				-- similarly for the digest
+				CREATE VIEW image_name(
+					image_id,
+					name,
+					manifest_url
+				) AS 
+			SELECT 
+	id, 
+	
+	rtrim(
+		printf("%s@%s", 
+			rtrim(
+				printf("%s://%s/%s:%s", scheme, registry, repository, tag),
+			':'), 
+			digest
+			), 
+		'@'
+	),
+
+	printf("%s://%s/v2/%s/manifests/%s", scheme, registry, repository, 
+		COALESCE(tag, printf("@%s", digest)))			
+
+					FROM image
+				;`,
+			},
+			Down: []string{`DROP VIEW image_name`},
 		},
 	},
 }

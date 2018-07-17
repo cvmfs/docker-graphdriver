@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 
 	"github.com/cvmfs/docker-graphdriver/daemon/lib"
@@ -29,20 +28,7 @@ var checkImageSyntaxCmd = &cobra.Command{
 			fmt.Println(err)
 			os.Exit(1)
 		}
-		if machineFriendly {
-			fmt.Printf("scheme,registry,repository,tag,digest\n")
-			fmt.Printf("%s,%s,%s,%s,%s\n", img.Scheme, img.Registry, img.Repository, img.Tag, img.Digest)
-		} else {
-			table := tablewriter.NewWriter(os.Stdout)
-			table.SetAlignment(tablewriter.ALIGN_LEFT)
-			table.SetHeader([]string{"Key", "Value"})
-			table.Append([]string{"Scheme", img.Scheme})
-			table.Append([]string{"Registry", img.Registry})
-			table.Append([]string{"Repository", img.Repository})
-			table.Append([]string{"Tag", img.Tag})
-			table.Append([]string{"Digest", img.Digest})
-			table.Render()
-		}
+		img.PrintImage(machineFriendly, true)
 		os.Exit(0)
 	},
 }

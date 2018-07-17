@@ -14,13 +14,21 @@ var (
 )
 
 var getImageQuery = `
-SELECT * FROM image WHERE
-	registry = :registry AND
-	repository = :repository AND
-	(
-		(tag = :tag AND digest = :digest) OR
-		(tag IS NULL AND digest = :digest) OR
-		(tag = :tag AND digest IS NULL)
+SELECT id, user, scheme, registry, repository, tag, digest, is_thin 
+FROM image 
+WHERE
+	registry = :registry 
+	AND repository = :repository 
+	AND (
+		(user = :user)
+		OR ("" = :user AND user IS NULL)
+	)
+	AND (
+		(tag = :tag AND digest = :digest) 
+		OR (tag IS NULL AND digest = :digest)
+		OR (tag = :tag AND digest IS NULL)
+		OR ("" = :tag AND digest = :digest)
+		OR (tag = :tag AND "" = :digest)
 	);
 `
 
@@ -36,11 +44,71 @@ func IsImageInDatabase(image Image) bool {
 	rows, err := getImageStmt.Query(
 		sql.Named("registry", image.Registry),
 		sql.Named("repository", image.Repository),
+		sql.Named("user", image.User),
 		sql.Named("tag", image.Tag),
 		sql.Named("digest", image.Digest),
 	)
 	defer rows.Close()
 	return rows.Next()
+}
+
+func GetImage(queryImage Image) (Image, error) {
+	db, err := sql.Open("sqlite3", Database)
+	if err != nil {
+		LogE(err).Fatal("Impossible to open the database.")
+	}
+	getImageStmt, err := db.Prepare(getImageQuery)
+	if err != nil {
+		LogE(err).Fatal("Impossible to create the statement.")
+	}
+	var id int
+	var scheme, registry, repository string
+	var n_user, n_tag, n_digest sql.NullString
+	var is_thin bool
+	var user, tag, digest string
+	err = getImageStmt.QueryRow(
+		sql.Named("registry", queryImage.Registry),
+		sql.Named("repository", queryImage.Repository),
+		sql.Named("user", queryImage.User),
+		sql.Named("tag", queryImage.Tag),
+		sql.Named("digest", queryImage.Digest),
+	).Scan(&id, &n_user, &scheme, &registry, &repository, &n_tag, &n_digest, &is_thin)
+	if err != nil {
+		return Image{}, err
+	}
+	if n_user.Valid {
+		user = n_user.String
+	} else {
+		user = ""
+	}
+	if n_tag.Valid {
+		tag = n_tag.String
+	} else {
+		tag = ""
+	}
+	if n_digest.Valid {
+		digest = n_digest.String
+	} else {
+		digest = ""
+	}
+	return Image{
+		User:       user,
+		Scheme:     scheme,
+		Registry:   registry,
+		Repository: repository,
+		Tag:        tag,
+		Digest:     digest,
+		IsThin:     is_thin}, err
+
+}
+
+func GetImageId(imageQuery Image) (id int, err error) {
+	image, err := GetImage(imageQuery)
+	if err != nil {
+		return
+	}
+	id = image.Id
+	return
 }
 
 var getAllImages = `SELECT scheme, registry, repository, tag, digest, is_thin FROM image`
@@ -148,5 +216,99 @@ func AddImage(img Image) error {
 		args = append(args, sql.Named("digest", nil))
 	}
 	_, err = addImagesStmt.Exec(args...)
+	return err
+}
+
+var getDesiderata = `
+SELECT id, input_image, output_image, cvmfs_repo 
+FROM desiderata
+WHERE (
+	input_image = :input
+	AND output_image = :output
+	AND cvmfs_repo = :repo
+);`
+
+func GetDesiderata(input_image, output_image int, cvmfs_repo string) (Desiderata, error) {
+	db, err := sql.Open("sqlite3", Database)
+	if err != nil {
+		LogE(err).Fatal("Impossible to open the database.")
+	}
+	getDesiderataStmt, err := db.Prepare(getDesiderata)
+	if err != nil {
+		LogE(err).Fatal("Impossible to create the statement.")
+	}
+	var id, input, output int
+	var repo string
+	err = getDesiderataStmt.QueryRow(
+		sql.Named("input", input_image),
+		sql.Named("output", output_image),
+		sql.Named("repo", cvmfs_repo),
+	).Scan(&id, &input, &output, &repo)
+	if err != nil {
+		return Desiderata{}, err
+	}
+	return Desiderata{
+		Id:          id,
+		InputImage:  input,
+		OutputImage: output,
+		CvmfsRepo:   repo,
+	}, err
+}
+
+var getRefreshToken = `
+SELECT refresh_token FROM credential WHERE
+user = :user AND registry = :registry
+`
+
+func GetRefreshToken(user, registry string) (string, error) {
+	db, err := sql.Open("sqlite3", Database)
+	if err != nil {
+		LogE(err).Fatal("Impossible to open the database.")
+	}
+	getRefreshTokenStmt, err := db.Prepare(getRefreshToken)
+	if err != nil {
+		LogE(err).Fatal("Impossible to create the statement.")
+	}
+	var n_token sql.NullString
+	err = getRefreshTokenStmt.QueryRow(
+		sql.Named("user", user),
+		sql.Named("registry", registry),
+	).Scan(&n_token)
+	if err != nil {
+		return "", err
+	}
+	if n_token.Valid {
+		return n_token.String, nil
+	} else {
+		return "", nil
+	}
+}
+
+var addUser = `
+INSERT INTO credential(user, registry, refresh_token)
+VALUES(:user, :registry, :refresh_token);
+`
+
+func AddUser(user, registry, token string) error {
+	var n_token sql.NullString
+	if token == "" {
+		n_token = sql.NullString{}
+	} else {
+		n_token = sql.NullString{
+			String: token,
+			Valid:  true}
+	}
+	db, err := sql.Open("sqlite3", Database)
+	if err != nil {
+		LogE(err).Fatal("Impossible to open the database.")
+	}
+	addUserStmt, err := db.Prepare(addUser)
+	if err != nil {
+		LogE(err).Fatal("Impossible to create the statement.")
+	}
+	_, err = addUserStmt.Exec(
+		sql.Named("user", user),
+		sql.Named("registry", registry),
+		sql.Named("refresh_token", n_token))
 	return err
 }

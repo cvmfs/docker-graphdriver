@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"database/sql"
 	"fmt"
 	"os"
 
@@ -23,10 +24,16 @@ var imageInDatabaseCmd = &cobra.Command{
 			fmt.Println(err)
 			os.Exit(1)
 		}
-		if lib.IsImageInDatabase(img) {
-			fmt.Println(1)
+		_, err = lib.GetImageId(img)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				fmt.Println(0)
+
+			} else {
+				lib.LogE(err).Fatal("Error in executing SQL query")
+			}
 		} else {
-			fmt.Println(0)
+			fmt.Println(1)
 		}
 		os.Exit(0)
 	},
