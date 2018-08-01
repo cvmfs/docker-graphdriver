@@ -84,9 +84,10 @@ Here follow the list of commands that the converter understand.
 
 ### add-desiderata
 
-`add-desiderata --input-image $INPUT_IMAGE --output-image $OUTPUT_IMAGE --repository $CVMFS_REPO \
-
-        --user-input $USER_INPUT --user-output $USER_OUTPUT`
+```
+add-desiderata --input-image $INPUT_IMAGE --output-image $OUTPUT_IMAGE --repository $CVMFS_REPO \
+        --user-input $USER_INPUT --user-output $USER_OUTPUT
+```
 
 Will add a new `desiderata` to the internal database, then it will try to
 convert the regular image into a thin image.
