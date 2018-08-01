@@ -10,16 +10,19 @@ very common, so before to dive in we can agree on a share vocabulary.
 
 **Registry** does refer to the docker image registry, with protocol extensions,
 common examples are:
+
     * https://registry.hub.docker.com
     * https://gitlab-registry.cern.ch
 
 **Repository** This specify a containers of images, each image will be indexed,
 then by tag or digest. Common examples are:
+ 
     * library/redis
     * library/ubuntu
 
 **Tag** is a way to identify an image inside a repository, tags are mutable
 and may change in a feature. Common examples are:
+
     * 4
     * 3-alpine
 
@@ -27,6 +30,7 @@ and may change in a feature. Common examples are:
 **immutable**, since they are the result of an hash function to the content of
 the image. Thanks to this technique the images are content addreassable.
 Common examples are:
+
     * sha256:2aa24e8248d5c6483c99b6ce5e905040474c424965ec866f7decd87cb316b541
     * sha256:d582aa10c3355604d4133d6ff3530a35571bd95f97aadc5623355e66d92b6d2c
 
@@ -36,6 +40,7 @@ and it is identified by a tag, or a digest or both, if you can choose is always
 better to identify the image using at least the digest.
 
 To unique identify an image so we need to provide all those information:
+
     1. registry
     2. repository
     3. tag or digest or tag + digest
