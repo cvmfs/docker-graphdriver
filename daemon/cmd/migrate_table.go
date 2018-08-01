@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"database/sql"
+	"os"
+	"path/filepath"
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/rubenv/sql-migrate"
@@ -157,6 +159,11 @@ var migrateDatabaseCmd = &cobra.Command{
 	Use:   "migrate-database",
 	Short: "migrate the database to the newest version supported by this version of the software",
 	Run: func(cmd *cobra.Command, args []string) {
+		dbLocation := filepath.Dir(lib.Database)
+		err := os.MkdirAll(dbLocation, 0667)
+		if err != nil {
+			lib.LogE(err).Fatal("Impossible to create the directory for the database")
+		}
 		db, err := sql.Open("sqlite3", lib.Database)
 		if err != nil {
 			lib.LogE(err).Fatal("Impossible to open the database.")
