@@ -3,75 +3,8 @@ package lib
 import (
 	"fmt"
 	"net/url"
-	"os"
 	"strings"
-
-	"github.com/olekukonko/tablewriter"
 )
-
-type Image struct {
-	Id         int
-	User       string
-	Scheme     string
-	Registry   string
-	Repository string
-	Tag        string
-	Digest     string
-	IsThin     bool
-}
-
-type Desiderata struct {
-	Id          int
-	InputImage  int
-	OutputImage int
-	CvmfsRepo   string
-}
-
-func (i Image) WholeName() string {
-	root := fmt.Sprintf("%s://%s/%s", i.Scheme, i.Registry, i.Repository)
-	if i.Tag != "" {
-		root = fmt.Sprintf("%s:%s", root, i.Tag)
-	}
-	if i.Digest != "" {
-		root = fmt.Sprintf("%s@%s", root, i.Digest)
-	}
-	return root
-}
-
-func (i Image) GetManifestUrl() string {
-	url := fmt.Sprintf("%s://%s/v2/%s/manifests/", i.Scheme, i.Registry, i.Repository)
-	if i.Digest != "" {
-		url = fmt.Sprintf("%s@%s", url, i.Digest)
-	} else {
-		url = fmt.Sprintf("%s%s", url, i.Tag)
-	}
-	return url
-}
-
-func (img Image) PrintImage(machineFriendly, csv_header bool) {
-	if machineFriendly {
-		if csv_header {
-			fmt.Printf("name,scheme,registry,repository,tag,digest,is_thin\n")
-		}
-		fmt.Printf("%s,%s,%s,%s,%s,%s,%s,%s\n",
-			img.WholeName(), img.User, img.Scheme,
-			img.Registry, img.Repository,
-			img.Tag, img.Digest,
-			fmt.Sprint(img.IsThin))
-	} else {
-		table := tablewriter.NewWriter(os.Stdout)
-		table.SetAlignment(tablewriter.ALIGN_LEFT)
-		table.SetHeader([]string{"Key", "Value"})
-		table.Append([]string{"Name", img.WholeName()})
-		table.Append([]string{"User", img.User})
-		table.Append([]string{"Scheme", img.Scheme})
-		table.Append([]string{"Registry", img.Registry})
-		table.Append([]string{"Repository", img.Repository})
-		table.Append([]string{"Tag", img.Tag})
-		table.Append([]string{"Digest", img.Digest})
-		table.Render()
-	}
-}
 
 func ParseImage(image string) (img Image, err error) {
 	url, err := url.Parse(image)

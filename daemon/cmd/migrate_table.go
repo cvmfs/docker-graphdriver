@@ -18,22 +18,23 @@ func init() {
 var migrations = &migrate.MemoryMigrationSource{
 	Migrations: []*migrate.Migration{
 		&migrate.Migration{
-			Id:   "enable foreign key",
-			Up:   []string{`PRAGMA foreign_keys = ON;`},
-			Down: []string{`PRAGMA foreign_keys = OFF;`},
-		},
-		&migrate.Migration{
 			Id: "desiderata and converted table",
 			Up: []string{
 				`CREATE TABLE credential(
 					user STRING NOT NULL,
 					registry STRING NOT NULL,
-					refresh_token STRING,
+					password STRING NOT NULL,
 					
 					PRIMARY KEY(
 						user,
 						registry
-					)
+					),
+					CONSTRAINT no_empty_string
+						CHECK (
+							user != ''
+							AND registry != ''
+							AND password != ''
+						)
 				);`,
 				`CREATE TABLE image(
 					id INTEGER PRIMARY KEY,
@@ -55,6 +56,15 @@ var migrations = &migrate.MemoryMigrationSource{
 						),
 					CONSTRAINT at_least_tag_or_digest
 						CHECK (COALESCE(tag, digest) NOT NULL),
+					CONSTRAINT thin_images_must_have_an_user
+						CHECK (
+							is_thin = 0
+							OR (
+								is_thin != 0 
+								AND user NOT NULL
+								AND user != ''
+							)
+						),
 					UNIQUE(
 						user,
 						registry,
@@ -68,7 +78,7 @@ var migrations = &migrate.MemoryMigrationSource{
 						digest
 					),
 					FOREIGN KEY (user, registry)
-						REFERENCES credential(user, rgistry)
+						REFERENCES credential(user, registry)
 				);`,
 				`CREATE TABLE desiderata(
 					id INTEGER PRIMARY KEY,
@@ -90,6 +100,12 @@ var migrations = &migrate.MemoryMigrationSource{
 				);`,
 				`CREATE TABLE converted(
 					desiderata INTEGER,
+					input_reference STRING NOT NULL,
+					CONSTRAINT unique_desiderata_input
+						UNIQUE(
+							desiderata,
+							input_reference
+					),
 					FOREIGN KEY (desiderata)
 						REFERENCES desiderata(id)
 				);`,

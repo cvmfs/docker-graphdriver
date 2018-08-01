@@ -14,12 +14,11 @@ import (
 )
 
 var (
-	user, pass string
+	user string
 )
 
 func init() {
 	downloadManifestCmd.Flags().StringVarP(&user, "username", "u", "", "username to use to log in into the registry.")
-	downloadManifestCmd.Flags().StringVarP(&pass, "password", "p", "", "password to use to log in into the registry.")
 	rootCmd.AddCommand(downloadManifestCmd)
 }
 
@@ -36,25 +35,19 @@ var downloadManifestCmd = &cobra.Command{
 		if img.Tag == "" && img.Digest == "" {
 			log.Fatal("Please provide either the image tag or the image digest")
 		}
-
-		passChanell := make(chan string, 1)
-		tokenChanell := make(chan string, 1)
-		manifestRequest := lib.ManifestRequest{
-			Anonymous: user == "",
-			Password:  passChanell,
-			Token:     tokenChanell,
-		}
 		if user != "" {
 			img.User = user
 		}
-		if user != "" && pass != "" {
-			passChanell <- pass
-		}
-		body, err := img.GetManifest(manifestRequest)
+
+		manifest, err := img.GetManifest()
 		if err != nil {
 			lib.LogE(err).Fatal("Error in getting the manifest")
 		}
-		fmt.Println(string(body))
+		text, err := json.MarshalIndent(manifest, "", "  ")
+		if err != nil {
+			lib.LogE(err).Fatal("Error in encoding the manifest as JSON")
+		}
+		fmt.Println(string(text))
 	},
 }
 

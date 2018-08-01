@@ -77,7 +77,7 @@ layers could break some images actually running.
 
 Here follow the list of commands that the converter understand.
 
-### __add-desiderata__
+### add-desiderata
 
 **add-desiderata** --input-image $INPUT\_IMAGE --output-image $OUTPUT\_IMAGE --repository $CVMFS\_REPO
 
@@ -124,6 +124,20 @@ successful it will print the manifest itself, otherwise it will display the
 error. The same internal procedure is used in order to actually convert the
 images.
 
+### convert
+
+**convert**
+
+This command will try to convert all the desiderata in the internal database.
+
+### loop
+
+**loop**
+
+This command is equivalent to call `convert` in an infinite loop, usefull to
+make sure that all the images are up to date.
+
+
 ## add-desiderata workflow
 
 This section will go into the detail of what happens when you try to add a
@@ -137,5 +151,35 @@ database, if it is we are not going to add it again and we simply return an
 error.
 
 The next step is trying to download the input image manifest, if we are not
-able to access the manifest we emit a warning.
+able to access the input manifest we return an error.
+
+Finally if every check completely successfully we add the desiderata to the
+internal database.
+
+## convert workflow
+
+The goal of convert is to actually create the thin images starting from the
+regurlar one.
+
+In order to convert we iterate for every desiderata.
+
+In general some desiderata will be already converted while others will need to
+be converted ex-novo.
+
+The first step is then to check if the desiderata is already been converted.
+In order to do this check we download the input image manifest and check
+against the internal database if the input image digest is already been
+converted, if it is we can safely skip such conversion. 
+
+Then, every image is made of different layers, some of them could already been
+on the repository.
+In order to avoid expensive CVMFS transaction, before to downloand and ingest
+the layer we check if it is already in the repository, if it is we do not
+download nor ingest the layer.
+
+The conversion simply ingest every layer in an image, create a thin image and
+finally push the thin image to the registry.
+
+Such images can be used by docker with the plugins.
+
 

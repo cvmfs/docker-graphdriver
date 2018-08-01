@@ -11,7 +11,6 @@ import (
 
 func init() {
 	addImageCmd.Flags().StringVarP(&user, "username", "u", "", "username to use to log in into the registry.")
-	addImageCmd.Flags().StringVarP(&pass, "password", "p", "", "password to use to log in into the registry.")
 	addImageCmd.Flags().BoolVarP(&machineFriendly, "machine-friendly", "z", false, "produce machine friendly output, one line of csv")
 	rootCmd.AddCommand(addImageCmd)
 }
@@ -25,6 +24,10 @@ var addImageCmd = &cobra.Command{
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
+		}
+		_, err = img.GetManifest()
+		if err != nil {
+			lib.LogE(err).Fatal("Impossible to get the manifest of the image, wrong registry or missing credential maybe?")
 		}
 		err = lib.AddImage(img)
 		if err != nil {
