@@ -97,38 +97,45 @@ users (so usernames, password and registry) using the `add-user` command.
 
 ### add-image
 
-**add-image** $IMAGE
+```
+add-image $IMAGE
+```
 
 Will add the image to the internal database
 
 ### check-image-syntax
 
-**check-image-syntax** $IMAGE
+```
+check-image-syntax $IMAGE
+```
 
 Will parse your image and output what it is been able to parse.
 
-### image-in-database
-
-**image-in-database** $IMAGE
-
-Check if an image is already inside the database, if it is return such image.
-
 ### list-images
 
-**list-images**
+```
+list-images
+```
 
 List all the images in the database
 
 ### migrate-database
 
-**migrate-database**
+```
+migrate-database
+```
 
 Apply all the migration to the database up to the newest version of the
-software
+software.
+
+As first run is necessary to run this function and to run it as root since it
+will create the necessary directory for the database in `/var/lib/`
 
 ### download-manifest
 
-**download-manifest** $IMAGE
+```
+download-manifest $IMAGE
+```
 
 Will try to download the manifest of the image from the repository, if
 successful it will print the manifest itself, otherwise it will display the
@@ -137,13 +144,17 @@ images.
 
 ### convert
 
-**convert**
+```
+convert
+```
 
 This command will try to convert all the desiderata in the internal database.
 
 ### loop
 
-**loop**
+```
+loop
+```
 
 This command is equivalent to call `convert` in an infinite loop, usefull to
 make sure that all the images are up to date.
@@ -193,4 +204,6 @@ finally push the thin image to the registry.
 
 Such images can be used by docker with the plugins.
 
+## General workflow
 
+TODO
