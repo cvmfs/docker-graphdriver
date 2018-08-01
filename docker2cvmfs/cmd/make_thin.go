@@ -38,6 +38,7 @@ var MakeThin = &cobra.Command{
 		if err != nil {
 			log.Println("Unable to get the configuration for the image")
 		} else {
+			// setting the option for the docker image
 			var config map[string]interface{}
 			json.Unmarshal([]byte(configString), &config)
 			configConfigInterface, ok := config["config"]
@@ -62,7 +63,6 @@ var MakeThin = &cobra.Command{
 							fmt.Sprintf("CMD %s", cmdStr))
 					}
 				}
-
 			}
 		}
 
