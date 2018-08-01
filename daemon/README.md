@@ -45,8 +45,8 @@ To unique identify an image so we need to provide all those information:
     2. repository
     3. tag or digest or tag + digest
 
-We will use colon (`:`) to separate the `registry` from the `repository` and
-again the colon to separate the `repository` from the `tag` and the at (`@`) to
+We will use slash (`/`) to separate the `registry` from the `repository` and
+the colon (`/`) to separate the `repository` from the `tag` and the at (`@`) to
 separate the `digest` from the tag or from the `repository`.
 
 The final syntax will be:
@@ -67,7 +67,7 @@ The main component of this approach is the **desiderata** which is a triplet
 composed by the input image, the output image and in which cvmfs repository you
 want to store the data.
 
-    `desiderata => (input_image, output_image, cvmfs_repository)`
+    desiderata => (input_image, output_image, cvmfs_repository)
 
 The input image in your desiderata should be as more specific as possible,
 ideally specifying both the tag and the digest.
@@ -84,10 +84,14 @@ Here follow the list of commands that the converter understand.
 
 ### add-desiderata
 
-**add-desiderata** --input-image $INPUT\_IMAGE --output-image $OUTPUT\_IMAGE --repository $CVMFS\_REPO
+`add-desiderata --input-image $INPUT_IMAGE --output-image $OUTPUT_IMAGE --repository $CVMFS_REPO \
+        --user-input $USER_INPUT --user-output $USER_OUTPUT`
 
 Will add a new `desiderata` to the internal database, then it will try to
 convert the regular image into a thin image.
+
+The users are the one that will try tpo log into the registry, you can add
+users (so usernames, password and registry) using the `add-user` command.
 
 ### add-image
 
