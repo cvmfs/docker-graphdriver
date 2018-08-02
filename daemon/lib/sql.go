@@ -6,7 +6,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-var Database = "/var/lib/docker2cvmfs/docker2cvmfs_archive.sqlite?_foreign_keys=true"
+var Database = "docker2cvmfs_archive.sqlite?_foreign_keys=true"
 
 var (
 	BB           *sql.DB
