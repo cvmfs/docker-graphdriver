@@ -15,8 +15,8 @@ import (
 )
 
 type ThinImageLayer struct {
-	Digest   string `json:"digest"`
-	Url      string `json:"url,omitempty"`
+	Digest string `json:"digest"`
+	Url    string `json:"url,omitempty"`
 }
 
 type ThinImage struct {
@@ -53,22 +53,19 @@ func IsThinImageLayer(diffPath string) bool {
 	return false
 }
 
-
 func ParseThinUrl(url string) (schema string, location string) {
 	tokens := strings.Split(url, "://")
 	if tokens[0] != "cvmfs" {
 		fmt.Println("layer's url schema " + tokens[0] + " unsupported!" +
-			          " [" + url + "]")
+			" [" + url + "]")
 	}
 	return tokens[0], strings.Join(tokens[1:], "://")
 }
-
 
 func ParseCvmfsLocation(location string) (repo string, folder string) {
 	tokens := strings.Split(location, "/")
 	return tokens[0], strings.Join(tokens[1:], "/")
 }
-
 
 func GetCvmfsLayerPaths(layers []ThinImageLayer, cvmfsMountPath string) []string {
 	ret := make([]string, len(layers))
