@@ -63,13 +63,13 @@ Examples of images are:
 The converter has a declarative approach. You specify what is your end goal and
 it tries to reach it.
 
-The main component of this approach is the **desiderata** which is a triplet
+The main component of this approach is the **wish** which is a triplet
 composed by the input image, the output image and in which cvmfs repository you
 want to store the data.
 
-    desiderata => (input_image, output_image, cvmfs_repository)
+    wish => (input_image, output_image, cvmfs_repository)
 
-The input image in your desiderata should be as more specific as possible,
+The input image in your wish should be as more specific as possible,
 ideally specifying both the tag and the digest.
 
 On the other end, you cannot be so specific for the output image, simple
@@ -82,14 +82,14 @@ layers could break some images actually running.
 
 Here follow the list of commands that the converter understand.
 
-### add-desiderata
+### add-wish
 
 ```
-add-desiderata --input-image $INPUT_IMAGE --output-image $OUTPUT_IMAGE --repository $CVMFS_REPO \
+add-wish --input-image $INPUT_IMAGE --output-image $OUTPUT_IMAGE --repository $CVMFS_REPO \
         --user-input $USER_INPUT --user-output $USER_OUTPUT
 ```
 
-Will add a new `desiderata` to the internal database, then it will try to
+Will add a new `wish` to the internal database, then it will try to
 convert the regular image into a thin image.
 
 The users are the one that will try to log into the registry, you can add
@@ -147,7 +147,7 @@ images.
 convert
 ```
 
-This command will try to convert all the desiderata in the internal database.
+This command will try to convert all the wish in the wish list.
 
 ### loop
 
@@ -159,22 +159,22 @@ This command is equivalent to call `convert` in an infinite loop, useful to
 make sure that all the images are up to date.
 
 
-## add-desiderata workflow
+## add-wish workflow
 
-This section will go into the detail of what happens when you try to add a
-desiderata.
+This section will go into the detail of what happens when we try to add a
+wish.
 
 The very first step is the parse of both the input and output image, if any of
 those parse fails the whole command fails and we immediately return an error.
 
-Then we check if the desiderata we are trying to add is already in the
+Then we check if the wish we are trying to add is already in the
 database, if it is we are not going to add it again and we simply return an
 error.
 
 The next step is trying to download the input image manifest, if we are not
 able to access the input manifest we return an error.
 
-Finally if every check completed successfully we add the desiderata to the
+Finally if every check completed successfully we add the wish to the
 internal database.
 
 ## convert workflow
@@ -182,12 +182,12 @@ internal database.
 The goal of convert is to actually create the thin images starting from the
 regular one.
 
-In order to convert we iterate for every desiderata.
+In order to convert we iterate for every wish in the wish list.
 
-In general, some desiderata will be already converted while others will need to
+In general, some wish will be already converted while others will need to
 be converted ex-novo.
 
-The first step is then to check if the desiderata is already been converted.
+The first step is then to check if the wish is already been converted.
 In order to do this check, we download the input image manifest and check
 against the internal database if the input image digest is already been
 converted, if it is we can safely skip such conversion. 
@@ -224,7 +224,7 @@ where you are calling the utility itself, this requirements will be dropped in
 future releases.
 
 Once the database is been created we can start adding users, images and
-desideratas.
+wishes.
 
 The conversion is quite straightforward, we first download the input image, we
 store each layer on the cvmfs repository, we create the output image and
@@ -256,10 +256,10 @@ the moment is to use disposable users with very limited capabilities so that
 if the database get compromised (a third party has access to it) we are able to
 limit the treats.
 
-The next step is to add a desiderata, to do so:
+The next step is to add a wish, to do so:
 
 ```
-$ ./daemon add-desiderata \
+$ ./daemon add-wish \
         --input-image https://registry.hub.docker.com/library/redis:4 \
         --output-image https://gitlab-registry.cern.ch/smosciat/containerd/thin/redis:4 \
         --repository cd.cern.ch \
@@ -268,7 +268,7 @@ WARN[0000] Unable to retrieve the password, trying to get the manifest anonymous
 Auth to: Bearer realm="https://auth.docker.io/token",service="registry.docker.io",scope="repository:library/redis:pull"
 https://auth.docker.io/token?scope=repository%3Alibrary%2Fredis%3Apull&service=registry.docker.io
 
-$ ./daemon list-desideratas
+$ ./daemon list-wish
 +----+----------------+-------------------------------------------------+------------+-----------------+------------------------------------------------------------------+
 | ID | INPUT IMAGE ID |                INPUT IMAGE NAME                 | CVMFS REPO | OUTPUT IMAGE ID |                        OUTPUT IMAGE NAME                         |
 +----+----------------+-------------------------------------------------+------------+-----------------+------------------------------------------------------------------+
@@ -276,9 +276,9 @@ $ ./daemon list-desideratas
 +----+----------------+-------------------------------------------------+------------+-----------------+------------------------------------------------------------------+
 ```
 
-Of ocurse you can add as many desideratas as you wish.
+Of ocurse you can add as many wish as you need.
 
-Now that all the desideratas are in place you can simply start converting them:
+Now that all the wishes are in place you can simply start converting them:
 
 ```
 $ ./daemon convert
@@ -310,7 +310,7 @@ $./daemon loop
 
 While the daemon is running in a loop you should be able to iteract with the
 utility without any issue, so you should be able to add users, images and even
-desideratas.
+new wishes, the next loop will pick the adding elements up.
 
 Only be careful to don't leave the CVMFS repository in an inconsistet state
 (abort the program Ctrl-C while it is doing a transaction).
