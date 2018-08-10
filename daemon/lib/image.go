@@ -69,7 +69,7 @@ func (i Image) GetServerUrl() string {
 func (img Image) PrintImage(machineFriendly, csv_header bool) {
 	if machineFriendly {
 		if csv_header {
-			fmt.Printf("name,scheme,registry,repository,tag,digest,is_thin\n")
+			fmt.Printf("name,user,scheme,registry,repository,tag,digest,is_thin\n")
 		}
 		fmt.Printf("%s,%s,%s,%s,%s,%s,%s,%s\n",
 			img.WholeName(), img.User, img.Scheme,

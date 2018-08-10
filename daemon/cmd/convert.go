@@ -21,15 +21,15 @@ func init() {
 
 var convertCmd = &cobra.Command{
 	Use:   "convert",
-	Short: "Convert the desiderata",
+	Short: "Convert the wishes",
 	Run: func(cmd *cobra.Command, args []string) {
-		desideratas, err := lib.GetAllDesiderata()
+		wish, err := lib.GetAllWishes()
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
-		for _, desi := range desideratas {
-			err = lib.ConvertDesiderata(desi, convertAgain, overwriteLayer)
+		for _, wish := range wish {
+			err = lib.ConvertWish(wish, convertAgain, overwriteLayer)
 			if err != nil {
 				fmt.Println(err)
 			}

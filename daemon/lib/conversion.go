@@ -20,8 +20,8 @@ import (
 	d2c "github.com/cvmfs/docker-graphdriver/docker2cvmfs/lib"
 )
 
-func ConvertDesiderata(des DesiderataFriendly, convertAgain, forceDownload bool) (err error) {
-	outputImage, err := GetImageById(des.OutputId)
+func ConvertWish(wish WishFriendly, convertAgain, forceDownload bool) (err error) {
+	outputImage, err := GetImageById(wish.OutputId)
 	if err != nil {
 		return
 	}
@@ -29,7 +29,7 @@ func ConvertDesiderata(des DesiderataFriendly, convertAgain, forceDownload bool)
 	if err != nil {
 		return
 	}
-	inputImage, err := GetImageById(des.InputId)
+	inputImage, err := GetImageById(wish.InputId)
 	if err != nil {
 		return
 	}
@@ -37,7 +37,7 @@ func ConvertDesiderata(des DesiderataFriendly, convertAgain, forceDownload bool)
 	if err != nil {
 		return
 	}
-	if AlreadyConverted(des.Id, manifest.Config.Digest) && convertAgain == false {
+	if AlreadyConverted(wish.Id, manifest.Config.Digest) && convertAgain == false {
 		Log().Info("Already converted the image, skipping.")
 		return nil
 	}
@@ -54,7 +54,7 @@ func ConvertDesiderata(des DesiderataFriendly, convertAgain, forceDownload bool)
 				LogE(err).Error("Error in uncompressing the layer")
 			}
 			layerDigest := strings.Split(layer.Name, ":")[1]
-			cmd := exec.Command("cvmfs_server", "ingest", "-t", "-", "-b", subDirInsideRepo+"/"+layerDigest, des.CvmfsRepo)
+			cmd := exec.Command("cvmfs_server", "ingest", "-t", "-", "-b", subDirInsideRepo+"/"+layerDigest, wish.CvmfsRepo)
 			stdin, err := cmd.StdinPipe()
 			if err != nil {
 				return
@@ -94,11 +94,11 @@ func ConvertDesiderata(des DesiderataFriendly, convertAgain, forceDownload bool)
 		noErrorInConversion <- noErrors
 	}()
 	if forceDownload {
-		err = inputImage.GetLayers(des.CvmfsRepo, subDirInsideRepo, layersChanell)
+		err = inputImage.GetLayers(wish.CvmfsRepo, subDirInsideRepo, layersChanell)
 	} else {
-		err = inputImage.GetLayerIfNotInCVMFS(des.CvmfsRepo, subDirInsideRepo, layersChanell)
+		err = inputImage.GetLayerIfNotInCVMFS(wish.CvmfsRepo, subDirInsideRepo, layersChanell)
 	}
-	repoLocation := fmt.Sprintf("%s/%s", des.CvmfsRepo, subDirInsideRepo)
+	repoLocation := fmt.Sprintf("%s/%s", wish.CvmfsRepo, subDirInsideRepo)
 	thin := d2c.MakeThinImage(manifest, repoLocation, inputImage.WholeName())
 	if err != nil {
 		return
@@ -183,7 +183,7 @@ func ConvertDesiderata(des DesiderataFriendly, convertAgain, forceDownload bool)
 	// and if there was no error we add everything to the converted table
 	if <-noErrorInConversion {
 		inputDigest := manifest.Config.Digest
-		err = AddConverted(des.Id, inputDigest)
+		err = AddConverted(wish.Id, inputDigest)
 		if err != nil && convertAgain == false {
 			LogE(err).Error("Error in storing the conversion in the database")
 		}

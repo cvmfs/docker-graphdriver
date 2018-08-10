@@ -14,14 +14,14 @@ func init() {
 }
 
 var listAllDesiderataCmd = &cobra.Command{
-	Use:   "list-desideratas",
-	Short: "Show all the desiderata in the database",
+	Use:   "list-wishes",
+	Short: "Show all the wishes in the database",
 	Run: func(cmd *cobra.Command, args []string) {
-		desideratas, err := lib.GetAllDesiderata()
+		wishes, err := lib.GetAllWishes()
 		if err != nil {
 			lib.LogE(err).Fatal("Impossible to get the desiderata")
 		}
-		lib.PrintMultipleDesideratas(desideratas, machineFriendly, true)
+		lib.PrintMultipleWishes(wishes, machineFriendly, true)
 		os.Exit(0)
 	},
 }

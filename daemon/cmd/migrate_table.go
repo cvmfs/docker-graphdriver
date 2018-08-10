@@ -18,7 +18,7 @@ func init() {
 var migrations = &migrate.MemoryMigrationSource{
 	Migrations: []*migrate.Migration{
 		&migrate.Migration{
-			Id: "desiderata and converted table",
+			Id: "wish and converted table",
 			Up: []string{
 				`CREATE TABLE credential(
 					user STRING NOT NULL,
@@ -80,13 +80,13 @@ var migrations = &migrate.MemoryMigrationSource{
 					FOREIGN KEY (user, registry)
 						REFERENCES credential(user, registry)
 				);`,
-				`CREATE TABLE desiderata(
+				`CREATE TABLE wish(
 					id INTEGER PRIMARY KEY,
 					input_image INTEGER NOT NULL,
 					output_image INTEGER NOT NULL,
 					cvmfs_repo STRING NOT NULL,
 
-					CONSTRAINT unique_desiderata 
+					CONSTRAINT unique_wish 
 						UNIQUE(
 							input_image,
 							output_image,
@@ -99,21 +99,21 @@ var migrations = &migrate.MemoryMigrationSource{
 
 				);`,
 				`CREATE TABLE converted(
-					desiderata INTEGER,
+					wish INTEGER,
 					input_reference STRING NOT NULL,
-					CONSTRAINT unique_desiderata_input
+					CONSTRAINT unique_wish_input
 						UNIQUE(
-							desiderata,
+							wish,
 							input_reference
 					),
-					FOREIGN KEY (desiderata)
-						REFERENCES desiderata(id)
+					FOREIGN KEY (wish)
+						REFERENCES wish(id)
 				);`,
 			},
 			Down: []string{
 				`DROP TABLE credential;`,
 				`DROP TABLE image;`,
-				`DROP TABLE desiderata;`,
+				`DROP TABLE wish;`,
 				`DROP TABLE converted;`,
 			},
 		},

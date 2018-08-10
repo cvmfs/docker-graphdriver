@@ -301,56 +301,56 @@ func AddImage(img Image) error {
 	return err
 }
 
-var addDesiderata = `
-INSERT INTO desiderata(input_image, output_image, cvmfs_repo)
+var addWish = `
+INSERT INTO wish(input_image, output_image, cvmfs_repo)
 VALUES(:input, :output, :repo);
 `
 
-func AddDesiderata(inputId, outputId int, repo string) (err error) {
+func AddWish(inputId, outputId int, repo string) (err error) {
 	db, err := sql.Open("sqlite3", Database)
 	if err != nil {
 		return
 	}
-	addDesiderataStmt, err := db.Prepare(addDesiderata)
+	addWishStmt, err := db.Prepare(addWish)
 	if err != nil {
 		return
 	}
-	_, err = addDesiderataStmt.Exec(
+	_, err = addWishStmt.Exec(
 		sql.Named("input", inputId),
 		sql.Named("output", outputId),
 		sql.Named("repo", repo))
 	return
 }
 
-var getDesiderata = `
+var getWish = `
 SELECT id, input_image, output_image, cvmfs_repo 
-FROM desiderata
+FROM wish
 WHERE (
 	input_image = :input
 	AND output_image = :output
 	AND cvmfs_repo = :repo
 );`
 
-func GetDesiderata(input_image, output_image int, cvmfs_repo string) (Desiderata, error) {
+func GetWish(input_image, output_image int, cvmfs_repo string) (Wish, error) {
 	db, err := sql.Open("sqlite3", Database)
 	if err != nil {
 		LogE(err).Fatal("Impossible to open the database.")
 	}
-	getDesiderataStmt, err := db.Prepare(getDesiderata)
+	getWishStmt, err := db.Prepare(getWish)
 	if err != nil {
 		LogE(err).Fatal("Impossible to create the statement.")
 	}
 	var id, input, output int
 	var repo string
-	err = getDesiderataStmt.QueryRow(
+	err = getWishStmt.QueryRow(
 		sql.Named("input", input_image),
 		sql.Named("output", output_image),
 		sql.Named("repo", cvmfs_repo),
 	).Scan(&id, &input, &output, &repo)
 	if err != nil {
-		return Desiderata{}, err
+		return Wish{}, err
 	}
-	return Desiderata{
+	return Wish{
 		Id:          id,
 		InputImage:  input,
 		OutputImage: output,
@@ -453,9 +453,9 @@ func GetUserPassword(user, registry string) (password string, err error) {
 	return
 }
 
-var getAllDesiderata = `
+var getAllWishes = `
 SELECT d.id, d.input_image, input.name, d.output_image, output.name, d.cvmfs_repo
-	FROM desiderata AS d
+	FROM wish AS d
 	JOIN image_name as input
 	JOIN image_name as output
 	WHERE 
@@ -463,29 +463,29 @@ SELECT d.id, d.input_image, input.name, d.output_image, output.name, d.cvmfs_rep
 		AND d.output_image = output.image_id;
 `
 
-func GetAllDesiderata() ([]DesiderataFriendly, error) {
+func GetAllWishes() ([]WishFriendly, error) {
 	db, err := sql.Open("sqlite3", Database)
 	if err != nil {
 		LogE(err).Fatal("Impossible to open the database.")
 	}
-	getAllDesiderataStmt, err := db.Prepare(getAllDesiderata)
+	getAllWishesStmt, err := db.Prepare(getAllWishes)
 	if err != nil {
 		LogE(err).Fatal("Impossible to create the statement.")
 	}
-	rows, err := getAllDesiderataStmt.Query()
-	desiderata := []DesiderataFriendly{}
+	rows, err := getAllWishesStmt.Query()
+	wishes := []WishFriendly{}
 	defer rows.Close()
 	if err != nil {
-		return desiderata, err
+		return wishes, err
 	}
 	for rows.Next() {
 		var id, input_id, output_id int
 		var input_name, output_name, cvmfsRepo string
 		err = rows.Scan(&id, &input_id, &input_name, &output_id, &output_name, &cvmfsRepo)
 		if err != nil {
-			return desiderata, err
+			return wishes, err
 		}
-		desi := DesiderataFriendly{
+		wish := WishFriendly{
 			Id:         id,
 			InputId:    input_id,
 			InputName:  input_name,
@@ -493,14 +493,14 @@ func GetAllDesiderata() ([]DesiderataFriendly, error) {
 			OutputName: output_name,
 			CvmfsRepo:  cvmfsRepo,
 		}
-		desiderata = append(desiderata, desi)
+		wishes = append(wishes, wish)
 	}
-	return desiderata, nil
+	return wishes, nil
 }
 
-var getDesiderataF = `
+var getWishF = `
 SELECT d.id, d.input_image, input.name, d.output_image, output.name, d.cvmfs_repo
-	FROM desiderata AS d
+	FROM wish AS d
 	JOIN image_name as input
 	JOIN image_name as output
 	WHERE 
@@ -511,18 +511,18 @@ SELECT d.id, d.input_image, input.name, d.output_image, output.name, d.cvmfs_rep
 		AND d.cvmfs_repo = :repo;
 `
 
-func GetDesiderataF(inputId, outputId int, repo string) (desi DesiderataFriendly, err error) {
+func GetWishF(inputId, outputId int, repo string) (wish WishFriendly, err error) {
 	db, err := sql.Open("sqlite3", Database)
 	if err != nil {
 		LogE(err).Fatal("Impossible to open the database.")
 	}
-	getDesiderataFStmt, err := db.Prepare(getDesiderataF)
+	getWishFStmt, err := db.Prepare(getWishF)
 	if err != nil {
 		LogE(err).Fatal("Impossible to create the statement.")
 	}
 	var id, input_id, output_id int
 	var input_name, output_name, cvmfsRepo string
-	err = getDesiderataFStmt.QueryRow(
+	err = getWishFStmt.QueryRow(
 		sql.Named("input_id", inputId),
 		sql.Named("output_id", outputId),
 		sql.Named("repo", repo),
@@ -530,18 +530,18 @@ func GetDesiderataF(inputId, outputId int, repo string) (desi DesiderataFriendly
 	if err != nil {
 		return
 	}
-	desi.Id = id
-	desi.InputId = input_id
-	desi.InputName = input_name
-	desi.OutputId = output_id
-	desi.OutputName = output_name
-	desi.CvmfsRepo = cvmfsRepo
+	wish.Id = id
+	wish.InputId = input_id
+	wish.InputName = input_name
+	wish.OutputId = output_id
+	wish.OutputName = output_name
+	wish.CvmfsRepo = cvmfsRepo
 	return
 }
 
-var addConverted = `INSERT INTO converted VALUES(:desiderata, :input_reference);`
+var addConverted = `INSERT INTO converted VALUES(:wish, :input_reference);`
 
-func AddConverted(desiderataId int, inputReferece string) error {
+func AddConverted(wishId int, inputReferece string) error {
 	db, err := sql.Open("sqlite3", Database)
 	if err != nil {
 		LogE(err).Fatal("Impossible to open the database.")
@@ -551,19 +551,19 @@ func AddConverted(desiderataId int, inputReferece string) error {
 		LogE(err).Fatal("Impossible to create the statement.")
 	}
 	_, err = AddConvertedStmt.Exec(
-		sql.Named("desiderata", desiderataId),
+		sql.Named("wish", wishId),
 		sql.Named("input_reference", inputReferece),
 	)
 	return err
 }
 
 var alreadyConverted = `
-SELECT desiderata, input_reference FROM converted WHERE
-desiderata = :desiderata_id
+SELECT wish, input_reference FROM converted WHERE
+wish = :wish_id
 AND input_reference = :input_reference
 `
 
-func AlreadyConverted(desiderataId int, input_reference string) bool {
+func AlreadyConverted(wishId int, input_reference string) bool {
 	db, err := sql.Open("sqlite3", Database)
 	if err != nil {
 		LogE(err).Fatal("Impossible to open the database.")
@@ -575,8 +575,27 @@ func AlreadyConverted(desiderataId int, input_reference string) bool {
 	var id int
 	var inputReference string
 	err = alreadyConvertedStmt.QueryRow(
-		sql.Named("desiderata_id", desiderataId),
+		sql.Named("wish_id", wishId),
 		sql.Named("input_reference", input_reference),
 	).Scan(&id, &inputReference)
 	return err == nil
+}
+
+var deleteWish = `DELETE FROM wish WHERE id = :id;`
+
+func DeleteWish(wishId int) (int, error) {
+	db, err := sql.Open("sqlite3", Database)
+	if err != nil {
+		return 0, err
+	}
+	deleteWishStmt, err := db.Prepare(deleteWish)
+	if err != nil {
+		return 0, err
+	}
+	res, err := deleteWishStmt.Exec(wishId)
+	if err != nil {
+		return 0, err
+	}
+	n, err := res.RowsAffected()
+	return int(n), err
 }

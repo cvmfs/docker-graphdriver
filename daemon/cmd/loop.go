@@ -18,18 +18,18 @@ var loopCmd = &cobra.Command{
 	Short: "An infinite loop that keep converting all the images",
 	Run: func(cmd *cobra.Command, args []string) {
 		for {
-			desideratas, err := lib.GetAllDesiderata()
+			wish, err := lib.GetAllWishes()
 			if err != nil {
 				lib.LogE(err).Error("Error in getting the desiderata")
 			}
-			for _, desi := range desideratas {
+			for _, wish := range wish {
 				fields := log.Fields{
-					"input image":  desi.InputName,
-					"CVMFS repo":   desi.CvmfsRepo,
-					"output image": desi.OutputName,
+					"input image":  wish.InputName,
+					"CVMFS repo":   wish.CvmfsRepo,
+					"output image": wish.OutputName,
 				}
 				lib.Log().WithFields(fields).Info("Working on desiderata")
-				err = lib.ConvertDesiderata(desi, convertAgain, overwriteLayer)
+				err = lib.ConvertWish(wish, convertAgain, overwriteLayer)
 				if err != nil {
 					lib.LogE(err).Error("Error in converting the desiderata")
 				}
