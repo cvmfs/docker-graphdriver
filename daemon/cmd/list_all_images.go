@@ -15,8 +15,9 @@ func init() {
 }
 
 var listAllImagesCmd = &cobra.Command{
-	Use:   "list-images",
-	Short: "Show all the images actually in the database",
+	Use:     "list-images",
+	Short:   "Show all the images actually in the database",
+	Aliases: []string{"list-image", "ls-images", "ls-image", "image-ls", "images-ls"},
 	Run: func(cmd *cobra.Command, args []string) {
 		imgs, err := lib.GetAllImagesInDatabase()
 		if err != nil {

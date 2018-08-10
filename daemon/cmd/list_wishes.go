@@ -9,13 +9,14 @@ import (
 )
 
 func init() {
-	listAllDesiderataCmd.Flags().BoolVarP(&machineFriendly, "machine-friendly", "z", false, "produce machine friendly output, one line of csv")
-	rootCmd.AddCommand(listAllDesiderataCmd)
+	listAllWishesCmd.Flags().BoolVarP(&machineFriendly, "machine-friendly", "z", false, "produce machine friendly output, one line of csv")
+	rootCmd.AddCommand(listAllWishesCmd)
 }
 
-var listAllDesiderataCmd = &cobra.Command{
-	Use:   "list-wishes",
-	Short: "Show all the wishes in the database",
+var listAllWishesCmd = &cobra.Command{
+	Use:     "list-wishes",
+	Aliases: []string{"list-wish", "ls-wish", "ls-wishes", "wishlist", "wish-list", "wishes-list", "wish-ls", "wishes-ls"},
+	Short:   "Show all the wishes in the database",
 	Run: func(cmd *cobra.Command, args []string) {
 		wishes, err := lib.GetAllWishes()
 		if err != nil {

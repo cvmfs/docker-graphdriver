@@ -155,7 +155,7 @@ var migrations = &migrate.MemoryMigrationSource{
 
 var migrateDatabaseCmd = &cobra.Command{
 	Use:     "migrate-database",
-	Aliases: []string{"init"},
+	Aliases: []string{"init", "migrate", "init-db", "migrate-db", "init-database"},
 	Short:   "migrate the database to the newest version supported by this version of the software",
 	Run: func(cmd *cobra.Command, args []string) {
 		db, err := sql.Open("sqlite3", lib.Database)

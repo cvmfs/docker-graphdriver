@@ -19,9 +19,10 @@ func init() {
 }
 
 var checkImageSyntaxCmd = &cobra.Command{
-	Use:   "check-image-syntax",
-	Short: "Check that the provide image has a valid syntax, the same checks are applied before any command in the converter.",
-	Args:  cobra.MinimumNArgs(1),
+	Use:     "check-image-syntax",
+	Short:   "Check that the provide image has a valid syntax, the same checks are applied before any command in the converter.",
+	Aliases: []string{"check-image", "image-check"},
+	Args:    cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		img, err := lib.ParseImage(args[0])
 		if err != nil {

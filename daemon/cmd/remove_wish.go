@@ -14,9 +14,10 @@ func init() {
 }
 
 var removeWish = &cobra.Command{
-	Use:   "remove-wish",
-	Short: "Remove a wish from the database starting by id",
-	Args:  cobra.MinimumNArgs(1),
+	Use:     "remove-wish",
+	Aliases: []string{"rm-wish", "rm-wishes", "wish-rm", "wishes-rm"},
+	Short:   "Remove a wish from the database starting by id",
+	Args:    cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		for _, arg := range args {
 			narg, err := strconv.Atoi(arg)
