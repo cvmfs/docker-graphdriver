@@ -6,7 +6,14 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-var Database = "docker2cvmfs_archive.sqlite?_foreign_keys=true"
+var DefaultDatabaseLocation = "docker2cvmfs_archive.sqlite"
+var DatabaseLocation string
+
+var DatabasePostFix = "?_foreign_keys=true"
+
+func Database() string {
+	return DatabaseLocation + DatabasePostFix
+}
 
 var (
 	BB           *sql.DB
@@ -33,7 +40,7 @@ WHERE
 `
 
 func IsImageInDatabase(image Image) bool {
-	db, err := sql.Open("sqlite3", Database)
+	db, err := sql.Open("sqlite3", Database())
 	if err != nil {
 		LogE(err).Fatal("Impossible to open the database.")
 	}
@@ -53,7 +60,7 @@ func IsImageInDatabase(image Image) bool {
 }
 
 func GetImage(queryImage Image) (Image, error) {
-	db, err := sql.Open("sqlite3", Database)
+	db, err := sql.Open("sqlite3", Database())
 	if err != nil {
 		LogE(err).Fatal("Impossible to open the database.")
 	}
@@ -119,7 +126,7 @@ WHERE id = :id;
 `
 
 func GetImageById(inputId int) (Image, error) {
-	db, err := sql.Open("sqlite3", Database)
+	db, err := sql.Open("sqlite3", Database())
 	if err != nil {
 		LogE(err).Fatal("Impossible to open the database.")
 	}
@@ -167,7 +174,7 @@ func GetImageById(inputId int) (Image, error) {
 var getAllImages = `SELECT rowid, user, scheme, registry, repository, tag, digest, is_thin FROM image`
 
 func GetAllImagesInDatabase() ([]Image, error) {
-	db, err := sql.Open("sqlite3", Database)
+	db, err := sql.Open("sqlite3", Database())
 	if err != nil {
 		LogE(err).Fatal("Impossible to open the database.")
 	}
@@ -261,7 +268,7 @@ VALUES(:scheme, :user, :registry, :repository, :tag, :digest, :is_thin);
 `
 
 func AddImage(img Image) error {
-	db, err := sql.Open("sqlite3", Database)
+	db, err := sql.Open("sqlite3", Database())
 	if err != nil {
 		LogE(err).Fatal("Impossible to open the database.")
 	}
@@ -307,7 +314,7 @@ VALUES(:input, :output, :repo);
 `
 
 func AddWish(inputId, outputId int, repo string) (err error) {
-	db, err := sql.Open("sqlite3", Database)
+	db, err := sql.Open("sqlite3", Database())
 	if err != nil {
 		return
 	}
@@ -332,7 +339,7 @@ WHERE (
 );`
 
 func GetWish(input_image, output_image int, cvmfs_repo string) (Wish, error) {
-	db, err := sql.Open("sqlite3", Database)
+	db, err := sql.Open("sqlite3", Database())
 	if err != nil {
 		LogE(err).Fatal("Impossible to open the database.")
 	}
@@ -364,7 +371,7 @@ user = :user AND registry = :registry
 `
 
 func GetPassword(user, registry string) (string, error) {
-	db, err := sql.Open("sqlite3", Database)
+	db, err := sql.Open("sqlite3", Database())
 	if err != nil {
 		LogE(err).Fatal("Impossible to open the database.")
 	}
@@ -389,7 +396,7 @@ VALUES(:user, :registry, :password);
 `
 
 func AddUser(user, password, registry string) error {
-	db, err := sql.Open("sqlite3", Database)
+	db, err := sql.Open("sqlite3", Database())
 	if err != nil {
 		LogE(err).Fatal("Impossible to open the database.")
 	}
@@ -407,7 +414,7 @@ func AddUser(user, password, registry string) error {
 var getAllUsers = `SELECT user, registry FROM credential;`
 
 func GetAllUsers() ([]struct{ Username, Registry string }, error) {
-	db, err := sql.Open("sqlite3", Database)
+	db, err := sql.Open("sqlite3", Database())
 	if err != nil {
 		LogE(err).Fatal("Impossible to open the database.")
 	}
@@ -438,7 +445,7 @@ WHERE user = :user
 AND registry = :registry;`
 
 func GetUserPassword(user, registry string) (password string, err error) {
-	db, err := sql.Open("sqlite3", Database)
+	db, err := sql.Open("sqlite3", Database())
 	if err != nil {
 		LogE(err).Fatal("Impossible to open the database.")
 	}
@@ -464,7 +471,7 @@ SELECT d.id, d.input_image, input.name, d.output_image, output.name, d.cvmfs_rep
 `
 
 func GetAllWishes() ([]WishFriendly, error) {
-	db, err := sql.Open("sqlite3", Database)
+	db, err := sql.Open("sqlite3", Database())
 	if err != nil {
 		LogE(err).Fatal("Impossible to open the database.")
 	}
@@ -512,7 +519,7 @@ SELECT d.id, d.input_image, input.name, d.output_image, output.name, d.cvmfs_rep
 `
 
 func GetWishF(inputId, outputId int, repo string) (wish WishFriendly, err error) {
-	db, err := sql.Open("sqlite3", Database)
+	db, err := sql.Open("sqlite3", Database())
 	if err != nil {
 		LogE(err).Fatal("Impossible to open the database.")
 	}
@@ -542,7 +549,7 @@ func GetWishF(inputId, outputId int, repo string) (wish WishFriendly, err error)
 var addConverted = `INSERT INTO converted VALUES(:wish, :input_reference);`
 
 func AddConverted(wishId int, inputReferece string) error {
-	db, err := sql.Open("sqlite3", Database)
+	db, err := sql.Open("sqlite3", Database())
 	if err != nil {
 		LogE(err).Fatal("Impossible to open the database.")
 	}
@@ -564,7 +571,7 @@ AND input_reference = :input_reference
 `
 
 func AlreadyConverted(wishId int, input_reference string) bool {
-	db, err := sql.Open("sqlite3", Database)
+	db, err := sql.Open("sqlite3", Database())
 	if err != nil {
 		LogE(err).Fatal("Impossible to open the database.")
 	}
@@ -584,7 +591,7 @@ func AlreadyConverted(wishId int, input_reference string) bool {
 var deleteWish = `DELETE FROM wish WHERE id = :id;`
 
 func DeleteWish(wishId int) (int, error) {
-	db, err := sql.Open("sqlite3", Database)
+	db, err := sql.Open("sqlite3", Database())
 	if err != nil {
 		return 0, err
 	}

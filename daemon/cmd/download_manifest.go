@@ -14,11 +14,11 @@ import (
 )
 
 var (
-	user string
+	username string
 )
 
 func init() {
-	downloadManifestCmd.Flags().StringVarP(&user, "username", "u", "", "username to use to log in into the registry.")
+	downloadManifestCmd.Flags().StringVarP(&username, "username", "u", "", "username to use to log in into the registry.")
 	rootCmd.AddCommand(downloadManifestCmd)
 }
 
@@ -36,8 +36,8 @@ var downloadManifestCmd = &cobra.Command{
 		if img.Tag == "" && img.Digest == "" {
 			log.Fatal("Please provide either the image tag or the image digest")
 		}
-		if user != "" {
-			img.User = user
+		if username != "" {
+			img.User = username
 		}
 
 		manifest, err := img.GetManifest()
@@ -88,8 +88,8 @@ func requestAuthToken(token string) (authToken string, err error) {
 	}
 	req.URL.RawQuery = query.Encode()
 
-	if user != "" || pass != "" {
-		req.SetBasicAuth(user, pass)
+	if username != "" || pass != "" {
+		req.SetBasicAuth(username, pass)
 	}
 
 	client := &http.Client{}

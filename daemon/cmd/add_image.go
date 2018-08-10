@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	addImageCmd.Flags().StringVarP(&user, "username", "u", "", "username to use to log in into the registry.")
+	addImageCmd.Flags().StringVarP(&username, "username", "u", "", "username to use to log in into the registry.")
 	addImageCmd.Flags().BoolVarP(&machineFriendly, "machine-friendly", "z", false, "produce machine friendly output, one line of csv")
 	rootCmd.AddCommand(addImageCmd)
 }

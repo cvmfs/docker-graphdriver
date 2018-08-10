@@ -2,6 +2,9 @@ package cmd
 
 import (
 	"database/sql"
+	"fmt"
+	"os"
+	"os/user"
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/rubenv/sql-migrate"
@@ -11,7 +14,10 @@ import (
 	"github.com/cvmfs/docker-graphdriver/daemon/lib"
 )
 
+var databaseUser string
+
 func init() {
+	migrateDatabaseCmd.Flags().StringVarP(&databaseUser, "database-user", "u", "", "The user for which create the database, by default SUDO_USER")
 	rootCmd.AddCommand(migrateDatabaseCmd)
 }
 
@@ -158,7 +164,19 @@ var migrateDatabaseCmd = &cobra.Command{
 	Aliases: []string{"init", "migrate", "init-db", "migrate-db", "init-database"},
 	Short:   "migrate the database to the newest version supported by this version of the software",
 	Run: func(cmd *cobra.Command, args []string) {
-		db, err := sql.Open("sqlite3", lib.Database)
+
+		if databaseUser == "" {
+			databaseUser = os.Getenv("SUDO_USER")
+			if databaseUser == "" {
+				user, err := user.Current()
+				if err != nil {
+					lib.LogE(err).Warning("Error in getting the user for migrating the database")
+				}
+				databaseUser = user.Username
+			}
+		}
+
+		db, err := sql.Open("sqlite3", lib.Database())
 		if err != nil {
 			lib.LogE(err).Fatal("Impossible to open the database.")
 		}
