@@ -4,10 +4,10 @@
 # utility
 # the test automatically apply migration and remove database, be aware!
 
-tool="../daemon"
+tool="../daemon --database $BATS_TMPDIR/db.sqlite"
 
 function migrate_database {
-        tool migrate-database
+        sudo tool migrate-database --database "$BATS_TMPDIR/db.sqlite"
 }
 
 function print_output() {
@@ -25,7 +25,7 @@ function setup() {
 }
 
 function teardown() {
-        rm -f docker2cvmfs_archive.sqlite
+        rm -f "$BATS_TMPDIR/db.sqlite"
 }
 
 @test "2 + 2 = 4" {

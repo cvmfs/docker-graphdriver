@@ -2,9 +2,10 @@ package cmd
 
 import (
 	"database/sql"
-	"fmt"
 	"os"
 	"os/user"
+	"path/filepath"
+	"strconv"
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/rubenv/sql-migrate"
@@ -175,15 +176,39 @@ var migrateDatabaseCmd = &cobra.Command{
 				databaseUser = user.Username
 			}
 		}
+		userStruct, err := user.Lookup(databaseUser)
+		if err != nil {
+			lib.LogE(err).WithFields(log.Fields{"user": databaseUser}).Error("Not found user")
+		}
+
+		dir := filepath.Dir(lib.DatabaseFile())
+		err = os.MkdirAll(dir, 0765)
+		if err != nil {
+			lib.LogE(err).Warning("Error in creating the directory for the db")
+		}
 
 		db, err := sql.Open("sqlite3", lib.Database())
 		if err != nil {
 			lib.LogE(err).Fatal("Impossible to open the database.")
 		}
+
 		n, err := migrate.Exec(db, "sqlite3", migrations, migrate.Up)
 		if err != nil {
 			lib.LogE(err).Fatal("Impossible to migrate the database")
 		}
+
+		uid, _ := strconv.Atoi(userStruct.Uid)
+		gid, _ := strconv.Atoi(userStruct.Gid)
+		err = os.Chown(lib.DatabaseFile(), uid, gid)
+		if err != nil {
+			lib.LogE(err).Error("Error in changing the owever of the database")
+		}
+
+		err = os.Chmod(lib.DatabaseFile(), 0777)
+		if err != nil {
+			lib.LogE(err).Error("Error in changing tha permission of the database")
+		}
+
 		log.WithFields(log.Fields{"n": n}).Info("Made migrations")
 	},
 }

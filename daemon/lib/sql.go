@@ -2,17 +2,33 @@ package lib
 
 import (
 	"database/sql"
+	"os/user"
+	"path"
 
 	_ "github.com/mattn/go-sqlite3"
 )
 
-var DefaultDatabaseLocation = "docker2cvmfs_archive.sqlite"
+// var DefaultDatabaseLocation = "/var/lib/docker2cvmfs/docker2cvmfs_archive.sqlite"
+var DefaultDatabaseLocation string
+
+func init() {
+	usr, err := user.Current()
+	if err != nil {
+		DefaultDatabaseLocation = path.Join("~", ".docker2cvmfs", "docker2cvmfs_archive.sqlite")
+	}
+	DefaultDatabaseLocation = path.Join(usr.HomeDir, ".docker2cvmfs", "docker2cvmfs_archive.sqlite")
+}
+
 var DatabaseLocation string
 
 var DatabasePostFix = "?_foreign_keys=true"
 
+func DatabaseFile() string {
+	return DatabaseLocation
+}
+
 func Database() string {
-	return DatabaseLocation + DatabasePostFix
+	return DatabaseFile() + DatabasePostFix
 }
 
 var (
