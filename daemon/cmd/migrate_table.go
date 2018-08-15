@@ -114,7 +114,7 @@ var migrations = &migrate.MemoryMigrationSource{
 							input_reference
 					),
 					FOREIGN KEY (wish)
-						REFERENCES wish(id)
+						REFERENCES wish(id) ON DELETE CASCADE
 				);`,
 			},
 			Down: []string{

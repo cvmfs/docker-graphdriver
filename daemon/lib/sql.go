@@ -477,13 +477,23 @@ func GetUserPassword(user, registry string) (password string, err error) {
 }
 
 var getAllWishes = `
-SELECT d.id, d.input_image, input.name, d.output_image, output.name, d.cvmfs_repo
-	FROM wish AS d
+SELECT 
+	d.id, d.input_image, 
+	input.name, d.output_image, 
+	output.name, d.cvmfs_repo, 
+	CASE WHEN
+		(SELECT input_reference FROM converted WHERE d.id = wish) IS NULL
+		THEN 0
+		ELSE 1
+	END
+
+FROM wish AS d
 	JOIN image_name as input
 	JOIN image_name as output
-	WHERE 
-		d.input_image = input.image_id
-		AND d.output_image = output.image_id;
+
+WHERE 
+	d.input_image = input.image_id
+	AND d.output_image = output.image_id;
 `
 
 func GetAllWishes() ([]WishFriendly, error) {
@@ -504,7 +514,8 @@ func GetAllWishes() ([]WishFriendly, error) {
 	for rows.Next() {
 		var id, input_id, output_id int
 		var input_name, output_name, cvmfsRepo string
-		err = rows.Scan(&id, &input_id, &input_name, &output_id, &output_name, &cvmfsRepo)
+		var converted bool
+		err = rows.Scan(&id, &input_id, &input_name, &output_id, &output_name, &cvmfsRepo, &converted)
 		if err != nil {
 			return wishes, err
 		}
@@ -515,6 +526,7 @@ func GetAllWishes() ([]WishFriendly, error) {
 			OutputId:   output_id,
 			OutputName: output_name,
 			CvmfsRepo:  cvmfsRepo,
+			Converted:  converted,
 		}
 		wishes = append(wishes, wish)
 	}

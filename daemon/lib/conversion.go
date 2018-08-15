@@ -10,7 +10,9 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"os"
 	"os/exec"
+	"os/signal"
 	"strings"
 
 	"github.com/docker/docker/api/types"
@@ -21,6 +23,9 @@ import (
 )
 
 func ConvertWish(wish WishFriendly, convertAgain, forceDownload bool) (err error) {
+	interruptLayerUpload := make(chan os.Signal, 1)
+	signal.Notify(interruptLayerUpload, os.Interrupt)
+
 	outputImage, err := GetImageById(wish.OutputId)
 	if err != nil {
 		return
@@ -43,41 +48,118 @@ func ConvertWish(wish WishFriendly, convertAgain, forceDownload bool) (err error
 	}
 	fmt.Println(manifest)
 	layersChanell := make(chan downloadedLayer, 3)
+	stopGettingLayers := make(chan bool, 1)
 	noErrorInConversion := make(chan bool, 1)
 	subDirInsideRepo := "layers"
 	go func() {
 		noErrors := true
+		defer func() {
+			noErrorInConversion <- noErrors
+			stopGettingLayers <- true
+			close(stopGettingLayers)
+		}()
+		cleanup := func(location string) {
+			Log().Info("Running clean up function deleting the last layer.")
+
+			cmd := exec.Command("cvmfs_server", "abort", wish.CvmfsRepo)
+
+			stdout, _ := cmd.StdoutPipe()
+
+			stderr, _ := cmd.StderrPipe()
+
+			Log().Info("Running abort")
+			err = cmd.Start()
+			if err != nil {
+				LogE(err).Error("Error in starting the abort command inside the cleanup function")
+			}
+
+			slurpOut, _ := ioutil.ReadAll(stdout)
+			Log().WithFields(log.Fields{"pipe": "STDOUT Abort"}).Info(string(slurpOut))
+
+			slurpErr, err := ioutil.ReadAll(stderr)
+			Log().WithFields(log.Fields{"pipe": "STDERR Abort"}).Info(string(slurpErr))
+
+			err = cmd.Wait()
+			if err != nil {
+				LogE(err).Error("Error in the abort command inside the cleanup function")
+			}
+
+			cmd = exec.Command("cvmfs_server", "ingest", "--delete", location, wish.CvmfsRepo)
+			stdout, _ = cmd.StdoutPipe()
+
+			stderr, _ = cmd.StderrPipe()
+
+			Log().Info("Running delete")
+			err = cmd.Start()
+
+			if err != nil {
+				LogE(err).Error("Impossible to start the clean up command")
+			}
+
+			slurpOut, _ = ioutil.ReadAll(stdout)
+			Log().WithFields(log.Fields{"pipe": "STDOUT Cleanup"}).Info(string(slurpOut))
+
+			slurpErr, err = ioutil.ReadAll(stderr)
+			Log().WithFields(log.Fields{"pipe": "STDERR Cleanup"}).Info(string(slurpErr))
+
+			err = cmd.Wait()
+			if err != nil {
+				LogE(err).Error("Error in the cleanup command")
+			}
+		}
 		for layer := range layersChanell {
+			select {
+			case _, _ = <-interruptLayerUpload:
+				{
+					Log().Info("Received SIGINT, exiting")
+					return
+				}
+			default:
+				{
+				}
+			}
+			Log().WithFields(log.Fields{"layer": layer.Name}).Info("Ingesting layer")
 			uncompressed, err := gzip.NewReader(layer.Resp.Body)
 			defer layer.Resp.Body.Close()
 			if err != nil {
 				LogE(err).Error("Error in uncompressing the layer")
+				noErrors = false
 			}
 			layerDigest := strings.Split(layer.Name, ":")[1]
-			cmd := exec.Command("cvmfs_server", "ingest", "-t", "-", "-b", subDirInsideRepo+"/"+layerDigest, wish.CvmfsRepo)
+			layerLocation := subDirInsideRepo + "/" + layerDigest
+			cmd := exec.Command("cvmfs_server", "ingest", "-t", "-", "-b", layerLocation, wish.CvmfsRepo)
 			stdin, err := cmd.StdinPipe()
 			if err != nil {
+				noErrors = false
 				return
 			}
 			stdout, err := cmd.StdoutPipe()
 			if err != nil {
+				noErrors = false
 				return
 			}
 			stderr, err := cmd.StderrPipe()
 			if err != nil {
+				noErrors = false
 				return
 			}
 			err = cmd.Start()
 
 			go func() {
+				defer stdin.Close()
 				_, err := io.Copy(stdin, uncompressed)
 				if err != nil {
-					fmt.Println("Error in writing to stdin: ", err)
+					LogE(err).Error("Error in writing to stdin")
+					noErrors = false
 				}
 			}()
 			if err != nil {
+				LogE(err).Error("Error in starting the ingest command")
+				noErrors = false
+				cleanup(layerLocation)
 				return
 			}
+
 			slurpOut, err := ioutil.ReadAll(stdout)
 
 			slurpErr, err := ioutil.ReadAll(stderr)
@@ -88,16 +170,20 @@ func ConvertWish(wish WishFriendly, convertAgain, forceDownload bool) (err error
 				fmt.Println("STDOUT: ", string(slurpOut))
 				fmt.Println("STDERR: ", string(slurpErr))
 				noErrors = false
+				cleanup(layerLocation)
+				return
 			}
 		}
 		Log().Info("Finished pushing the layers into CVMFS")
-		noErrorInConversion <- noErrors
 	}()
 	if forceDownload {
-		err = inputImage.GetLayers(wish.CvmfsRepo, subDirInsideRepo, layersChanell)
+		err = inputImage.GetLayers(wish.CvmfsRepo, subDirInsideRepo, layersChanell, stopGettingLayers)
 	} else {
-		err = inputImage.GetLayerIfNotInCVMFS(wish.CvmfsRepo, subDirInsideRepo, layersChanell)
+		err = inputImage.GetLayerIfNotInCVMFS(wish.CvmfsRepo, subDirInsideRepo, layersChanell, stopGettingLayers)
 	}
+
+	changes, _ := inputImage.GetChanges()
+
 	repoLocation := fmt.Sprintf("%s/%s", wish.CvmfsRepo, subDirInsideRepo)
 	thin := d2c.MakeThinImage(manifest, repoLocation, inputImage.WholeName())
 	if err != nil {
@@ -137,7 +223,7 @@ func ConvertWish(wish WishFriendly, convertAgain, forceDownload bool) (err error
 	importOptions := types.ImageImportOptions{
 		Tag:     outputImage.Tag,
 		Message: "",
-		Changes: []string{"ENV CVMFS_IMAGE true"},
+		Changes: changes,
 	}
 	importResult, err := dockerClient.ImageImport(
 		context.Background(),

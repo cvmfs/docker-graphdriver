@@ -75,8 +75,8 @@ function teardown() {
         run $tool list-wishes -z
         [ "$status" -eq 0 ]
         [ "${#lines[@]}" -eq 2 ]
-        [ "${lines[0]}" = "id,input_image_id,input_image_name,cvmfs_repo,output_image_id,output_image_name" ]
-        [ "${lines[1]}" = "1,1,https://registry.hub.docker.com/atlas/athanalysis:latest,setup_registry,2,https://registry.cern.ch/atlas/thin/athanalysis:latest" ]
+        [ "${lines[0]}" = "id,input_image_id,input_image_name,cvmfs_repo,output_image_id,output_image_name,converted" ]
+        [ "${lines[1]}" = "1,1,https://registry.hub.docker.com/atlas/athanalysis:latest,setup_registry,2,https://registry.cern.ch/atlas/thin/athanalysis:latest,false" ]
 }
 
 @test "add twice same wish result in error" {

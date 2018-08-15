@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"os/signal"
 
 	"github.com/spf13/cobra"
 
@@ -23,15 +24,36 @@ var convertCmd = &cobra.Command{
 	Use:   "convert",
 	Short: "Convert the wishes",
 	Run: func(cmd *cobra.Command, args []string) {
+
+		showWeReceivedSignal := make(chan os.Signal, 1)
+		signal.Notify(showWeReceivedSignal, os.Interrupt)
+
+		stopWishLoopSignal := make(chan os.Signal, 1)
+		signal.Notify(stopWishLoopSignal, os.Interrupt)
+
+		go func() {
+			<-showWeReceivedSignal
+			lib.Log().Info("Received SIGINT (Ctrl-C) waiting the last layer to upload then exiting.")
+		}()
+
 		wish, err := lib.GetAllWishes()
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
 		for _, wish := range wish {
+			select {
+			case <-stopWishLoopSignal:
+				lib.Log().Info("Exiting because of SIGINT")
+				os.Exit(1)
+			default:
+				{
+				}
+			}
 			err = lib.ConvertWish(wish, convertAgain, overwriteLayer)
 			if err != nil {
 				fmt.Println(err)
+				os.Exit(1)
 			}
 		}
 		os.Exit(0)

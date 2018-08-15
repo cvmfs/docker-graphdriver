@@ -1,6 +1,9 @@
 package cmd
 
 import (
+	"os"
+	"os/signal"
+
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
@@ -17,12 +20,33 @@ var loopCmd = &cobra.Command{
 	Use:   "loop",
 	Short: "An infinite loop that keep converting all the images",
 	Run: func(cmd *cobra.Command, args []string) {
+		showWeReceivedSignal := make(chan os.Signal, 1)
+		signal.Notify(showWeReceivedSignal, os.Interrupt)
+
+		stopWishLoopSignal := make(chan os.Signal, 1)
+		signal.Notify(stopWishLoopSignal, os.Interrupt)
+
+		go func() {
+			<-showWeReceivedSignal
+			lib.Log().Info("Received SIGINT (Ctrl-C) waiting the last layer to upload then exiting.")
+		}()
+
 		for {
 			wish, err := lib.GetAllWishes()
 			if err != nil {
 				lib.LogE(err).Error("Error in getting the desiderata")
 			}
 			for _, wish := range wish {
+
+				select {
+				case <-stopWishLoopSignal:
+					lib.Log().Info("Exiting because of SIGINT")
+					os.Exit(1)
+				default:
+					{
+					}
+				}
+
 				fields := log.Fields{
 					"input image":  wish.InputName,
 					"CVMFS repo":   wish.CvmfsRepo,

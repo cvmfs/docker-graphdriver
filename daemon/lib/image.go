@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/docker/docker/image"
 	"github.com/olekukonko/tablewriter"
 	log "github.com/sirupsen/logrus"
 
@@ -30,6 +31,7 @@ type Image struct {
 	Tag        string
 	Digest     string
 	IsThin     bool
+	Manifest   *d2c.Manifest
 }
 
 func (i Image) GetSimpleName() string {
@@ -99,6 +101,9 @@ func (img Image) PrintImage(machineFriendly, csv_header bool) {
 }
 
 func (img Image) GetManifest() (d2c.Manifest, error) {
+	if img.Manifest != nil {
+		return *img.Manifest, nil
+	}
 	bytes, err := img.getByteManifest()
 	if err != nil {
 		return d2c.Manifest{}, err
@@ -111,7 +116,77 @@ func (img Image) GetManifest() (d2c.Manifest, error) {
 	if reflect.DeepEqual(d2c.Manifest{}, manifest) {
 		return manifest, fmt.Errorf("Got empty manifest")
 	}
+	img.Manifest = &manifest
 	return manifest, nil
+}
+
+func (img Image) GetChanges() (changes []string, err error) {
+	user := img.User
+	pass, err := GetPassword(img.User, img.Registry)
+	if err != nil {
+		LogE(err).Warning("Unable to get the credential for downloading the configuration blog, trying anonymously")
+		user = ""
+		pass = ""
+	}
+
+	changes = []string{"ENV CVMFS_IMAGE true"}
+	manifest, err := img.GetManifest()
+	if err != nil {
+		LogE(err).Warning("Impossible to retrieve the manifest of the image, not changes set")
+		return
+	}
+	configUrl := fmt.Sprintf("%s://%s/v2/%s/blobs/%s",
+		img.Scheme, img.Registry, img.Repository, manifest.Config.Digest)
+	token, err := firstRequestForAuth(configUrl, user, pass)
+	if err != nil {
+		LogE(err).Warning("Impossible to retrieve the token for getting the changes from the repository, not changes set")
+		return
+	}
+	client := &http.Client{}
+	req, err := http.NewRequest("GET", configUrl, nil)
+	if err != nil {
+		LogE(err).Warning("Impossible to create a request for getting the changes no chnages set.")
+		return
+	}
+	req.Header.Set("Authorization", token)
+	req.Header.Set("Accept", "application/vnd.docker.distribution.manifest.v2+json")
+
+	resp, err := client.Do(req)
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		LogE(err).Warning("Error in reading the body from the configuration, no change set")
+		return
+	}
+
+	var config image.Image
+	err = json.Unmarshal(body, &config)
+	if err != nil {
+		LogE(err).Warning("Error in unmarshaling the configuration of the image")
+		return
+	}
+	env := config.Config.Env
+
+	if len(env) > 0 {
+		for _, e := range env {
+			envs := strings.SplitN(e, "=", 2)
+			if len(envs) != 2 {
+				continue
+			}
+			change := fmt.Sprintf("ENV %s=\"%s\"", envs[0], envs[1])
+			changes = append(changes, change)
+		}
+	}
+
+	cmd := config.Config.Cmd
+
+	if len(cmd) > 0 {
+		for _, c := range cmd {
+			changes = append(changes, fmt.Sprintf("CMD %s", c))
+		}
+	}
+
+	return
 }
 
 func (img Image) getByteManifest() ([]byte, error) {
@@ -200,7 +275,7 @@ type downloadedLayer struct {
 	Resp *http.Response
 }
 
-func (img Image) GetLayerIfNotInCVMFS(cvmfsRepo, subDir string, layers chan<- downloadedLayer) (err error) {
+func (img Image) GetLayerIfNotInCVMFS(cvmfsRepo, subDir string, layers chan<- downloadedLayer, stopGettingLayers <-chan bool) (err error) {
 	// remember to close the layers channel when done
 	defer close(layers)
 	// get the credential
@@ -228,7 +303,7 @@ func (img Image) GetLayerIfNotInCVMFS(cvmfsRepo, subDir string, layers chan<- do
 	}
 	// at this point we iterate each layer and we download it.
 	for _, layer := range manifest.Layers {
-		// in this function before to wonwload something we check that the layer is not already in the repository
+		// in this function before to donwload something we check that the layer is not already in the repository
 		layerDigest := strings.Split(layer.Digest, ":")[1]
 		location := filepath.Join("/", "cvmfs", cvmfsRepo, subDir, layerDigest)
 		_, err := os.Stat(location)
@@ -241,14 +316,21 @@ func (img Image) GetLayerIfNotInCVMFS(cvmfsRepo, subDir string, layers chan<- do
 		if err != nil {
 			LogE(err).Error("Error in downloading a layer")
 		} else {
-			layers <- toSend
+			select {
+			case layers <- toSend:
+				{
+				}
+			case <-stopGettingLayers:
+				Log().Info("Receive stop signal")
+				return nil
+			}
 		}
 	}
 	return nil
 
 }
 
-func (img Image) GetLayers(cvmfsRepo, subDir string, layers chan<- downloadedLayer) error {
+func (img Image) GetLayers(cvmfsRepo, subDir string, layers chan<- downloadedLayer, stopGettingLayers <-chan bool) error {
 	// first we get the username and password, if we are not able to get those,
 	// we try anyway anonymously
 	defer close(layers)
@@ -280,7 +362,14 @@ func (img Image) GetLayers(cvmfsRepo, subDir string, layers chan<- downloadedLay
 		if err != nil {
 			LogE(err).Error("Error in downloading a layer")
 		}
-		layers <- toSend
+		select {
+		case layers <- toSend:
+			{
+			}
+		case <-stopGettingLayers:
+			Log().Info("Received stop signal")
+			return nil
+		}
 	}
 	return nil
 }
@@ -319,6 +408,8 @@ func (img Image) downloadLayer(layer d2c.Layer, token string) (toSend downloaded
 		}{layer.Digest, resp}
 	} else {
 		Log().Warning("Received status code ", resp.StatusCode)
+		// TODO add error
+		err = fmt.Errorf("Layer not received, status code: %s", resp.StatusCode)
 	}
 	return
 
