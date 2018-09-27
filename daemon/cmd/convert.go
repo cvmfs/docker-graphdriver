@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/signal"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
 	"github.com/cvmfs/docker-graphdriver/daemon/lib"
@@ -50,6 +51,7 @@ var convertCmd = &cobra.Command{
 				{
 				}
 			}
+			lib.Log().WithFields(log.Fields{"input image": wish.InputName}).Info("Converting Image")
 			err = lib.ConvertWish(wish, convertAgain, overwriteLayer)
 			if err != nil {
 				fmt.Println(err)
