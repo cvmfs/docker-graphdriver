@@ -2,10 +2,13 @@ package lib
 
 import (
 	"database/sql"
+	"encoding/json"
 	"os/user"
 	"path"
 
 	_ "github.com/mattn/go-sqlite3"
+
+	d2c "github.com/cvmfs/docker-graphdriver/docker2cvmfs/lib"
 )
 
 // var DefaultDatabaseLocation = "/var/lib/docker2cvmfs/docker2cvmfs_archive.sqlite"
@@ -574,9 +577,9 @@ func GetWishF(inputId, outputId int, repo string) (wish WishFriendly, err error)
 	return
 }
 
-var addConverted = `INSERT INTO converted VALUES(:wish, :input_reference);`
+var addConverted = `INSERT INTO converted VALUES(:wish, :input_reference, json(:manifest));`
 
-func AddConverted(wishId int, inputReferece string) error {
+func AddConverted(wishId int, manifest d2c.Manifest) error {
 	db, err := sql.Open("sqlite3", Database())
 	if err != nil {
 		LogE(err).Fatal("Impossible to open the database.")
@@ -585,9 +588,15 @@ func AddConverted(wishId int, inputReferece string) error {
 	if err != nil {
 		LogE(err).Fatal("Impossible to create the statement.")
 	}
+	inputReference := manifest.Config.Digest
+	manifestJson, err := json.Marshal(manifest)
+	if err != nil {
+		LogE(err).Fatal("Impossible to encode the manifest into JSON")
+	}
 	_, err = AddConvertedStmt.Exec(
 		sql.Named("wish", wishId),
-		sql.Named("input_reference", inputReferece),
+		sql.Named("input_reference", inputReference),
+		sql.Named("manifest", manifestJson),
 	)
 	return err
 }
@@ -616,7 +625,7 @@ func AlreadyConverted(wishId int, input_reference string) bool {
 	return err == nil
 }
 
-var deleteWish = `DELETE FROM wish WHERE id = :id;`
+var deleteWish = `DELETE FROM wish WHERE id = ?;`
 
 func DeleteWish(wishId int) (int, error) {
 	db, err := sql.Open("sqlite3", Database())
@@ -633,4 +642,89 @@ func DeleteWish(wishId int) (int, error) {
 	}
 	n, err := res.RowsAffected()
 	return int(n), err
+}
+
+var deleteAllConverted = `DELETE FROM converted`
+
+func DeleteAllConverted() (int, error) {
+	db, err := sql.Open("sqlite3", Database())
+	if err != nil {
+		return 0, err
+	}
+	deleteAllConvertedStmt, err := db.Prepare(deleteAllConverted)
+	if err != nil {
+		return 0, err
+	}
+	res, err := deleteAllConvertedStmt.Exec()
+	if err != nil {
+		return 0, err
+	}
+	n, err := res.RowsAffected()
+	return int(n), err
+}
+
+var getAllNeededImages = `SELECT printf("%s://%s/%s@%s", i.scheme, i.registry, i.repository, converted.input_reference) FROM converted, wish, image as i WHERE
+converted.wish = wish.id AND
+wish.input_image = i.id;
+`
+
+func GetAllNeededImages() ([]string, error) {
+	db, err := sql.Open("sqlite3", Database())
+	if err != nil {
+		LogE(err).Fatal("Impossible to open the database.")
+	}
+	getAllNeededImagesStmt, err := db.Prepare(getAllNeededImages)
+	if err != nil {
+		LogE(err).Fatal("Impossible to create the statement.")
+	}
+	rows, err := getAllNeededImagesStmt.Query()
+	var images []string
+	defer rows.Close()
+	if err != nil {
+		return images, err
+	}
+	for rows.Next() {
+		var image string
+		err = rows.Scan(&image)
+		if err != nil {
+			return images, err
+		}
+		images = append(images, image)
+	}
+	return images, nil
+}
+
+var getAllNeededLayers = `
+SELECT DISTINCT( 
+	'/cvmfs/' || wish.cvmfs_repo || '/layers/' || substr(json_extract(layers.value, '$.Digest'), 8)
+	) 
+FROM 
+converted, wish, json_each(converted.manifest, '$.Layers') as layers WHERE
+converted.wish = wish.id;
+`
+
+func GetAllNeededLayers() ([]string, error) {
+	db, err := sql.Open("sqlite3", Database())
+	if err != nil {
+		LogE(err).Fatal("Impossible to open the database.")
+	}
+	getAllNeededLayersStmt, err := db.Prepare(getAllNeededLayers)
+	if err != nil {
+		LogE(err).Fatal("Impossible to create the statement.")
+	}
+	rows, err := getAllNeededLayersStmt.Query()
+	var layers []string
+	defer rows.Close()
+	if err != nil {
+		return layers, err
+	}
+	for rows.Next() {
+		var layer string
+		err = rows.Scan(&layer)
+		if err != nil {
+			return layers, err
+		}
+		layers = append(layers, layer)
+	}
+	return layers, nil
 }
