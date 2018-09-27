@@ -57,7 +57,7 @@ func (i Image) WholeName() string {
 func (i Image) GetManifestUrl() string {
 	url := fmt.Sprintf("%s://%s/v2/%s/manifests/", i.Scheme, i.Registry, i.Repository)
 	if i.Digest != "" {
-		url = fmt.Sprintf("%s@%s", url, i.Digest)
+		url = fmt.Sprintf("%s%s", url, i.Digest)
 	} else {
 		url = fmt.Sprintf("%s%s", url, i.Tag)
 	}
@@ -227,6 +227,10 @@ func getManifestWithUsernameAndPassword(img Image, user, pass string) ([]byte, e
 	req.Header.Set("Accept", "application/vnd.docker.distribution.manifest.v2+json")
 
 	resp, err := client.Do(req)
+	if err != nil {
+		LogE(err).Error("Error in making the HTTP request")
+		return nil, err
+	}
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
@@ -255,7 +259,6 @@ func firstRequestForAuth(url, user, pass string) (token string, err error) {
 		return "", err
 	}
 	WwwAuthenticate := resp.Header["Www-Authenticate"][0]
-	fmt.Println("Auth to: " + WwwAuthenticate)
 	token, err = requestAuthToken(WwwAuthenticate, user, pass)
 	if err != nil {
 		LogE(err).Error("Error in getting the authentication token")
@@ -454,8 +457,6 @@ func requestAuthToken(token, user, pass string) (authToken string, err error) {
 		req.SetBasicAuth(user, pass)
 	}
 	req.URL.RawQuery = query.Encode()
-
-	fmt.Println(req.URL)
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
