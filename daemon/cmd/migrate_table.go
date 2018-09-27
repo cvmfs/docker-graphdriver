@@ -108,6 +108,7 @@ var migrations = &migrate.MemoryMigrationSource{
 				`CREATE TABLE converted(
 					wish INTEGER,
 					input_reference STRING NOT NULL,
+					manifest STRING NOT NULL,
 					CONSTRAINT unique_wish_input
 						UNIQUE(
 							wish,
@@ -131,13 +132,9 @@ var migrations = &migrate.MemoryMigrationSource{
 				-- if there is not tag, we print an empty string, 
 				-- then we will remove the ":" with the trim function, 
 				-- similarly for the digest
-				CREATE VIEW image_name(
-					image_id,
-					name,
-					manifest_url
-				) AS 
+				CREATE VIEW image_name AS 
 			SELECT 
-	id, 
+	id AS image_id, 
 	
 	rtrim(
 		printf("%s@%s", 
@@ -147,15 +144,14 @@ var migrations = &migrate.MemoryMigrationSource{
 			digest
 			), 
 		'@'
-	),
+	) AS name,
 
 	printf("%s://%s/v2/%s/manifests/%s", scheme, registry, repository, 
-		COALESCE(tag, printf("@%s", digest)))			
+		COALESCE(tag, printf("@%s", digest))) AS manifest_url
 
-					FROM image
-				;`,
+	FROM image;`,
 			},
-			Down: []string{`DROP VIEW image_name`},
+			Down: []string{`DROP VIEW image_name;`},
 		},
 	},
 }
