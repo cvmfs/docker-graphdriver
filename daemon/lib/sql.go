@@ -83,6 +83,10 @@ func GetImage(queryImage Image) (Image, error) {
 	if err != nil {
 		LogE(err).Fatal("Impossible to open the database.")
 	}
+	return GetImageWithDb(db, queryImage)
+}
+
+func GetImageWithDb(db *sql.DB, queryImage Image) (Image, error) {
 	getImageStmt, err := db.Prepare(getImageQuery)
 	if err != nil {
 		LogE(err).Fatal("Impossible to create the statement.")
@@ -131,6 +135,15 @@ func GetImage(queryImage Image) (Image, error) {
 
 func GetImageId(imageQuery Image) (id int, err error) {
 	image, err := GetImage(imageQuery)
+	if err != nil {
+		return
+	}
+	id = image.Id
+	return
+}
+
+func GetImageIdWithDb(db *sql.DB, imageQuery Image) (id int, err error) {
+	image, err := GetImageWithDb(db, imageQuery)
 	if err != nil {
 		return
 	}
@@ -291,6 +304,10 @@ func AddImage(img Image) error {
 	if err != nil {
 		LogE(err).Fatal("Impossible to open the database.")
 	}
+	return AddImageWithConnection(db, img)
+}
+
+func AddImageWithConnection(db *sql.DB, img Image) error {
 	addImagesStmt, err := db.Prepare(addImage)
 	if err != nil {
 		LogE(err).Fatal("Impossible to create the statement.")
@@ -382,6 +399,43 @@ func GetWish(input_image, output_image int, cvmfs_repo string) (Wish, error) {
 		OutputImage: output,
 		CvmfsRepo:   repo,
 	}, err
+}
+
+var getAllRawWishes = `
+SELECT id, input_image, output_image, cvmfs_repo FROM wish;
+`
+
+func GetAllWish() ([]Wish, error) {
+	db, err := sql.Open("sqlite3", Database())
+	if err != nil {
+		LogE(err).Fatal("Impossible to open the database.")
+	}
+	stmt, err := db.Prepare(getAllRawWishes)
+	if err != nil {
+		LogE(err).Fatal("Impossible to create the statement.")
+	}
+	wishes := []Wish{}
+	rows, err := stmt.Query()
+	if err != nil {
+		return wishes, err
+	}
+	for rows.Next() {
+		var id, input, output int
+		var repo string
+		err = rows.Scan(&id, &input, &output, &repo)
+		if err != nil {
+			return wishes, err
+		}
+		wish := Wish{
+			Id:          id,
+			InputImage:  input,
+			OutputImage: output,
+			CvmfsRepo:   repo,
+		}
+		wishes = append(wishes, wish)
+	}
+	return wishes, nil
+
 }
 
 var getPassword = `
