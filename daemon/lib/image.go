@@ -68,6 +68,19 @@ func (i Image) GetServerUrl() string {
 	return fmt.Sprintf("%s://%s", i.Scheme, i.Registry)
 }
 
+func (i Image) GetReference() string {
+	if i.Digest == "" && i.Tag != "" {
+		return ":" + i.Tag
+	}
+	if i.Digest != "" && i.Tag == "" {
+		return "@" + i.Digest
+	}
+	if i.Digest != "" && i.Tag != "" {
+		return ":" + i.Tag + "@" + i.Digest
+	}
+	panic("Image wrong format, missing both tag and digest")
+}
+
 func (img Image) PrintImage(machineFriendly, csv_header bool) {
 	if machineFriendly {
 		if csv_header {
