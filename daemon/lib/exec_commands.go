@@ -8,8 +8,8 @@ import (
 )
 
 func ExecCommand(input ...string) error {
-
-	cmd := exec.Command(input[0], input[0:]...)
+	Log().WithFields(log.Fields{"action": "executing"}).Info(input)
+	cmd := exec.Command(input[0], input[1:]...)
 	stdout, errOUT := cmd.StdoutPipe()
 	if errOUT != nil {
 		LogE(errOUT).Warning("Impossible to obtain the STDOUT pipe")
@@ -35,8 +35,8 @@ func ExecCommand(input ...string) error {
 	err = cmd.Wait()
 	if err != nil {
 		LogE(err).Error("Error in executing the command")
-		Log().WithFields(log.Fields{"pipe": "STDOUT"}).Info(slurpOut)
-		Log().WithFields(log.Fields{"pipe": "STDERR"}).Info(slurpErr)
+		Log().WithFields(log.Fields{"pipe": "STDOUT"}).Info(string(slurpOut))
+		Log().WithFields(log.Fields{"pipe": "STDERR"}).Info(string(slurpErr))
 		return err
 	}
 	return nil

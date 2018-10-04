@@ -132,6 +132,7 @@ func ConvertWish(wish WishFriendly, convertAgain, forceDownload bool) (err error
 				cleanup(layerLocation)
 				return
 			}
+			Log().WithFields(log.Fields{"layer": layer.Name}).Info("Finish Ingesting the file")
 		}
 		Log().Info("Finished pushing the layers into CVMFS")
 	}()

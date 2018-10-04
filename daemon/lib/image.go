@@ -82,6 +82,16 @@ func (i Image) GetReference() string {
 	panic("Image wrong format, missing both tag and digest")
 }
 
+func (i Image) GetSimpleReference() string {
+	if i.Tag != "" {
+		return i.Tag
+	}
+	if i.Digest != "" {
+		return i.Digest
+	}
+	panic("Image wrong format, missing both tag and digest")
+}
+
 func (img Image) PrintImage(machineFriendly, csv_header bool) {
 	if machineFriendly {
 		if csv_header {
@@ -204,7 +214,7 @@ func (img Image) GetChanges() (changes []string, err error) {
 }
 
 func (img Image) GetSingularityLocation() string {
-	return fmt.Sprint("docker://%s/%s/%s", img.Registry, img.Repository, img.GetReference())
+	return fmt.Sprintf("docker://%s/%s%s", img.Registry, img.Repository, img.GetReference())
 }
 
 type Singularity struct {
@@ -228,23 +238,39 @@ func (img Image) DownloadSingularityDirectory() (sing Singularity, err error) {
 }
 
 func (s Singularity) IngestIntoCVMFS(CVMFSRepo string) error {
-	path := filepath.Join("/", "cvmfs", CVMFSRepo, s.Image.Registry, s.Image.Repository, s.Image.GetReference())
+	defer func() {
+		Log().WithFields(log.Fields{"image": s.Image.GetSimpleName(), "action": "ingesting singularity"}).Info("Deleting temporary direcotry")
+		os.RemoveAll(s.TempDirectory)
+	}()
+	Log().WithFields(log.Fields{"image": s.Image.GetSimpleName(), "action": "ingesting singularity"}).Info("Start ingesting")
+	path := filepath.Join("/", "cvmfs", CVMFSRepo, ".singularity", s.Image.Registry, s.Image.Repository, s.Image.GetSimpleReference())
 
+	Log().WithFields(log.Fields{"image": s.Image.GetSimpleName(), "action": "ingesting singularity"}).Info("Start ingesting")
 	err := ExecCommand("cvmfs_server", "transaction", CVMFSRepo)
 	if err != nil {
 		LogE(err).WithFields(log.Fields{"repo": CVMFSRepo}).Error("Error in opening the transaction")
+		ExecCommand("cvmfs_server", "abort", "-f", CVMFSRepo)
 		return err
 	}
 
+	Log().WithFields(log.Fields{"image": s.Image.GetSimpleName(), "action": "ingesting singularity"}).Info("Copying directory")
+	os.RemoveAll(path)
+	err = os.MkdirAll(path, 0666)
+	if err != nil {
+		LogE(err).WithFields(log.Fields{"repo": CVMFSRepo}).Warning("Error in creating the directory where to copy the singularity")
+	}
 	err = copy.Copy(s.TempDirectory, path)
 	if err != nil {
 		LogE(err).WithFields(log.Fields{"repo": CVMFSRepo}).Error("Error in moving the directory inside the CVMFS repo")
+		ExecCommand("cvmfs_server", "abort", "-f", CVMFSRepo)
 		return err
 	}
 
+	Log().WithFields(log.Fields{"image": s.Image.GetSimpleName(), "action": "ingesting singularity"}).Info("Publishing")
 	err = ExecCommand("cvmfs_server", "publish", CVMFSRepo)
 	if err != nil {
 		LogE(err).WithFields(log.Fields{"repo": CVMFSRepo}).Error("Error in publishing the repository")
+		ExecCommand("cvmfs_server", "abort", "-f", CVMFSRepo)
 		return err
 	}
 
