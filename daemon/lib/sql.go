@@ -3,6 +3,7 @@ package lib
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"os/user"
 	"path"
 
@@ -748,14 +749,14 @@ func GetAllNeededImages() ([]string, error) {
 	return images, nil
 }
 
-var getAllNeededLayers = `
+var getAllNeededLayers = fmt.Sprint(`
 SELECT DISTINCT( 
-	'/cvmfs/' || wish.cvmfs_repo || '/layers/' || substr(json_extract(layers.value, '$.Digest'), 8)
+	'/cvmfs/' || wish.cvmfs_repo || '%s' || substr(json_extract(layers.value, '$.Digest'), 8)
 	) 
 FROM 
 converted, wish, json_each(converted.manifest, '$.Layers') as layers WHERE
 converted.wish = wish.id;
-`
+`, subDirInsideRepo)
 
 func GetAllNeededLayers() ([]string, error) {
 	db, err := sql.Open("sqlite3", Database())

@@ -23,7 +23,7 @@ import (
 	d2c "github.com/cvmfs/docker-graphdriver/docker2cvmfs/lib"
 )
 
-var subDirInsideRepo = "layers"
+var subDirInsideRepo = ".layers"
 
 func ConvertWish(wish WishFriendly, convertAgain, forceDownload bool) (err error) {
 	interruptLayerUpload := make(chan os.Signal, 1)
@@ -291,7 +291,11 @@ func ConvertWish(wish WishFriendly, convertAgain, forceDownload bool) (err error
 	Log().Info("Finish pushing the image to the registry")
 	// we wait for the goroutines to finish
 	// and if there was no error we add everything to the converted table
-	if <-noErrorInConversion {
+	noErrorInConversionValue := <-noErrorInConversion
+
+	// here we can launch the ingestion for the singularity image
+
+	if noErrorInConversionValue {
 		err = AddConverted(wish.Id, manifest)
 		if err != nil && convertAgain == false {
 			LogE(err).Error("Error in storing the conversion in the database")
