@@ -12,6 +12,7 @@ import (
 
 	"github.com/docker/docker/image"
 	"github.com/olekukonko/tablewriter"
+	copy "github.com/otiai10/copy"
 	log "github.com/sirupsen/logrus"
 
 	d2c "github.com/cvmfs/docker-graphdriver/docker2cvmfs/lib"
@@ -200,6 +201,54 @@ func (img Image) GetChanges() (changes []string, err error) {
 	}
 
 	return
+}
+
+func (img Image) GetSingularityLocation() string {
+	return fmt.Sprint("docker://%s/%s/%s", img.Registry, img.Repository, img.GetReference())
+}
+
+type Singularity struct {
+	Image         *Image
+	TempDirectory string
+}
+
+func (img Image) DownloadSingularityDirectory() (sing Singularity, err error) {
+	dir, err := ioutil.TempDir("", "singularity_buffer")
+	if err != nil {
+		return
+	}
+	err = ExecCommand("singularity", "build", "--sandbox", dir, img.GetSingularityLocation())
+	if err != nil {
+		LogE(err).Error("Error in downloading the singularity image")
+		return
+	}
+
+	Log().Info("Successfully download the singularity image")
+	return Singularity{Image: &img, TempDirectory: dir}, nil
+}
+
+func (s Singularity) IngestIntoCVMFS(CVMFSRepo string) error {
+	path := filepath.Join("/", "cvmfs", CVMFSRepo, s.Image.Registry, s.Image.Repository, s.Image.GetReference())
+
+	err := ExecCommand("cvmfs_server", "transaction", CVMFSRepo)
+	if err != nil {
+		LogE(err).WithFields(log.Fields{"repo": CVMFSRepo}).Error("Error in opening the transaction")
+		return err
+	}
+
+	err = copy.Copy(s.TempDirectory, path)
+	if err != nil {
+		LogE(err).WithFields(log.Fields{"repo": CVMFSRepo}).Error("Error in moving the directory inside the CVMFS repo")
+		return err
+	}
+
+	err = ExecCommand("cvmfs_server", "publish", CVMFSRepo)
+	if err != nil {
+		LogE(err).WithFields(log.Fields{"repo": CVMFSRepo}).Error("Error in publishing the repository")
+		return err
+	}
+
+	return nil
 }
 
 func (img Image) getByteManifest() ([]byte, error) {

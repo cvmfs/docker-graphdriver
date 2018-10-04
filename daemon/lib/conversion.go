@@ -142,6 +142,11 @@ func ConvertWish(wish WishFriendly, convertAgain, forceDownload bool) (err error
 		err = inputImage.GetLayerIfNotInCVMFS(wish.CvmfsRepo, subDirInsideRepo, layersChanell, stopGettingLayers)
 	}
 
+	singularity, err := inputImage.DownloadSingularityDirectory()
+	if err != nil {
+		LogE(err).Error("Error in dowloading the singularity image")
+		return
+	}
 	changes, _ := inputImage.GetChanges()
 
 	repoLocation := fmt.Sprintf("%s/%s", wish.CvmfsRepo, subDirInsideRepo)
@@ -231,6 +236,11 @@ func ConvertWish(wish WishFriendly, convertAgain, forceDownload bool) (err error
 	noErrorInConversionValue := <-noErrorInConversion
 
 	// here we can launch the ingestion for the singularity image
+	err = singularity.IngestIntoCVMFS(wish.CvmfsRepo)
+	if err != nil {
+		LogE(err).Error("Error in ingesting the singularity image into the CVMFS repository")
+		return
+	}
 
 	if noErrorInConversionValue {
 		err = AddConverted(wish.Id, manifest)
@@ -239,10 +249,11 @@ func ConvertWish(wish WishFriendly, convertAgain, forceDownload bool) (err error
 		} else {
 			Log().Info("Conversion completed")
 		}
+		return
 	} else {
 		Log().Warn("Some error during the conversion, we are not storing it into the database")
+		return
 	}
-	return nil
 }
 
 // copyBuffer is the actual implementation of Copy and CopyBuffer.
