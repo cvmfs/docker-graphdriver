@@ -11,7 +11,6 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"os/signal"
 	"strings"
 
@@ -63,48 +62,12 @@ func ConvertWish(wish WishFriendly, convertAgain, forceDownload bool) (err error
 		cleanup := func(location string) {
 			Log().Info("Running clean up function deleting the last layer.")
 
-			cmd := exec.Command("cvmfs_server", "abort", "-f", wish.CvmfsRepo)
-
-			stdout, _ := cmd.StdoutPipe()
-
-			stderr, _ := cmd.StderrPipe()
-
-			Log().Info("Running abort")
-			err = cmd.Start()
-			if err != nil {
-				LogE(err).Error("Error in starting the abort command inside the cleanup function")
-			}
-
-			slurpOut, _ := ioutil.ReadAll(stdout)
-			Log().WithFields(log.Fields{"pipe": "STDOUT Abort"}).Info(string(slurpOut))
-
-			slurpErr, err := ioutil.ReadAll(stderr)
-			Log().WithFields(log.Fields{"pipe": "STDERR Abort"}).Info(string(slurpErr))
-
-			err = cmd.Wait()
+			err := ExecCommand("cvmfs_server", "abort", "-f", wish.CvmfsRepo)
 			if err != nil {
 				LogE(err).Warning("Error in the abort command inside the cleanup function, this warning is usually normal")
 			}
 
-			cmd = exec.Command("cvmfs_server", "ingest", "--delete", location, wish.CvmfsRepo)
-			stdout, _ = cmd.StdoutPipe()
-
-			stderr, _ = cmd.StderrPipe()
-
-			Log().Info("Running delete")
-			err = cmd.Start()
-
-			if err != nil {
-				LogE(err).Error("Impossible to start the clean up command")
-			}
-
-			slurpOut, _ = ioutil.ReadAll(stdout)
-			Log().WithFields(log.Fields{"pipe": "STDOUT Cleanup"}).Info(string(slurpOut))
-
-			slurpErr, err = ioutil.ReadAll(stderr)
-			Log().WithFields(log.Fields{"pipe": "STDERR Cleanup"}).Info(string(slurpErr))
-
-			err = cmd.Wait()
+			err = ExecCommand("cvmfs_server", "ingest", "--delete", location, wish.CvmfsRepo)
 			if err != nil {
 				LogE(err).Error("Error in the cleanup command")
 			}
@@ -161,36 +124,10 @@ func ConvertWish(wish WishFriendly, convertAgain, forceDownload bool) (err error
 			Log().WithFields(log.Fields{"layer": layer.Name}).Info("Start Ingesting the file into CVMFS")
 			layerDigest := strings.Split(layer.Name, ":")[1]
 			layerLocation := subDirInsideRepo + "/" + layerDigest
-			cmd := exec.Command("cvmfs_server", "ingest", "-t", tempFile.Name(), "-b", layerLocation, wish.CvmfsRepo)
 
-			stdout, err := cmd.StdoutPipe()
-			if err != nil {
-				noErrors = false
-				return
-			}
-			stderr, err := cmd.StderrPipe()
-			if err != nil {
-				noErrors = false
-				return
-			}
-			err = cmd.Start()
-
-			if err != nil {
-				LogE(err).Error("Error in starting the ingest command")
-				noErrors = false
-				cleanup(layerLocation)
-				return
-			}
-
-			slurpOut, err := ioutil.ReadAll(stdout)
-
-			slurpErr, err := ioutil.ReadAll(stderr)
-
-			err = cmd.Wait()
+			err = ExecCommand("cvmfs_server", "ingest", "-t", tempFile.Name(), "-b", layerLocation, wish.CvmfsRepo)
 			if err != nil {
 				LogE(err).WithFields(log.Fields{"layer": layer.Name}).Error("Some error in ingest the layer")
-				fmt.Println("STDOUT: ", string(slurpOut))
-				fmt.Println("STDERR: ", string(slurpErr))
 				noErrors = false
 				cleanup(layerLocation)
 				return

@@ -122,7 +122,8 @@ func upload(src, h string) error {
 	}
 
 	for i := 0; i < 5; i++ {
-		_, err = minioClient.FPutObject("layers", h, src, "application/x-gzip")
+		_, err = minioClient.FPutObject("layers", h, src,
+			minio.PutObjectOptions{ContentType: "application/x-gzip"})
 		if err != nil {
 			fmt.Printf("Failed FPutObject(), this was attempt %d\n", i)
 		} else {
