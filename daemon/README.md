@@ -366,15 +366,11 @@ images.
 **output_format**: how to name the thin images. It accepts few "variables" that
 reference to the input image.
 
-    * $(scheme), the very first part of the image url, most likely `http` or
-      `https`
-    * $(registry), in which registry the image is locate, in the case of the
-      example it would be `registry.hub.docker.com`
-    * $(repository), the repository of the input image, so something like
-      `library/ubuntu` or `atlas/athena`
-    * $(tag), the tag of the image examples could be `latest` or `stable` or
-      `v0.1.4`
-    * $(image), the $(repository) plus the $(tag)
+* $(scheme), the very first part of the image url, most likely `http` or `https`
+* $(registry), in which registry the image is locate, in the case of the example it would be `registry.hub.docker.com`
+* $(repository), the repository of the input image, so something like `library/ubuntu` or `atlas/athena`
+* $(tag), the tag of the image examples could be `latest` or `stable` or `v0.1.4`
+* $(image), the $(repository) plus the $(tag)
 
 **input**: list of docker images to convert
 
