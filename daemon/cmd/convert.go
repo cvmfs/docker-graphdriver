@@ -25,7 +25,7 @@ var convertCmd = &cobra.Command{
 	Use:   "convert",
 	Short: "Convert the wishes",
 	Run: func(cmd *cobra.Command, args []string) {
-
+		AliveMessage()
 		showWeReceivedSignal := make(chan os.Signal, 1)
 		signal.Notify(showWeReceivedSignal, os.Interrupt)
 

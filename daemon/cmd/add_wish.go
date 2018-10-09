@@ -45,6 +45,7 @@ var addWishCmd = &cobra.Command{
 
 		// if required to convert mmediately the wish we do so
 		if convert {
+			AliveMessage()
 			wish, err := lib.GetWishF(wish.InputImage, wish.OutputImage, wish.CvmfsRepo)
 			if err != nil {
 				lib.LogE(err).Fatal("Impossible to retrieve the wish just added")

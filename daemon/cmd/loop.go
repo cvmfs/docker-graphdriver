@@ -20,6 +20,7 @@ var loopCmd = &cobra.Command{
 	Use:   "loop",
 	Short: "An infinite loop that keep converting all the images",
 	Run: func(cmd *cobra.Command, args []string) {
+		AliveMessage()
 		showWeReceivedSignal := make(chan os.Signal, 1)
 		signal.Notify(showWeReceivedSignal, os.Interrupt)
 
