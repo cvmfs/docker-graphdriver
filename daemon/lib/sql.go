@@ -749,9 +749,9 @@ func GetAllNeededImages() ([]string, error) {
 	return images, nil
 }
 
-var getAllNeededLayers = fmt.Sprint(`
+var getAllNeededLayers = fmt.Sprintf(`
 SELECT DISTINCT( 
-	'/cvmfs/' || wish.cvmfs_repo || '%s' || substr(json_extract(layers.value, '$.Digest'), 8)
+	'/cvmfs/' || wish.cvmfs_repo || '/'|| '%s' || '/' || substr(json_extract(layers.value, '$.Digest'), 8)
 	) 
 FROM 
 converted, wish, json_each(converted.manifest, '$.Layers') as layers WHERE
