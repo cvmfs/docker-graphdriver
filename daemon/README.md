@@ -201,7 +201,13 @@ download nor ingest the layer.
 The conversion simply ingest every layer in an image, create a thin image and
 finally push the thin image to the registry.
 
-Such images can be used by docker with the plugins.
+Such images can be used by docker with the  thin image plugins.
+
+The daemon also transform the images into singularity images and store them
+into the repository.
+
+The layers are stored into the `.layer` subdirectory, while the singularity
+images are stored in the `singularity` subdirectory.
 
 ## General workflow
 
@@ -276,7 +282,7 @@ $ ./daemon list-wish
 +----+----------------+-------------------------------------------------+------------+-----------------+------------------------------------------------------------------+
 ```
 
-Of ocurse you can add as many wish as you need.
+Of course you can add as many wish as you need.
 
 Now that all the wishes are in place you can simply start converting them:
 
@@ -288,7 +294,7 @@ The above command should provide enough logs to be able to infer what is
 happening and to debug any error. 
 
 Make sure that the user is able to start a cvmfs transaction and that is able
-to communicate with docker, anyway this errors should be pretty self evidentds
+to communicate with docker, anyway this errors should be pretty self evident
 in the logs.
 
 The above command is quite cheap, it avoids to convert an images that is
@@ -298,7 +304,7 @@ downloaded, command line flags can change this behaviour if necessary.
 You may want to keep the above command running in a loop, hence it will
 automatically pick up changes in the input images and start the conversion.
 
-We are basically polling the registries for changings in the input image, again
+We are basically polling the registries for changing in the input image, again
 there was not a reliable and easy way to get updates from the registry, not
 even from the one inside CERN that we manage.
 
@@ -314,4 +320,62 @@ new wishes, the next loop will pick the adding elements up.
 
 Only be careful to don't leave the CVMFS repository in an inconsistet state
 (abort the program Ctrl-C while it is doing a transaction).
+
+
+## Recipes
+
+Recipes are a way to describe the content of the wish list using a simple,
+static YAML file.
+
+Recipes are read by the tool and set the wish list accordingly, adding and
+**removing** wishes.
+
+The operation of setting a recipe is idempotence, this means that repeating the
+operation, with the same recipe, multiple times does not change the wish list.
+
+Please make sure to be careful if you add a wish manually and then set a recipe,
+if the wish you add manually is not in the recipe the wish will be deleted.
+Similarly avoid to work with multiple recipe files, one will delete the wishes
+of the other.
+
+Recipes are thought in such a way that you should have only a single recipe
+for CVMFS repository.
+
+### Recipe Syntax v1
+
+An example of a complete recipe file is above, let's go over each key
+
+``` yaml
+version: 1
+user: smosciat
+cvmfs_repo: unpacked.cern.ch
+output_format: '$(scheme)://registry.gitlab.cern.ch/thin/$(image)'
+input:
+        - 'https://registry.hub.docker.com/econtal/numpy-mkl:latest'
+        - 'https://registry.hub.docker.com/agladstein/simprily:version1'
+        - 'https://registry.hub.docker.com/library/fedora:latest'
+        - 'https://registry.hub.docker.com/library/debian:stable'
+```
+
+**version**: indicate what version of recipe we are using, at the moment only
+`1` is supported.
+**user**: the user that will push the thin docker images into the registry,
+this user need to be added separately into the database
+**cvmfs_repo**: in which CVMFS repository store the layers and the singularity
+images.
+**output_format**: how to name the thin images. It accepts few "variables" that
+reference to the input image.
+
+    * $(scheme), the very first part of the image url, most likely `http` or
+      `https`
+    * $(registry), in which registry the image is locate, in the case of the
+      example it would be `registry.hub.docker.com`
+    * $(repository), the repository of the input image, so something like
+      `library/ubuntu` or `atlas/athena`
+    * $(tag), the tag of the image examples could be `latest` or `stable` or
+      `v0.1.4`
+    * $(image), the $(repository) plus the $(tag)
+
+**input**: list of docker images to convert
+
 
