@@ -23,7 +23,7 @@ import (
 
 var subDirInsideRepo = ".layers"
 
-func ConvertWish(wish WishFriendly, convertAgain, forceDownload bool) (err error) {
+func ConvertWish(wish WishFriendly, convertAgain, forceDownload, convertSingularity bool) (err error) {
 	interruptLayerUpload := make(chan os.Signal, 1)
 	// register to Ctrl-C
 	signal.Notify(interruptLayerUpload, os.Interrupt)
@@ -142,10 +142,13 @@ func ConvertWish(wish WishFriendly, convertAgain, forceDownload bool) (err error
 		err = inputImage.GetLayerIfNotInCVMFS(wish.CvmfsRepo, subDirInsideRepo, layersChanell, stopGettingLayers)
 	}
 
-	singularity, err := inputImage.DownloadSingularityDirectory()
-	if err != nil {
-		LogE(err).Error("Error in dowloading the singularity image")
-		return
+	var singularity Singularity
+	if convertSingularity {
+		singularity, err = inputImage.DownloadSingularityDirectory()
+		if err != nil {
+			LogE(err).Error("Error in dowloading the singularity image")
+			return
+		}
 	}
 	changes, _ := inputImage.GetChanges()
 
@@ -176,7 +179,7 @@ func ConvertWish(wish WishFriendly, convertAgain, forceDownload bool) (err error
 		return
 	}
 
-	dockerClient, err := client.NewClientWithOpts()
+	dockerClient, err := client.NewClientWithOpts(client.WithVersion("1.19"))
 	if err != nil {
 		return
 	}
@@ -236,10 +239,12 @@ func ConvertWish(wish WishFriendly, convertAgain, forceDownload bool) (err error
 	noErrorInConversionValue := <-noErrorInConversion
 
 	// here we can launch the ingestion for the singularity image
-	err = singularity.IngestIntoCVMFS(wish.CvmfsRepo)
-	if err != nil {
-		LogE(err).Error("Error in ingesting the singularity image into the CVMFS repository")
-		return
+	if convertSingularity {
+		err = singularity.IngestIntoCVMFS(wish.CvmfsRepo)
+		if err != nil {
+			LogE(err).Error("Error in ingesting the singularity image into the CVMFS repository")
+			return
+		}
 	}
 
 	if noErrorInConversionValue {

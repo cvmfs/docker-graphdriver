@@ -25,6 +25,7 @@ func init() {
 
 	addWishCmd.Flags().BoolVarP(&convert, "convert", "c", false, "start the conversion process immediately after adding the wish")
 	addWishCmd.Flags().BoolVarP(&overwriteLayer, "overwrite-layers", "f", false, "overwrite the layer if they are already inside the CVMFS repository")
+	addWishCmd.Flags().BoolVarP(&convertSingularity, "convert-singularity", "s", true, "also create a singularity images")
 
 	rootCmd.AddCommand(addWishCmd)
 }
@@ -50,7 +51,7 @@ var addWishCmd = &cobra.Command{
 			if err != nil {
 				lib.LogE(err).Fatal("Impossible to retrieve the wish just added")
 			}
-			err = lib.ConvertWish(wish, false, overwriteLayer)
+			err = lib.ConvertWish(wish, false, overwriteLayer, convertSingularity)
 			if err != nil {
 				lib.LogE(err).Fatal("Impossible to convert the newly added wish")
 			}

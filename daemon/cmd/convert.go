@@ -12,12 +12,13 @@ import (
 )
 
 var (
-	convertAgain, overwriteLayer bool
+	convertAgain, overwriteLayer, convertSingularity bool
 )
 
 func init() {
 	convertCmd.Flags().BoolVarP(&overwriteLayer, "overwrite-layers", "f", false, "overwrite the layer if they are already inside the CVMFS repository")
 	convertCmd.Flags().BoolVarP(&convertAgain, "convert-again", "g", false, "convert again images that are already successfull converted")
+	convertCmd.Flags().BoolVarP(&convertSingularity, "convert-singularity", "s", true, "also create a singularity images")
 	rootCmd.AddCommand(convertCmd)
 }
 
@@ -52,7 +53,7 @@ var convertCmd = &cobra.Command{
 				}
 			}
 			lib.Log().WithFields(log.Fields{"input image": wish.InputName}).Info("Converting Image")
-			err = lib.ConvertWish(wish, convertAgain, overwriteLayer)
+			err = lib.ConvertWish(wish, convertAgain, overwriteLayer, convertSingularity)
 			if err != nil {
 				fmt.Println(err)
 				os.Exit(1)
