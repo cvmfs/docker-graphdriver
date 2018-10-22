@@ -83,8 +83,8 @@ func ConvertWish(wish WishFriendly, convertAgain, forceDownload, convertSingular
 				}
 			}
 			Log().WithFields(log.Fields{"layer": layer.Name}).Info("Start Ingesting routine")
-			uncompressed, err := gzip.NewReader(layer.Resp.Body)
-			defer layer.Resp.Body.Close()
+			uncompressed, err := gzip.NewReader(layer.Resp)
+			defer layer.Resp.Close()
 			if err != nil {
 				LogE(err).Error("Error in uncompressing the layer")
 				noErrors = false

@@ -1,8 +1,10 @@
 package lib
 
 import (
+	"archive/tar"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -363,7 +365,7 @@ func getLayerUrl(img Image, layer d2c.Layer) string {
 
 type downloadedLayer struct {
 	Name string
-	Resp *http.Response
+	Resp io.ReadCloser
 }
 
 func (img Image) GetLayerIfNotInCVMFS(cvmfsRepo, subDir string, layers chan<- downloadedLayer, stopGettingLayers <-chan bool) (err error) {
@@ -465,6 +467,106 @@ func (img Image) GetLayers(cvmfsRepo, subDir string, layers chan<- downloadedLay
 	return nil
 }
 
+func (img Image) downloadImage() (err error) {
+	err = ExecCommand("docker", "pull", img.GetSimpleName())
+	if err != nil {
+		LogE(err).Error("Error in pulling from the registry")
+		return
+	}
+	return
+}
+
+func (img Image) saveDockerLayerAndManifestOnDisk(dockerSavedImage string) (manifest string, paths []string, err error) {
+
+	f, err := ioutil.TempFile("", "dockerSave")
+	defer f.Close()
+	if err != nil {
+		LogE(err).Error("Error in creating the temp file where to save the image")
+		return
+	}
+	err = ExecCommand("docker", "save", img.GetSimpleName(), "--output", f.Name())
+	if err != nil {
+		defer os.Remove(f.Name())
+		LogE(err).Error("Error in saving the image")
+		return
+	}
+
+	deleteFiles := func() {
+		if manifest != "" {
+			os.Remove(manifest)
+		}
+		if len(paths) != 0 {
+			for _, p := range paths {
+				os.Remove(p)
+			}
+		}
+	}
+	tempDir, err := ioutil.TempDir("", "layers")
+	tr := tar.NewReader(f)
+	for {
+		hdr, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			LogE(err).Error("Error in reading the archive")
+			deleteFiles()
+			return "", nil, err
+		}
+		if hdr.Name == "manifest.json" {
+			tempManifest, err := ioutil.TempFile(tempDir, "tempManifest")
+			if err != nil {
+				LogE(err).Error("Error in creating manifest temp file")
+				deleteFiles()
+				return "", nil, err
+			}
+			manifest = tempManifest.Name()
+			_, err = io.Copy(f, tr)
+			if err != nil {
+				LogE(err).Error("Error in copying the manifest to a file")
+				deleteFiles()
+				return "", nil, err
+			}
+		}
+		// the files are stored inside the directory $layer (so the actual name of the layer) as tar archive called "layer.tar", not the layer name, the string "layer"
+		if strings.HasSuffix(hdr.Name, ".tar") {
+			splitList := filepath.SplitList(hdr.Name)
+			splitListLen := len(splitList)
+			if splitListLen < 2 {
+				err = fmt.Errorf("Error in reading the tar for layer, less than 2 subpath for layer, expected at least two: $layerName/layer.tar")
+				LogE(err).WithFields(log.Fields{"name": hdr.Name}).Error(err)
+				deleteFiles()
+				return "", nil, err
+			}
+			layerName := splitList[splitListLen-2]
+			fLayer, err := os.OpenFile(filepath.Join(tempDir, layerName, ".tar"), os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0666)
+			if err != nil {
+				LogE(err).Error("Impossible to exclusively open the file to write the tar layer")
+				deleteFiles()
+				return "", nil, err
+			}
+			_, err = io.Copy(fLayer, tr)
+			if err != nil {
+				LogE(err).Error("Error in copying the layer in a file")
+				deleteFiles()
+				return "", nil, err
+			}
+			paths = append(paths, f.Name())
+			f.Close()
+		}
+	}
+	return
+}
+
+func (img Image) removeImage() (err error) {
+	err = ExecCommand("docker", "rmi", img.GetSimpleName())
+	if err != nil {
+		LogE(err).Error("Error in removing the image")
+		return
+	}
+	return
+}
+
 func (img Image) downloadLayer(layer d2c.Layer, token string) (toSend downloadedLayer, err error) {
 	user := img.User
 	pass, err := GetPassword(img.User, img.Registry)
@@ -495,8 +597,8 @@ func (img Image) downloadLayer(layer d2c.Layer, token string) (toSend downloaded
 	if 200 <= resp.StatusCode && resp.StatusCode < 300 {
 		toSend = struct {
 			Name string
-			Resp *http.Response
-		}{layer.Digest, resp}
+			Resp io.ReadCloser
+		}{layer.Digest, resp.Body}
 	} else {
 		Log().Warning("Received status code ", resp.StatusCode)
 		// TODO add error
