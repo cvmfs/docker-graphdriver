@@ -3,16 +3,13 @@ package lib
 import (
 	"archive/tar"
 	"bytes"
-	"compress/gzip"
 	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
 	"os/signal"
-	"strings"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
@@ -82,49 +79,12 @@ func ConvertWish(wish WishFriendly, convertAgain, forceDownload, convertSingular
 				{
 				}
 			}
-			Log().WithFields(log.Fields{"layer": layer.Name}).Info("Start Ingesting routine")
-			uncompressed, err := gzip.NewReader(layer.Resp)
-			defer layer.Resp.Close()
-			if err != nil {
-				LogE(err).Error("Error in uncompressing the layer")
-				noErrors = false
-			}
-
-			tempFile, err := ioutil.TempFile("", layer.Name)
-			if err != nil {
-				LogE(err).Error("Error in creating temporary file for storing the layer.")
-				noErrors = false
-				return
-			}
-			if err = tempFile.Chmod(0666); err != nil {
-				LogE(err).Warning("Error in changing the mod of the temp file")
-			}
-			defer os.Remove(tempFile.Name())
-
-			Log().WithFields(log.Fields{
-				"layer": layer.Name,
-				"file":  tempFile.Name(),
-			}).Info("Copying the layer to a temporary file")
-			if _, err = io.Copy(tempFile, uncompressed); err != nil {
-				LogE(err).Error("Error in writing the layer into the temp file")
-				noErrors = false
-				return
-			}
-
-			// let's make sure that the file is actually written on disk
-			tempFile.Sync()
-
-			Log().Info("Finished copying the layer to the temporary file")
-
-			if err = tempFile.Close(); err != nil {
-				LogE(err).Warning("Error in closing the temp file where we wrote the layer")
-			}
+			defer os.Remove(layer.Path)
 
 			Log().WithFields(log.Fields{"layer": layer.Name}).Info("Start Ingesting the file into CVMFS")
-			layerDigest := strings.Split(layer.Name, ":")[1]
-			layerLocation := subDirInsideRepo + "/" + layerDigest
+			layerLocation := subDirInsideRepo + "/" + layer.Name
 
-			err = ExecCommand("cvmfs_server", "ingest", "-t", tempFile.Name(), "-b", layerLocation, wish.CvmfsRepo)
+			err = ExecCommand("cvmfs_server", "ingest", "-t", layer.Path, "-b", layerLocation, wish.CvmfsRepo)
 			if err != nil {
 				LogE(err).WithFields(log.Fields{"layer": layer.Name}).Error("Some error in ingest the layer")
 				noErrors = false
@@ -136,11 +96,7 @@ func ConvertWish(wish WishFriendly, convertAgain, forceDownload, convertSingular
 		Log().Info("Finished pushing the layers into CVMFS")
 	}()
 	// this wil start to feed the above goroutine by writing into layersChanell
-	if forceDownload {
-		err = inputImage.GetLayers(wish.CvmfsRepo, subDirInsideRepo, layersChanell, stopGettingLayers)
-	} else {
-		err = inputImage.GetLayerIfNotInCVMFS(wish.CvmfsRepo, subDirInsideRepo, layersChanell, stopGettingLayers)
-	}
+	err = inputImage.GetLayers(layersChanell)
 
 	var singularity Singularity
 	if convertSingularity {

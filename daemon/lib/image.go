@@ -365,104 +365,23 @@ func getLayerUrl(img Image, layer d2c.Layer) string {
 
 type downloadedLayer struct {
 	Name string
-	Resp io.ReadCloser
+	Path string
 }
 
-func (img Image) GetLayerIfNotInCVMFS(cvmfsRepo, subDir string, layers chan<- downloadedLayer, stopGettingLayers <-chan bool) (err error) {
-	// remember to close the layers channel when done
-	defer close(layers)
-	// get the credential
-	user := img.User
-	pass, err := GetPassword(img.User, img.Registry)
+func (img Image) GetLayers(layersChan chan<- downloadedLayer) error {
+	// we start by getting the image inside the dockerd, if it is already there it will be fast, if it is not, it should
+	err := img.downloadImage()
 	if err != nil {
-		LogE(err).Warning("Unable to retrieve the password, trying to get the layers anonymously.")
-		user = ""
-		pass = ""
-	}
-
-	// then we try to get the manifest from our database
-	manifest, err := img.GetManifest()
-	if err != nil {
-		LogE(err).Warn("Error in getting the manifest")
+		LogE(err).Error("Impossible to download the image in the docker daemon")
 		return err
 	}
 
-	// A first request is used to get the authentication
-	firstLayer := manifest.Layers[0]
-	layerUrl := getLayerUrl(img, firstLayer)
-	token, err := firstRequestForAuth(layerUrl, user, pass)
-	if err != nil {
-		return err
-	}
-	// at this point we iterate each layer and we download it.
-	for _, layer := range manifest.Layers {
-		// in this function before to donwload something we check that the layer is not already in the repository
-		layerDigest := strings.Split(layer.Digest, ":")[1]
-		location := filepath.Join("/", "cvmfs", cvmfsRepo, subDir, layerDigest)
-		_, err := os.Stat(location)
-		if err == nil {
-			// the path exists
-			Log().WithFields(log.Fields{"layer": layer.Digest}).Info("Layer already exists, skipping download")
-			continue
-		}
-		toSend, err := img.downloadLayer(layer, token)
-		if err != nil {
-			LogE(err).Error("Error in downloading a layer")
-		} else {
-			select {
-			case layers <- toSend:
-				{
-				}
-			case <-stopGettingLayers:
-				Log().Info("Receive stop signal")
-				return nil
-			}
-		}
-	}
-	return nil
-
-}
-
-func (img Image) GetLayers(cvmfsRepo, subDir string, layers chan<- downloadedLayer, stopGettingLayers <-chan bool) error {
-	// first we get the username and password, if we are not able to get those,
-	// we try anyway anonymously
-	defer close(layers)
-	user := img.User
-	pass, err := GetPassword(img.User, img.Registry)
-	if err != nil {
-		LogE(err).Warning("Unable to retrieve the password, trying to get the layers anonymously.")
-		user = ""
-		pass = ""
-	}
-
-	// then we try to get the manifest from our database
-	manifest, err := img.GetManifest()
-	if err != nil {
-		LogE(err).Warn("Error in getting the manifest")
-		return err
-	}
-
-	// A first request is used to get the authentication
-	firstLayer := manifest.Layers[0]
-	layerUrl := getLayerUrl(img, firstLayer)
-	token, err := firstRequestForAuth(layerUrl, user, pass)
-	if err != nil {
-		return err
-	}
-	// at this point we iterate each layer and we download it.
-	for _, layer := range manifest.Layers {
-		toSend, err := img.downloadLayer(layer, token)
-		if err != nil {
-			LogE(err).Error("Error in downloading a layer")
-		}
-		select {
-		case layers <- toSend:
-			{
-			}
-		case <-stopGettingLayers:
-			Log().Info("Received stop signal")
-			return nil
-		}
+	// the we get the layers and the manifest as path string
+	_, layers, err := img.saveDockerLayerAndManifestOnDisk()
+	for _, layer := range layers {
+		layerBase := filepath.Base(layer)             // remove all the directory above
+		layerName := strings.Split(layerBase, ".")[0] // remove the .tar
+		layersChan <- downloadedLayer{Name: layerName, Path: layer}
 	}
 	return nil
 }
@@ -476,7 +395,7 @@ func (img Image) downloadImage() (err error) {
 	return
 }
 
-func (img Image) saveDockerLayerAndManifestOnDisk(dockerSavedImage string) (manifest string, paths []string, err error) {
+func (img Image) saveDockerLayerAndManifestOnDisk() (manifest string, paths []string, err error) {
 
 	f, err := ioutil.TempFile("", "dockerSave")
 	defer f.Close()
@@ -565,47 +484,6 @@ func (img Image) removeImage() (err error) {
 		return
 	}
 	return
-}
-
-func (img Image) downloadLayer(layer d2c.Layer, token string) (toSend downloadedLayer, err error) {
-	user := img.User
-	pass, err := GetPassword(img.User, img.Registry)
-	if err != nil {
-		LogE(err).Warning("Unable to retrieve the password, trying to get the layers anonymously.")
-		user = ""
-		pass = ""
-	}
-	layerUrl := getLayerUrl(img, layer)
-	if token == "" {
-		token, err = firstRequestForAuth(layerUrl, user, pass)
-		if err != nil {
-			return
-		}
-	}
-	client := &http.Client{}
-	req, err := http.NewRequest("GET", layerUrl, nil)
-	if err != nil {
-		LogE(err).Error("Impossible to create the HTTP request.")
-		return
-	}
-	req.Header.Set("Authorization", token)
-	resp, err := client.Do(req)
-	Log().WithFields(log.Fields{"layer": layer.Digest}).Info("Make request for layer")
-	if err != nil {
-		return
-	}
-	if 200 <= resp.StatusCode && resp.StatusCode < 300 {
-		toSend = struct {
-			Name string
-			Resp io.ReadCloser
-		}{layer.Digest, resp.Body}
-	} else {
-		Log().Warning("Received status code ", resp.StatusCode)
-		// TODO add error
-		err = fmt.Errorf("Layer not received, status code: %s", resp.StatusCode)
-	}
-	return
-
 }
 
 func parseBearerToken(token string) (realm string, options map[string]string, err error) {
