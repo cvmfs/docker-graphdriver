@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/signal"
+	"path/filepath"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
@@ -21,7 +22,7 @@ import (
 var subDirInsideRepo = ".layers"
 
 func ConvertWish(wish WishFriendly, convertAgain, forceDownload, convertSingularity bool) (err error) {
-	interruptLayerUpload := make(chan os.Signal, 1)
+	interruptLayerUpload := make(chan os.Signal, 20)
 	// register to Ctrl-C
 	signal.Notify(interruptLayerUpload, os.Interrupt)
 
@@ -46,6 +47,7 @@ func ConvertWish(wish WishFriendly, convertAgain, forceDownload, convertSingular
 		return nil
 	}
 	layersChanell := make(chan downloadedLayer, 3)
+	manifestChanell := make(chan string, 1)
 	stopGettingLayers := make(chan bool, 1)
 	noErrorInConversion := make(chan bool, 1)
 	go func() {
@@ -79,24 +81,38 @@ func ConvertWish(wish WishFriendly, convertAgain, forceDownload, convertSingular
 				{
 				}
 			}
-			defer os.Remove(layer.Path)
 
 			Log().WithFields(log.Fields{"layer": layer.Name}).Info("Start Ingesting the file into CVMFS")
 			layerLocation := subDirInsideRepo + "/" + layer.Name
 
-			err = ExecCommand("cvmfs_server", "ingest", "-t", layer.Path, "-b", layerLocation, wish.CvmfsRepo)
-			if err != nil {
-				LogE(err).WithFields(log.Fields{"layer": layer.Name}).Error("Some error in ingest the layer")
-				noErrors = false
-				cleanup(layerLocation)
-				return
+			var pathExists bool
+			layerPath := filepath.Join("/", "cvmfs", wish.CvmfsRepo, layerLocation)
+
+			if _, err := os.Stat(layerPath); os.IsNotExist(err) {
+				pathExists = false
+			} else {
+				pathExists = true
 			}
-			Log().WithFields(log.Fields{"layer": layer.Name}).Info("Finish Ingesting the file")
+
+			if pathExists == false || forceDownload {
+				err = ExecCommand("cvmfs_server", "ingest", "-t", layer.Path, "-b", layerLocation, wish.CvmfsRepo)
+
+				if err != nil {
+					LogE(err).WithFields(log.Fields{"layer": layer.Name}).Error("Some error in ingest the layer")
+					noErrors = false
+					cleanup(layerLocation)
+					return
+				}
+				Log().WithFields(log.Fields{"layer": layer.Name}).Info("Finish Ingesting the file")
+			} else {
+				Log().WithFields(log.Fields{"layer": layer.Name}).Info("Skipping ingestion of layer, already exists")
+			}
+			os.Remove(layer.Path)
 		}
 		Log().Info("Finished pushing the layers into CVMFS")
 	}()
 	// this wil start to feed the above goroutine by writing into layersChanell
-	err = inputImage.GetLayers(layersChanell)
+	err = inputImage.GetLayers(layersChanell, manifestChanell, stopGettingLayers)
 
 	var singularity Singularity
 	if convertSingularity {
