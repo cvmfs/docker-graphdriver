@@ -215,15 +215,21 @@ func ConvertWish(wish WishFriendly, convertAgain, forceDownload, convertSingular
 		err = singularity.IngestIntoCVMFS(wish.CvmfsRepo)
 		if err != nil {
 			LogE(err).Error("Error in ingesting the singularity image into the CVMFS repository")
-			return
+			noErrorInConversionValue = false
 		}
 	}
 
 	if noErrorInConversionValue {
-		err = AddConverted(wish.Id, manifest)
+		manifestPath := filepath.Join(".metadata", inputImage.GetSimpleName(), "manifest.json")
+		errIng := IngestIntoCVMFS(wish.CvmfsRepo, manifestPath, <-manifestChanell)
+		if err != nil {
+			LogE(errIng).Error("Error in storing the manifest in the repository")
+		}
+		errConv := AddConverted(wish.Id, manifest)
 		if err != nil && convertAgain == false {
-			LogE(err).Error("Error in storing the conversion in the database")
-		} else {
+			LogE(errConv).Error("Error in storing the conversion in the database")
+		}
+		if errIng == nil && errConv == nil {
 			Log().Info("Conversion completed")
 		}
 		return
