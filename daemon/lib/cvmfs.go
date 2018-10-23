@@ -1,6 +1,8 @@
 package lib
 
 import (
+	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 
@@ -32,15 +34,43 @@ func IngestIntoCVMFS(CVMFSRepo string, path string, target string) (err error) {
 		return err
 	}
 
-	Log().WithFields(log.Fields{"target": target, "action": "ingesting"}).Info("Copying directory")
+	Log().WithFields(log.Fields{"target": target, "path": path, "action": "ingesting"}).Info("Copying target into path")
 
-	os.RemoveAll(path)
-	err = os.MkdirAll(path, 0666)
+	targetStat, err := os.Stat(target)
 	if err != nil {
-		LogE(err).WithFields(log.Fields{"repo": CVMFSRepo}).Warning("Error in creating the directory where to copy the singularity")
+		LogE(err).WithFields(log.Fields{"target": target}).Error("Impossible to obtain information about the target")
+		return err
 	}
 
-	err = copy.Copy(target, path)
+	if targetStat.Mode().IsDir() {
+		os.RemoveAll(path)
+		err = os.MkdirAll(path, 0666)
+		if err != nil {
+			LogE(err).WithFields(log.Fields{"repo": CVMFSRepo}).Warning("Error in creating the directory where to copy the singularity")
+		}
+		err = copy.Copy(target, path)
+
+	} else if targetStat.Mode().IsRegular() {
+		err = func() error {
+			os.MkdirAll(filepath.Dir(path), 0666)
+			os.Remove(path)
+			from, err := os.Open(target)
+			defer from.Close()
+			if err != nil {
+				return err
+			}
+			to, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0666)
+			defer to.Close()
+			if err != nil {
+				return err
+			}
+			_, err = io.Copy(to, from)
+			return err
+		}()
+	} else {
+		err = fmt.Errorf("Trying to ingest neither a file nor a directory")
+	}
+
 	if err != nil {
 		LogE(err).WithFields(log.Fields{"repo": CVMFSRepo, "target": target}).Error("Error in moving the target inside the CVMFS repo")
 		ExecCommand("cvmfs_server", "abort", "-f", CVMFSRepo)
