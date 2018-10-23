@@ -240,7 +240,13 @@ func (img Image) DownloadSingularityDirectory() (sing Singularity, err error) {
 
 func (s Singularity) IngestIntoCVMFS(CVMFSRepo string) error {
 	path := filepath.Join(".singularity", s.Image.Registry, s.Image.Repository, s.Image.GetSimpleReference())
-	return IngestIntoCVMFS(CVMFSRepo, path, s.TempDirectory)
+	err := IngestIntoCVMFS(CVMFSRepo, path, s.TempDirectory)
+	if err != nil {
+		// if there is an error ingest does not remove the folder.
+		// we do want to remove the folder anyway
+		os.RemoveAll(path)
+	}
+	return err
 }
 
 func (img Image) getByteManifest() ([]byte, error) {
