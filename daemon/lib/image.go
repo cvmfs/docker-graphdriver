@@ -14,7 +14,6 @@ import (
 
 	"github.com/docker/docker/image"
 	"github.com/olekukonko/tablewriter"
-	copy "github.com/otiai10/copy"
 	log "github.com/sirupsen/logrus"
 
 	d2c "github.com/cvmfs/docker-graphdriver/docker2cvmfs/lib"
@@ -240,43 +239,8 @@ func (img Image) DownloadSingularityDirectory() (sing Singularity, err error) {
 }
 
 func (s Singularity) IngestIntoCVMFS(CVMFSRepo string) error {
-	defer func() {
-		Log().WithFields(log.Fields{"image": s.Image.GetSimpleName(), "action": "ingesting singularity"}).Info("Deleting temporary direcotry")
-		os.RemoveAll(s.TempDirectory)
-	}()
-	Log().WithFields(log.Fields{"image": s.Image.GetSimpleName(), "action": "ingesting singularity"}).Info("Start ingesting")
-	path := filepath.Join("/", "cvmfs", CVMFSRepo, ".singularity", s.Image.Registry, s.Image.Repository, s.Image.GetSimpleReference())
-
-	Log().WithFields(log.Fields{"image": s.Image.GetSimpleName(), "action": "ingesting singularity"}).Info("Start ingesting")
-	err := ExecCommand("cvmfs_server", "transaction", CVMFSRepo)
-	if err != nil {
-		LogE(err).WithFields(log.Fields{"repo": CVMFSRepo}).Error("Error in opening the transaction")
-		ExecCommand("cvmfs_server", "abort", "-f", CVMFSRepo)
-		return err
-	}
-
-	Log().WithFields(log.Fields{"image": s.Image.GetSimpleName(), "action": "ingesting singularity"}).Info("Copying directory")
-	os.RemoveAll(path)
-	err = os.MkdirAll(path, 0666)
-	if err != nil {
-		LogE(err).WithFields(log.Fields{"repo": CVMFSRepo}).Warning("Error in creating the directory where to copy the singularity")
-	}
-	err = copy.Copy(s.TempDirectory, path)
-	if err != nil {
-		LogE(err).WithFields(log.Fields{"repo": CVMFSRepo}).Error("Error in moving the directory inside the CVMFS repo")
-		ExecCommand("cvmfs_server", "abort", "-f", CVMFSRepo)
-		return err
-	}
-
-	Log().WithFields(log.Fields{"image": s.Image.GetSimpleName(), "action": "ingesting singularity"}).Info("Publishing")
-	err = ExecCommand("cvmfs_server", "publish", CVMFSRepo)
-	if err != nil {
-		LogE(err).WithFields(log.Fields{"repo": CVMFSRepo}).Error("Error in publishing the repository")
-		ExecCommand("cvmfs_server", "abort", "-f", CVMFSRepo)
-		return err
-	}
-
-	return nil
+	path := filepath.Join(".singularity", s.Image.Registry, s.Image.Repository, s.Image.GetSimpleReference())
+	return IngestIntoCVMFS(CVMFSRepo, path, s.TempDirectory)
 }
 
 func (img Image) getByteManifest() ([]byte, error) {
@@ -368,7 +332,8 @@ type downloadedLayer struct {
 	Path string
 }
 
-func (img Image) GetLayers(layersChan chan<- downloadedLayer) error {
+func (img Image) GetLayers(layersChan chan<- downloadedLayer, manifestChan chan<- string, stopGettingLayers <-chan bool) error {
+	defer close(layersChan)
 	// we start by getting the image inside the dockerd, if it is already there it will be fast, if it is not, it should
 	err := img.downloadImage()
 	if err != nil {
@@ -377,12 +342,22 @@ func (img Image) GetLayers(layersChan chan<- downloadedLayer) error {
 	}
 
 	// the we get the layers and the manifest as path string
-	_, layers, err := img.saveDockerLayerAndManifestOnDisk()
+	manifest, layers, err := img.saveDockerLayerAndManifestOnDisk()
 	for _, layer := range layers {
 		layerBase := filepath.Base(layer)             // remove all the directory above
 		layerName := strings.Split(layerBase, ".")[0] // remove the .tar
-		layersChan <- downloadedLayer{Name: layerName, Path: layer}
+		select {
+		case layersChan <- downloadedLayer{Name: layerName, Path: layer}:
+			{
+			}
+		case <-stopGettingLayers:
+			{
+				Log().Info("Received signal to stop")
+				return nil
+			}
+		}
 	}
+	manifestChan <- manifest
 	return nil
 }
 
@@ -397,18 +372,21 @@ func (img Image) downloadImage() (err error) {
 
 func (img Image) saveDockerLayerAndManifestOnDisk() (manifest string, paths []string, err error) {
 
-	f, err := ioutil.TempFile("", "dockerSave")
-	defer f.Close()
+	f, err := ioutil.TempFile("", "docker-save.*.tar")
+	defer os.Remove(f.Name())
+	fName := f.Name()
+	f.Close()
+
 	if err != nil {
 		LogE(err).Error("Error in creating the temp file where to save the image")
 		return
 	}
-	err = ExecCommand("docker", "save", img.GetSimpleName(), "--output", f.Name())
+	err = ExecCommand("docker", "save", img.GetSimpleName(), "-o", fName)
 	if err != nil {
-		defer os.Remove(f.Name())
 		LogE(err).Error("Error in saving the image")
 		return
 	}
+	Log().WithFields(log.Fields{"image": img.GetSimpleName(), "file": fName}).Info("Finish saving the docker image into the temporary file")
 
 	deleteFiles := func() {
 		if manifest != "" {
@@ -421,6 +399,7 @@ func (img Image) saveDockerLayerAndManifestOnDisk() (manifest string, paths []st
 		}
 	}
 	tempDir, err := ioutil.TempDir("", "layers")
+	f, err = os.OpenFile(fName, os.O_RDONLY, 0666)
 	tr := tar.NewReader(f)
 	for {
 		hdr, err := tr.Next()
@@ -440,7 +419,7 @@ func (img Image) saveDockerLayerAndManifestOnDisk() (manifest string, paths []st
 				return "", nil, err
 			}
 			manifest = tempManifest.Name()
-			_, err = io.Copy(f, tr)
+			_, err = io.Copy(tempManifest, tr)
 			if err != nil {
 				LogE(err).Error("Error in copying the manifest to a file")
 				deleteFiles()
@@ -449,7 +428,8 @@ func (img Image) saveDockerLayerAndManifestOnDisk() (manifest string, paths []st
 		}
 		// the files are stored inside the directory $layer (so the actual name of the layer) as tar archive called "layer.tar", not the layer name, the string "layer"
 		if strings.HasSuffix(hdr.Name, ".tar") {
-			splitList := filepath.SplitList(hdr.Name)
+			Log().WithFields(log.Fields{"path": hdr.Name}).Info("Got layer from tar")
+			splitList := strings.Split(hdr.Name, string(os.PathSeparator))
 			splitListLen := len(splitList)
 			if splitListLen < 2 {
 				err = fmt.Errorf("Error in reading the tar for layer, less than 2 subpath for layer, expected at least two: $layerName/layer.tar")
@@ -458,7 +438,7 @@ func (img Image) saveDockerLayerAndManifestOnDisk() (manifest string, paths []st
 				return "", nil, err
 			}
 			layerName := splitList[splitListLen-2]
-			fLayer, err := os.OpenFile(filepath.Join(tempDir, layerName, ".tar"), os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0666)
+			fLayer, err := os.OpenFile(filepath.Join(tempDir, layerName+".tar"), os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0666)
 			if err != nil {
 				LogE(err).Error("Impossible to exclusively open the file to write the tar layer")
 				deleteFiles()
@@ -470,10 +450,11 @@ func (img Image) saveDockerLayerAndManifestOnDisk() (manifest string, paths []st
 				deleteFiles()
 				return "", nil, err
 			}
-			paths = append(paths, f.Name())
-			f.Close()
+			paths = append(paths, fLayer.Name())
+			fLayer.Close()
 		}
 	}
+
 	return
 }
 
