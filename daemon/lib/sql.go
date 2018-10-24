@@ -656,30 +656,6 @@ func AddConverted(wishId int, manifest d2c.Manifest) error {
 	return err
 }
 
-var alreadyConverted = `
-SELECT wish, input_reference FROM converted WHERE
-wish = :wish_id
-AND input_reference = :input_reference
-`
-
-func AlreadyConverted(wishId int, input_reference string) bool {
-	db, err := sql.Open("sqlite3", Database())
-	if err != nil {
-		LogE(err).Fatal("Impossible to open the database.")
-	}
-	alreadyConvertedStmt, err := db.Prepare(alreadyConverted)
-	if err != nil {
-		LogE(err).Fatal("Impossible to create the statement.")
-	}
-	var id int
-	var inputReference string
-	err = alreadyConvertedStmt.QueryRow(
-		sql.Named("wish_id", wishId),
-		sql.Named("input_reference", input_reference),
-	).Scan(&id, &inputReference)
-	return err == nil
-}
-
 var deleteWish = `DELETE FROM wish WHERE id = ?;`
 
 func DeleteWish(wishId int) (int, error) {

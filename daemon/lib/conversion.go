@@ -11,9 +11,13 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 
+	"github.com/docker/distribution"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
+	"github.com/docker/docker/image"
+	"github.com/docker/docker/layer"
 	log "github.com/sirupsen/logrus"
 
 	d2c "github.com/cvmfs/docker-graphdriver/docker2cvmfs/lib"
@@ -42,10 +46,21 @@ func ConvertWish(wish WishFriendly, convertAgain, forceDownload, convertSingular
 	if err != nil {
 		return
 	}
-	if AlreadyConverted(wish.Id, manifest.Config.Digest) && convertAgain == false {
+
+	digest := strings.Split(manifest.Config.Digest, ":")[1]
+	alreadyConverted := AlreadyConverted(wish.CvmfsRepo, inputImage, digest)
+	Log().WithFields(log.Fields{"alreadyConverted": alreadyConverted}).Info("Already converted the image, skipping.")
+
+	if alreadyConverted && convertAgain == false {
 		Log().Info("Already converted the image, skipping.")
 		return nil
 	}
+	/*
+		if AlreadyConverted(wish.Id, manifest.Config.Digest) && convertAgain == false {
+			Log().Info("Already converted the image, skipping.")
+			return nil
+		}
+	*/
 	layersChanell := make(chan downloadedLayer, 3)
 	manifestChanell := make(chan string, 1)
 	stopGettingLayers := make(chan bool, 1)
@@ -237,4 +252,51 @@ func ConvertWish(wish WishFriendly, convertAgain, forceDownload, convertSingular
 		Log().Warn("Some error during the conversion, we are not storing it into the database")
 		return
 	}
+}
+
+func AlreadyConverted(CVMFSRepo string, img Image, reference string) bool {
+	path := filepath.Join("/", "cvmfs", CVMFSRepo, ".metadata", img.GetSimpleName(), "manifest.json")
+
+	// from https://github.com/moby/moby/blob/8e610b2b55bfd1bfa9436ab110d311f5e8a74dcb/image/tarexport/tarexport.go#L18
+	type manifestItem struct {
+		Config       string
+		RepoTags     []string
+		Layers       []string
+		Parent       image.ID                                 `json:",omitempty"`
+		LayerSources map[layer.DiffID]distribution.Descriptor `json:",omitempty"`
+	}
+
+	fmt.Println(path)
+	manifestStat, err := os.Stat(path)
+	if os.IsNotExist(err) {
+		Log().Info("Manifest not existing")
+		return false
+	}
+	if !manifestStat.Mode().IsRegular() {
+		Log().Info("Manifest not a regular file")
+		return false
+	}
+
+	manifestFile, err := os.Open(path)
+	if err != nil {
+		Log().Info("Error in opening the manifest")
+		return false
+	}
+	defer manifestFile.Close()
+
+	bytes, _ := ioutil.ReadAll(manifestFile)
+
+	var manifests []manifestItem
+	err = json.Unmarshal(bytes, &manifests)
+	if err != nil {
+		LogE(err).Info("Error in unmarshaling the manifest")
+		return false
+	}
+	for _, manifest := range manifests {
+		fmt.Println("%s == %s.json", manifest.Config, reference)
+		if manifest.Config == reference+".json" {
+			return true
+		}
+	}
+	return false
 }
