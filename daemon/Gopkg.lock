@@ -22,10 +22,7 @@
 [[projects]]
   branch = "devel"
   name = "github.com/cvmfs/docker-graphdriver"
-  packages = [
-    "docker2cvmfs/lib",
-    "plugins/util"
-  ]
+  packages = ["plugins/util"]
   revision = "6cfd6c4a62edeed779d4c51fc34127ad8ddc2646"
 
 [[projects]]
@@ -109,12 +106,6 @@
   name = "github.com/dustin/go-humanize"
   packages = ["."]
   revision = "9f541cc9db5d55bce703bd99987c9d5cb8eea45e"
-
-[[projects]]
-  name = "github.com/go-errors/errors"
-  packages = ["."]
-  revision = "a6af135bd4e28680facf08a3d206b454abc877a4"
-  version = "v1.0.1"
 
 [[projects]]
   name = "github.com/go-ini/ini"
@@ -334,6 +325,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "2feeebb6a131ff24c618ab7999f7715917e307fdf720bce663707880afdf4dce"
+  inputs-digest = "d42fea0df3f835d3afe7801d672c54be9d54660ae5fca7bfea83c9ee3c8bf115"
   solver-name = "gps-cdcl"
   solver-version = 1

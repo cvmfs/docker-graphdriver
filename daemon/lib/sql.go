@@ -7,9 +7,9 @@ import (
 	"os/user"
 	"path"
 
-	_ "github.com/mattn/go-sqlite3"
+	da "github.com/cvmfs/docker-graphdriver/daemon/docker-api"
 
-	d2c "github.com/cvmfs/docker-graphdriver/docker2cvmfs/lib"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 // var DefaultDatabaseLocation = "/var/lib/docker2cvmfs/docker2cvmfs_archive.sqlite"
@@ -634,7 +634,7 @@ func GetWishF(inputId, outputId int, repo string) (wish WishFriendly, err error)
 
 var addConverted = `INSERT INTO converted VALUES(:wish, :input_reference, json(:manifest));`
 
-func AddConverted(wishId int, manifest d2c.Manifest) error {
+func AddConverted(wishId int, manifest da.Manifest) error {
 	db, err := sql.Open("sqlite3", Database())
 	if err != nil {
 		LogE(err).Fatal("Impossible to open the database.")

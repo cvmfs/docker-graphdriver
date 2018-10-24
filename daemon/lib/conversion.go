@@ -13,14 +13,14 @@ import (
 	"path/filepath"
 	"strings"
 
+	da "github.com/cvmfs/docker-graphdriver/daemon/docker-api"
+
 	"github.com/docker/distribution"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/image"
 	"github.com/docker/docker/layer"
 	log "github.com/sirupsen/logrus"
-
-	d2c "github.com/cvmfs/docker-graphdriver/docker2cvmfs/lib"
 )
 
 var subDirInsideRepo = ".layers"
@@ -140,7 +140,7 @@ func ConvertWish(wish WishFriendly, convertAgain, forceDownload, convertSingular
 	changes, _ := inputImage.GetChanges()
 
 	repoLocation := fmt.Sprintf("%s/%s", wish.CvmfsRepo, subDirInsideRepo)
-	thin := d2c.MakeThinImage(manifest, repoLocation, inputImage.WholeName())
+	thin := da.MakeThinImage(manifest, repoLocation, inputImage.WholeName())
 	if err != nil {
 		return
 	}

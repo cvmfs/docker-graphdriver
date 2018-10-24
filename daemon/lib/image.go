@@ -16,7 +16,7 @@ import (
 	"github.com/olekukonko/tablewriter"
 	log "github.com/sirupsen/logrus"
 
-	d2c "github.com/cvmfs/docker-graphdriver/docker2cvmfs/lib"
+	da "github.com/cvmfs/docker-graphdriver/daemon/docker-api"
 )
 
 type ManifestRequest struct {
@@ -33,7 +33,7 @@ type Image struct {
 	Tag        string
 	Digest     string
 	IsThin     bool
-	Manifest   *d2c.Manifest
+	Manifest   *da.Manifest
 }
 
 func (i Image) GetSimpleName() string {
@@ -125,20 +125,20 @@ func (img Image) PrintImage(machineFriendly, csv_header bool) {
 	}
 }
 
-func (img Image) GetManifest() (d2c.Manifest, error) {
+func (img Image) GetManifest() (da.Manifest, error) {
 	if img.Manifest != nil {
 		return *img.Manifest, nil
 	}
 	bytes, err := img.getByteManifest()
 	if err != nil {
-		return d2c.Manifest{}, err
+		return da.Manifest{}, err
 	}
-	var manifest d2c.Manifest
+	var manifest da.Manifest
 	err = json.Unmarshal(bytes, &manifest)
 	if err != nil {
 		return manifest, err
 	}
-	if reflect.DeepEqual(d2c.Manifest{}, manifest) {
+	if reflect.DeepEqual(da.Manifest{}, manifest) {
 		return manifest, fmt.Errorf("Got empty manifest")
 	}
 	img.Manifest = &manifest
@@ -328,7 +328,7 @@ func firstRequestForAuth(url, user, pass string) (token string, err error) {
 
 }
 
-func getLayerUrl(img Image, layer d2c.Layer) string {
+func getLayerUrl(img Image, layer da.Layer) string {
 	return fmt.Sprintf("%s://%s/v2/%s/blobs/%s",
 		img.Scheme, img.Registry, img.Repository, layer.Digest)
 }
