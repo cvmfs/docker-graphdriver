@@ -22,6 +22,7 @@ var loopCmd = &cobra.Command{
 	Short: "An infinite loop that keep converting all the images",
 	Run: func(cmd *cobra.Command, args []string) {
 		AliveMessage()
+		defer lib.ExecCommand("docker", "system", "prune", "--force", "--all")
 		showWeReceivedSignal := make(chan os.Signal, 1)
 		signal.Notify(showWeReceivedSignal, os.Interrupt)
 
