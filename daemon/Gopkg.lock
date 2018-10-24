@@ -20,12 +20,6 @@
   revision = "be9bd761db19d4fc551d40be908f02e00487511d"
 
 [[projects]]
-  branch = "devel"
-  name = "github.com/cvmfs/docker-graphdriver"
-  packages = ["plugins/util"]
-  revision = "6cfd6c4a62edeed779d4c51fc34127ad8ddc2646"
-
-[[projects]]
   name = "github.com/docker/distribution"
   packages = [
     ".",
@@ -70,7 +64,6 @@
     "pkg/ioutils",
     "pkg/longpath",
     "pkg/mount",
-    "pkg/parsers",
     "pkg/parsers/kernel",
     "pkg/plugingetter",
     "pkg/plugins",
@@ -100,18 +93,6 @@
   packages = ["."]
   revision = "47565b4f722fb6ceae66b95f853feed578a4a51c"
   version = "v0.3.3"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/dustin/go-humanize"
-  packages = ["."]
-  revision = "9f541cc9db5d55bce703bd99987c9d5cb8eea45e"
-
-[[projects]]
-  name = "github.com/go-ini/ini"
-  packages = ["."]
-  revision = "7b294651033cd7d9e7f0d9ffa1b75ed1e198e737"
-  version = "v1.38.3"
 
 [[projects]]
   name = "github.com/gogo/protobuf"
@@ -148,25 +129,6 @@
   packages = ["."]
   revision = "25ecb14adfc7543176f7d85291ec7dba82c6f7e4"
   version = "v1.9.0"
-
-[[projects]]
-  name = "github.com/minio/minio-go"
-  packages = [
-    ".",
-    "pkg/credentials",
-    "pkg/encrypt",
-    "pkg/s3signer",
-    "pkg/s3utils",
-    "pkg/set"
-  ]
-  revision = "e8c97c88468e122f161683409cde02dc89a2961c"
-  version = "v6.0.7"
-
-[[projects]]
-  name = "github.com/mitchellh/go-homedir"
-  packages = ["."]
-  revision = "ae18d6b8b3205b561c79e8e5f69bff09736185f4"
-  version = "v1.0.0"
 
 [[projects]]
   branch = "master"
@@ -258,11 +220,7 @@
 [[projects]]
   branch = "master"
   name = "golang.org/x/crypto"
-  packages = [
-    "argon2",
-    "blake2b",
-    "ssh/terminal"
-  ]
+  packages = ["ssh/terminal"]
   revision = "e3636079e1a4c1f337f212cc5cd2aca108f6c900"
 
 [[projects]]
@@ -271,8 +229,6 @@
   packages = [
     "context",
     "context/ctxhttp",
-    "http/httpguts",
-    "idna",
     "internal/socks",
     "proxy"
   ]
@@ -282,33 +238,11 @@
   branch = "master"
   name = "golang.org/x/sys"
   packages = [
-    "cpu",
     "unix",
     "windows",
     "windows/registry"
   ]
   revision = "af653ce8b74f808d092db8ca9741fbb63d2a469d"
-
-[[projects]]
-  name = "golang.org/x/text"
-  packages = [
-    "collate",
-    "collate/build",
-    "internal/colltab",
-    "internal/gen",
-    "internal/tag",
-    "internal/triegen",
-    "internal/ucd",
-    "language",
-    "secure/bidirule",
-    "transform",
-    "unicode/bidi",
-    "unicode/cldr",
-    "unicode/norm",
-    "unicode/rangetable"
-  ]
-  revision = "f21a4dfb5e38f5895301dc265a8def02365cc3d0"
-  version = "v0.3.0"
 
 [[projects]]
   name = "gopkg.in/gorp.v1"
@@ -325,6 +259,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "d42fea0df3f835d3afe7801d672c54be9d54660ae5fca7bfea83c9ee3c8bf115"
+  inputs-digest = "dba9f6217c7ad27cb51db60e861103d1e508cab1f0c1d792504136a8d0c4cb53"
   solver-name = "gps-cdcl"
   solver-version = 1
