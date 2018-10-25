@@ -61,7 +61,7 @@ func MakeThinImage(m Manifest, layersMapping map[string]string, origin string) (
 		}
 		// the location comes as /cvmfs/$reponame/$path
 		// we need to remove the /cvmfs/ part, which are 7 chars
-		url := url_base + "/" + location[7:]
+		url := url_base + location[7:]
 		layers[i] = ThinImageLayer{Digest: digest, Url: url}
 	}
 
