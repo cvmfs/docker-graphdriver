@@ -97,7 +97,8 @@ func ConvertWish(wish WishFriendly, convertAgain, forceDownload, convertSingular
 		for layer := range layersChanell {
 
 			Log().WithFields(log.Fields{"layer": layer.Name}).Info("Start Ingesting the file into CVMFS")
-			layerLocation := subDirInsideRepo + "/" + layer.Name
+			layerDigest := strings.Split(layer.Name, ":")[1]
+			layerLocation := filepath.Join(subDirInsideRepo, layerDigest[0:2], "layerfs", layerDigest)
 
 			var pathExists bool
 			layerPath := filepath.Join("/", "cvmfs", wish.CvmfsRepo, layerLocation)
