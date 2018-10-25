@@ -225,8 +225,8 @@ type Singularity struct {
 	TempDirectory string
 }
 
-func (img Image) DownloadSingularityDirectory() (sing Singularity, err error) {
-	dir, err := ioutil.TempDir("", "singularity_buffer")
+func (img Image) DownloadSingularityDirectory(rootPath string) (sing Singularity, err error) {
+	dir, err := ioutil.TempDir(rootPath, "singularity_buffer")
 	if err != nil {
 		return
 	}

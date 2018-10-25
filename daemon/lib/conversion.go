@@ -147,11 +147,12 @@ func ConvertWish(wish WishFriendly, convertAgain, forceDownload, convertSingular
 
 	var singularity Singularity
 	if convertSingularity {
-		singularity, err = inputImage.DownloadSingularityDirectory()
+		singularity, err = inputImage.DownloadSingularityDirectory(tmpDir)
 		if err != nil {
 			LogE(err).Error("Error in dowloading the singularity image")
 			return
 		}
+		defer os.RemoveAll(singularity.TempDirectory)
 	}
 	changes, _ := inputImage.GetChanges()
 
