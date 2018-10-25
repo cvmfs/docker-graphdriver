@@ -1,6 +1,7 @@
 package dockerutil
 
 import (
+	"fmt"
 	"strings"
 )
 
@@ -43,18 +44,26 @@ var thinImageVersion = "1.0"
 // origin is an ecoding fo the original referencese and original registry
 // I believe origin is quite useless but maybe is better to preserv it for
 // ergonomic reasons.
-
-func MakeThinImage(m Manifest, repoLocation string, origin string) ThinImage {
+func MakeThinImage(m Manifest, layersMapping map[string]string, origin string) (ThinImage, error) {
 	layers := make([]ThinImageLayer, len(m.Layers))
 
-	url_base := "cvmfs://" + repoLocation
-	for i, l := range m.Layers {
-		d := strings.Split(l.Digest, ":")[1]
-		url := url_base + "/" + d
-		layers[i] = ThinImageLayer{Digest: d, Url: url}
+	url_base := "cvmfs://"
+
+	fmt.Println(layersMapping)
+	fmt.Println(m.Layers)
+
+	for i, layer := range m.Layers {
+		digest := strings.Split(layer.Digest, ":")[1]
+		location, ok := layersMapping[layer.Digest]
+		if !ok {
+			err := fmt.Errorf("Impossible to create thin image, missing layer")
+			return ThinImage{}, err
+		}
+		url := url_base + "/" + location
+		layers[i] = ThinImageLayer{Digest: digest, Url: url}
 	}
 
 	return ThinImage{Layers: layers,
 		Origin:  origin,
-		Version: thinImageVersion}
+		Version: thinImageVersion}, nil
 }

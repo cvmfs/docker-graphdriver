@@ -65,6 +65,12 @@ func ConvertWish(wish WishFriendly, convertAgain, forceDownload, convertSingular
 	manifestChanell := make(chan string, 1)
 	stopGettingLayers := make(chan bool, 1)
 	noErrorInConversion := make(chan bool, 1)
+
+	type LayerRepoLocation struct {
+		Digest   string
+		Location string //location does NOT need the prefix `/cvmfs`
+	}
+	layerRepoLocationChan := make(chan LayerRepoLocation, 3)
 	go func() {
 		noErrors := true
 		defer func() {
@@ -72,6 +78,7 @@ func ConvertWish(wish WishFriendly, convertAgain, forceDownload, convertSingular
 			stopGettingLayers <- true
 			close(stopGettingLayers)
 		}()
+		defer close(layerRepoLocationChan)
 		cleanup := func(location string) {
 			Log().Info("Running clean up function deleting the last layer.")
 
@@ -85,6 +92,7 @@ func ConvertWish(wish WishFriendly, convertAgain, forceDownload, convertSingular
 				LogE(err).Error("Error in the cleanup command")
 			}
 		}
+		layerRepoLocationRoot := filepath.Join("/", "cvmfs", wish.CvmfsRepo)
 		for layer := range layersChanell {
 			select {
 			case _, _ = <-interruptLayerUpload:
@@ -109,6 +117,13 @@ func ConvertWish(wish WishFriendly, convertAgain, forceDownload, convertSingular
 				pathExists = true
 			}
 
+			// need to run this into a goroutine to avoid a deadlock
+			go func(layerName, layerLocation string) {
+				layerRepoLocationChan <- LayerRepoLocation{
+					Digest:   layerName,
+					Location: layerLocation}
+			}(layer.Name, filepath.Join(layerRepoLocationRoot, layerLocation))
+
 			if pathExists == false || forceDownload {
 				err = ExecCommand("cvmfs_server", "ingest", "-t", layer.Path, "-b", layerLocation, wish.CvmfsRepo)
 
@@ -126,8 +141,16 @@ func ConvertWish(wish WishFriendly, convertAgain, forceDownload, convertSingular
 		}
 		Log().Info("Finished pushing the layers into CVMFS")
 	}()
+	// we create a temp directory for all the files needed, when this function finish we can remove the temp directory cleaning up
+	tmpDir, err := ioutil.TempDir("", "conversion")
+	if err != nil {
+		LogE(err).Error("Error in creating a temporary direcotry for all the files")
+		return
+	}
+	defer os.RemoveAll(tmpDir)
+
 	// this wil start to feed the above goroutine by writing into layersChanell
-	err = inputImage.GetLayers(layersChanell, manifestChanell, stopGettingLayers)
+	err = inputImage.GetLayers(layersChanell, manifestChanell, stopGettingLayers, tmpDir)
 
 	var singularity Singularity
 	if convertSingularity {
@@ -139,8 +162,11 @@ func ConvertWish(wish WishFriendly, convertAgain, forceDownload, convertSingular
 	}
 	changes, _ := inputImage.GetChanges()
 
-	repoLocation := fmt.Sprintf("%s/%s", wish.CvmfsRepo, subDirInsideRepo)
-	thin := da.MakeThinImage(manifest, repoLocation, inputImage.WholeName())
+	layerLocations := make(map[string]string)
+	for layerLocation := range layerRepoLocationChan {
+		layerLocations[layerLocation.Digest] = layerLocation.Location
+	}
+	thin, err := da.MakeThinImage(manifest, layerLocations, inputImage.WholeName())
 	if err != nil {
 		return
 	}

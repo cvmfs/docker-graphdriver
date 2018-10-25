@@ -2,6 +2,7 @@ package lib
 
 import (
 	"archive/tar"
+	"compress/gzip"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -11,6 +12,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
+	"sync"
 
 	"github.com/docker/docker/image"
 	"github.com/olekukonko/tablewriter"
@@ -338,33 +340,128 @@ type downloadedLayer struct {
 	Path string
 }
 
-func (img Image) GetLayers(layersChan chan<- downloadedLayer, manifestChan chan<- string, stopGettingLayers <-chan bool) error {
+func (img Image) GetLayers(layersChan chan<- downloadedLayer, manifestChan chan<- string, stopGettingLayers <-chan bool, rootPath string) error {
 	defer close(layersChan)
-	// we start by getting the image inside the dockerd, if it is already there it will be fast, if it is not, it should
-	err := img.downloadImage()
+	defer close(manifestChan)
+
+	user := img.User
+	pass, err := GetPassword(img.User, img.Registry)
 	if err != nil {
-		LogE(err).Error("Impossible to download the image in the docker daemon")
+		LogE(err).Warning("Unable to retrieve the password, trying to get the layers anonymously.")
+		user = ""
+		pass = ""
+	}
+
+	// then we try to get the manifest from our database
+	manifest, err := img.GetManifest()
+	if err != nil {
+		LogE(err).Warn("Error in getting the manifest")
 		return err
 	}
 
-	// the we get the layers and the manifest as path string
-	manifest, layers, err := img.saveDockerLayerAndManifestOnDisk()
-	for _, layer := range layers {
-		layerBase := filepath.Base(layer)             // remove all the directory above
-		layerName := strings.Split(layerBase, ".")[0] // remove the .tar
-		select {
-		case layersChan <- downloadedLayer{Name: layerName, Path: layer}:
-			{
+	// A first request is used to get the authentication
+	firstLayer := manifest.Layers[0]
+	layerUrl := getLayerUrl(img, firstLayer)
+	token, err := firstRequestForAuth(layerUrl, user, pass)
+	if err != nil {
+		return err
+	}
+
+	var wg sync.WaitGroup
+	defer wg.Wait()
+	// at this point we iterate each layer and we download it.
+	for _, layer := range manifest.Layers {
+		wg.Add(1)
+		go func(layer da.Layer) {
+			defer wg.Done()
+			Log().WithFields(log.Fields{"layer": layer.Digest}).Info("Start working on layer")
+			toSend, err := img.downloadLayer(layer, token, rootPath)
+			if err != nil {
+				LogE(err).Error("Error in downloading a layer")
+				return
 			}
-		case <-stopGettingLayers:
-			{
-				Log().Info("Received signal to stop")
-				return nil
-			}
+			layersChan <- toSend
+		}(layer)
+	}
+
+	// finally we marshal the manifest and store it into a file
+	manifestBytes, err := json.Marshal(manifest)
+	if err != nil {
+		LogE(err).Error("Error in marshaling the manifest")
+		return err
+	}
+	manifestPath := filepath.Join(rootPath, "manifest.json")
+	err = ioutil.WriteFile(manifestPath, manifestBytes, 0666)
+	if err != nil {
+		LogE(err).Error("Error in writing the manifest to file")
+		return err
+	}
+	// ship the manifest file
+	manifestChan <- manifestPath
+	return nil
+}
+
+func (img Image) downloadLayer(layer da.Layer, token, rootPath string) (toSend downloadedLayer, err error) {
+	user := img.User
+	pass, err := GetPassword(img.User, img.Registry)
+	if err != nil {
+		LogE(err).Warning("Unable to retrieve the password, trying to get the layers anonymously.")
+		user = ""
+		pass = ""
+	}
+	layerUrl := getLayerUrl(img, layer)
+	if token == "" {
+		token, err = firstRequestForAuth(layerUrl, user, pass)
+		if err != nil {
+			return
 		}
 	}
-	manifestChan <- manifest
-	return nil
+	for i := 0; i <= 5; i++ {
+		err = nil
+		client := &http.Client{}
+		req, err := http.NewRequest("GET", layerUrl, nil)
+		if err != nil {
+			LogE(err).Error("Impossible to create the HTTP request.")
+			break
+		}
+		req.Header.Set("Authorization", token)
+		resp, err := client.Do(req)
+		Log().WithFields(log.Fields{"layer": layer.Digest}).Info("Make request for layer")
+		if err != nil {
+			break
+		}
+		if 200 <= resp.StatusCode && resp.StatusCode < 300 {
+
+			gread, err := gzip.NewReader(resp.Body)
+			if err != nil {
+				LogE(err).Warning("Error in creating the zip to unzip the layer")
+				continue
+			}
+
+			tmpFile, err := ioutil.TempFile(rootPath, "layer.*.tar")
+			if err != nil {
+				LogE(err).Warning("Error in creating buffer temp layer")
+				continue
+			}
+			defer tmpFile.Close()
+
+			_, err = io.Copy(tmpFile, gread)
+			if err != nil {
+				LogE(err).Warning("Error in copying the layer into the temp file")
+				os.Remove(tmpFile.Name())
+				continue
+			}
+
+			toSend = downloadedLayer{Name: layer.Digest, Path: tmpFile.Name()}
+			return toSend, nil
+
+		} else {
+			Log().Warning("Received status code ", resp.StatusCode)
+			err = fmt.Errorf("Layer not received, status code: %s", resp.StatusCode)
+		}
+	}
+	return
+
 }
 
 func (img Image) downloadImage() (err error) {
