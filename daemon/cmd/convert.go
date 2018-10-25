@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"os/signal"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -28,16 +27,6 @@ var convertCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		AliveMessage()
 		defer lib.ExecCommand("docker", "system", "prune", "--force", "--all")
-		showWeReceivedSignal := make(chan os.Signal, 1)
-		signal.Notify(showWeReceivedSignal, os.Interrupt)
-
-		stopWishLoopSignal := make(chan os.Signal, 1)
-		signal.Notify(stopWishLoopSignal, os.Interrupt)
-
-		go func() {
-			<-showWeReceivedSignal
-			lib.Log().Info("Received SIGINT (Ctrl-C) waiting the last layer to upload then exiting.")
-		}()
 
 		wish, err := lib.GetAllWishes()
 		if err != nil {
@@ -45,14 +34,6 @@ var convertCmd = &cobra.Command{
 			os.Exit(1)
 		}
 		for _, wish := range wish {
-			select {
-			case <-stopWishLoopSignal:
-				lib.Log().Info("Exiting because of SIGINT")
-				os.Exit(1)
-			default:
-				{
-				}
-			}
 			lib.Log().WithFields(log.Fields{"input image": wish.InputName}).Info("Converting Image")
 			err = lib.ConvertWish(wish, convertAgain, overwriteLayer, convertSingularity)
 			if err != nil {

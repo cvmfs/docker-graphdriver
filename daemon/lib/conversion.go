@@ -9,9 +9,9 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"os/signal"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	da "github.com/cvmfs/docker-graphdriver/daemon/docker-api"
 
@@ -26,9 +26,6 @@ import (
 var subDirInsideRepo = ".layers"
 
 func ConvertWish(wish WishFriendly, convertAgain, forceDownload, convertSingularity bool) (err error) {
-	interruptLayerUpload := make(chan os.Signal, 20)
-	// register to Ctrl-C
-	signal.Notify(interruptLayerUpload, os.Interrupt)
 
 	outputImage, err := GetImageById(wish.OutputId)
 	if err != nil {
@@ -73,12 +70,16 @@ func ConvertWish(wish WishFriendly, convertAgain, forceDownload, convertSingular
 	layerRepoLocationChan := make(chan LayerRepoLocation, 3)
 	go func() {
 		noErrors := true
+		var wg sync.WaitGroup
+		defer func() {
+			wg.Wait()
+			close(layerRepoLocationChan)
+		}()
 		defer func() {
 			noErrorInConversion <- noErrors
 			stopGettingLayers <- true
 			close(stopGettingLayers)
 		}()
-		defer close(layerRepoLocationChan)
 		cleanup := func(location string) {
 			Log().Info("Running clean up function deleting the last layer.")
 
@@ -94,16 +95,6 @@ func ConvertWish(wish WishFriendly, convertAgain, forceDownload, convertSingular
 		}
 		layerRepoLocationRoot := filepath.Join("/", "cvmfs", wish.CvmfsRepo)
 		for layer := range layersChanell {
-			select {
-			case _, _ = <-interruptLayerUpload:
-				{
-					Log().Info("Received SIGINT, exiting")
-					return
-				}
-			default:
-				{
-				}
-			}
 
 			Log().WithFields(log.Fields{"layer": layer.Name}).Info("Start Ingesting the file into CVMFS")
 			layerLocation := subDirInsideRepo + "/" + layer.Name
@@ -118,10 +109,12 @@ func ConvertWish(wish WishFriendly, convertAgain, forceDownload, convertSingular
 			}
 
 			// need to run this into a goroutine to avoid a deadlock
+			wg.Add(1)
 			go func(layerName, layerLocation string) {
 				layerRepoLocationChan <- LayerRepoLocation{
 					Digest:   layerName,
 					Location: layerLocation}
+				wg.Done()
 			}(layer.Name, filepath.Join(layerRepoLocationRoot, layerLocation))
 
 			if pathExists == false || forceDownload {
