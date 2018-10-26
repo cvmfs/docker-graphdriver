@@ -105,7 +105,7 @@ func SaveLayersBacklink(CVMFSRepo string, img Image, layerMetadataPaths []string
 	backlinks := make(map[string][]byte)
 
 	for _, layerMetadataPath := range layerMetadataPaths {
-		originPath := filepath.Join(layerMetadataPath, "origin.json")
+		originPath := filepath.Join("/", "cvmfs", CVMFSRepo, layerMetadataPath, "origin.json")
 		imgManifest, err := img.GetManifest()
 		if err != nil {
 			llog(LogE(err)).WithFields(log.Fields{"file": originPath}).Error(
