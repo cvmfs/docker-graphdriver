@@ -46,18 +46,13 @@ func ConvertWish(wish WishFriendly, convertAgain, forceDownload, convertSingular
 
 	digest := strings.Split(manifest.Config.Digest, ":")[1]
 	alreadyConverted := AlreadyConverted(wish.CvmfsRepo, inputImage, digest)
-	Log().WithFields(log.Fields{"alreadyConverted": alreadyConverted}).Info("Already converted the image, skipping.")
+	Log().WithFields(log.Fields{"alreadyConverted": alreadyConverted}).Info(
+		"Already converted the image, skipping.")
 
 	if alreadyConverted && convertAgain == false {
 		Log().Info("Already converted the image, skipping.")
 		return nil
 	}
-	/*
-		if AlreadyConverted(wish.Id, manifest.Config.Digest) && convertAgain == false {
-			Log().Info("Already converted the image, skipping.")
-			return nil
-		}
-	*/
 	layersChanell := make(chan downloadedLayer, 3)
 	manifestChanell := make(chan string, 1)
 	stopGettingLayers := make(chan bool, 1)
