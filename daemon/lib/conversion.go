@@ -68,12 +68,14 @@ func ConvertWish(wish WishFriendly, convertAgain, forceDownload, convertSingular
 		Location string //location does NOT need the prefix `/cvmfs`
 	}
 	layerRepoLocationChan := make(chan LayerRepoLocation, 3)
+	layerMetadataLocationChan := make(chan string, 3)
 	go func() {
 		noErrors := true
 		var wg sync.WaitGroup
 		defer func() {
 			wg.Wait()
 			close(layerRepoLocationChan)
+			close(layerMetadataLocationChan)
 		}()
 		defer func() {
 			noErrorInConversion <- noErrors
@@ -98,7 +100,9 @@ func ConvertWish(wish WishFriendly, convertAgain, forceDownload, convertSingular
 
 			Log().WithFields(log.Fields{"layer": layer.Name}).Info("Start Ingesting the file into CVMFS")
 			layerDigest := strings.Split(layer.Name, ":")[1]
-			layerLocation := filepath.Join(subDirInsideRepo, layerDigest[0:2], "layerfs", layerDigest)
+			layerRoot := filepath.Join(subDirInsideRepo, layerDigest[0:2], layerDigest)
+			layerLocation := filepath.Join(layerRoot, "layerfs")
+			layerMetadata := filepath.Join(layerRoot, ".metadata")
 
 			var pathExists bool
 			layerPath := filepath.Join("/", "cvmfs", wish.CvmfsRepo, layerLocation)
@@ -111,12 +115,13 @@ func ConvertWish(wish WishFriendly, convertAgain, forceDownload, convertSingular
 
 			// need to run this into a goroutine to avoid a deadlock
 			wg.Add(1)
-			go func(layerName, layerLocation string) {
+			go func(layerName, layerLocation, layerMetadata string) {
 				layerRepoLocationChan <- LayerRepoLocation{
 					Digest:   layerName,
 					Location: layerLocation}
+				layerMetadataLocationChan <- layerMetadata
 				wg.Done()
-			}(layer.Name, filepath.Join(layerRepoLocationRoot, layerLocation))
+			}(layer.Name, filepath.Join(layerRepoLocationRoot, layerLocation), layerMetadata)
 
 			if pathExists == false || forceDownload {
 				err = ExecCommand("cvmfs_server", "ingest", "-t", layer.Path, "-b", layerLocation, wish.CvmfsRepo)
@@ -157,10 +162,27 @@ func ConvertWish(wish WishFriendly, convertAgain, forceDownload, convertSingular
 	}
 	changes, _ := inputImage.GetChanges()
 
+	var wg sync.WaitGroup
+
 	layerLocations := make(map[string]string)
-	for layerLocation := range layerRepoLocationChan {
-		layerLocations[layerLocation.Digest] = layerLocation.Location
-	}
+	wg.Add(1)
+	go func() {
+		for layerLocation := range layerRepoLocationChan {
+			layerLocations[layerLocation.Digest] = layerLocation.Location
+		}
+		wg.Done()
+	}()
+
+	layerMetadaLocations := make([]string, 8)
+	wg.Add(1)
+	go func() {
+		for layerMetadaLocation := range layerMetadataLocationChan {
+			layerMetadaLocations = append(layerMetadaLocations, layerMetadaLocation)
+		}
+		wg.Done()
+	}()
+	wg.Wait()
+
 	thin, err := da.MakeThinImage(manifest, layerLocations, inputImage.WholeName())
 	if err != nil {
 		return
@@ -253,6 +275,12 @@ func ConvertWish(wish WishFriendly, convertAgain, forceDownload, convertSingular
 			LogE(err).Error("Error in ingesting the singularity image into the CVMFS repository")
 			noErrorInConversionValue = false
 		}
+	}
+
+	err = SaveLayersBacklink(wish.CvmfsRepo, inputImage, layerMetadaLocations)
+	if err != nil {
+		LogE(err).Error("Error in saving the backlinks")
+		noErrorInConversionValue = false
 	}
 
 	if noErrorInConversionValue {

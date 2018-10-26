@@ -1,8 +1,10 @@
 package lib
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -86,4 +88,103 @@ func IngestIntoCVMFS(CVMFSRepo string, path string, target string) (err error) {
 	}
 	err = nil
 	return err
+}
+
+func SaveLayersBacklink(CVMFSRepo string, img Image, layerMetadataPaths []string) error {
+	llog := func(l *log.Entry) *log.Entry {
+		return l.WithFields(log.Fields{"action": "save backlink",
+			"repo":  CVMFSRepo,
+			"image": img.GetSimpleName()})
+	}
+	type Backlink struct {
+		Origin []string `json:"origin"`
+	}
+	llog(Log()).Info("Start saving backlinks")
+	llog(Log()).Info("Start transaction")
+
+	backlinks := make(map[string][]byte)
+
+	for _, layerMetadataPath := range layerMetadataPaths {
+		originPath := filepath.Join(layerMetadataPath, "origin.json")
+		imgManifest, err := img.GetManifest()
+		if err != nil {
+			llog(LogE(err)).WithFields(log.Fields{"file": originPath}).Error(
+				"Error in getting the manifest from the image, skipping...")
+			continue
+		}
+		imgDigest := imgManifest.Config.Digest
+
+		var backlink Backlink
+		if _, err := os.Stat(originPath); os.IsNotExist(err) {
+
+			backlink = Backlink{Origin: []string{imgDigest}}
+
+		} else {
+
+			backlinkFile, err := os.Open(originPath)
+			if err != nil {
+				llog(LogE(err)).WithFields(log.Fields{"file": originPath}).Error(
+					"Error in opening the file for writing the backlinks, skipping...")
+				continue
+			}
+
+			byteBackLink, err := ioutil.ReadAll(backlinkFile)
+			if err != nil {
+				llog(LogE(err)).WithFields(log.Fields{"file": originPath}).Error(
+					"Error in reading the bytes from the origin file, skipping...")
+				continue
+			}
+
+			err = json.Unmarshal(byteBackLink, &backlink)
+			if err != nil {
+				llog(LogE(err)).WithFields(log.Fields{"file": originPath}).Error(
+					"Error in unmarshaling the files, skipping...")
+				continue
+			}
+
+			backlink.Origin = append(backlink.Origin, imgDigest)
+		}
+		backlinkBytesMarshal, err := json.Marshal(backlink)
+		if err != nil {
+			llog(LogE(err)).WithFields(log.Fields{"file": originPath}).Error(
+				"Error in Marshaling back the files, skipping...")
+			continue
+		}
+
+		backlinks[originPath] = backlinkBytesMarshal
+	}
+
+	err := ExecCommand("cvmfs_server", "transaction", CVMFSRepo)
+	if err != nil {
+		llog(LogE(err)).Error("Error in opening the transaction")
+		return err
+	}
+
+	for path, fileContent := range backlinks {
+		// the path may not be there, check, and if it doesn't exists create it
+		dir := filepath.Dir(path)
+		if _, err := os.Stat(dir); os.IsNotExist(err) {
+			err = os.MkdirAll(dir, 0666)
+			if err != nil {
+				llog(LogE(err)).WithFields(log.Fields{"file": path}).Error(
+					"Error in creating the directory for the backlinks file, skipping...")
+				continue
+			}
+		}
+		err = ioutil.WriteFile(path, fileContent, 0666)
+		if err != nil {
+			llog(LogE(err)).WithFields(log.Fields{"file": path}).Error(
+				"Error in writing the backlink file, skipping...")
+			continue
+		}
+
+	}
+
+	err = ExecCommand("cvmfs_server", "publish", CVMFSRepo)
+	if err != nil {
+		llog(LogE(err)).Error("Error in publishing after adding the backlinks")
+		return err
+	}
+
+	return nil
 }
