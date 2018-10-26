@@ -177,7 +177,8 @@ func SaveLayersBacklink(CVMFSRepo string, img Image, layerMetadataPaths []string
 				"Error in writing the backlink file, skipping...")
 			continue
 		}
-
+		llog(LogE(err)).WithFields(log.Fields{"file": path}).Info(
+			"Wrote backlink")
 	}
 
 	err = ExecCommand("cvmfs_server", "publish", CVMFSRepo)
