@@ -220,6 +220,17 @@ func (img Image) GetSingularityLocation() string {
 	return fmt.Sprintf("docker://%s/%s%s", img.Registry, img.Repository, img.GetReference())
 }
 
+// here is where in the FS we are going to store the singularity image
+func (img Image) GetSingularityPath() (string, error) {
+	manifest, err := img.GetManifest()
+	if err != nil {
+		LogE(err).Error("Error in getting the manifest to figureout the singularity path")
+		return "", err
+	}
+	digest := strings.Split(manifest.Config.Digest, ":")[1]
+	return filepath.Join(".flat", digest[0:2], digest), nil
+}
+
 type Singularity struct {
 	Image         *Image
 	TempDirectory string
@@ -241,14 +252,27 @@ func (img Image) DownloadSingularityDirectory(rootPath string) (sing Singularity
 }
 
 func (s Singularity) IngestIntoCVMFS(CVMFSRepo string) error {
-	path := filepath.Join(".singularity", s.Image.Registry, s.Image.Repository, s.Image.GetSimpleReference())
-	err := IngestIntoCVMFS(CVMFSRepo, path, s.TempDirectory)
+	symlinkPath := filepath.Join("/", "cvmfs", CVMFSRepo, s.Image.Registry, s.Image.Repository, s.Image.GetSimpleReference())
+	singularityPath, err := s.Image.GetSingularityPath()
+	if err != nil {
+		LogE(err).Error(
+			"Error in ingesting singularity image into CVMFS, unable to get where save the image")
+		return err
+	}
+	err = IngestIntoCVMFS(CVMFSRepo, singularityPath, s.TempDirectory)
 	if err != nil {
 		// if there is an error ingest does not remove the folder.
 		// we do want to remove the folder anyway
-		os.RemoveAll(path)
+		os.RemoveAll(s.TempDirectory)
+		return err
 	}
-	return err
+	// lets create the symlink
+	err = CreateSymlinkIntoCVMFS(CVMFSRepo, symlinkPath, singularityPath)
+	if err != nil {
+		LogE(err).Error("Error in creating the symlink for the singularity Image")
+		return err
+	}
+	return nil
 }
 
 func (img Image) getByteManifest() ([]byte, error) {

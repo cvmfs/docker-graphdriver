@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 
 	copy "github.com/otiai10/copy"
 	log "github.com/sirupsen/logrus"
@@ -14,8 +15,8 @@ import (
 
 // ingest into the repository, inside the subpath, the target (directory or file) object
 // CVMFSRepo: just the name of the repository (ex: unpacked.cern.ch)
-// path: the path inside the repository, without the prefix (ex: .foo/bar/baz)
-// target: the path of the target in the FS
+// path: the path inside the repository, without the prefix (ex: .foo/bar/baz), where to put the ingested target
+// target: the path of the target in the normal FS, the thing to ingest
 // if no error is returned, we remove the target from the FS
 func IngestIntoCVMFS(CVMFSRepo string, path string, target string) (err error) {
 	defer func() {
@@ -88,6 +89,52 @@ func IngestIntoCVMFS(CVMFSRepo string, path string, target string) (err error) {
 	}
 	err = nil
 	return err
+}
+
+func CreateSymlinkIntoCVMFS(CVMFSRepo, newLinkName, toLinkPath string) (err error) {
+	// check that we are creating a link inside the repository towards something in the repository
+	dirsNew := strings.Split(newLinkName, string(filepath.Separator))
+	if len(dirsNew) <= 3 || dirsNew[1] != "cvmfs" || dirsNew[2] != CVMFSRepo {
+		LogE(err).WithFields(log.Fields{"repo": CVMFSRepo, "linkName": newLinkName}).Error(
+			"Error in creating the symlink, new outside repository")
+		return fmt.Errorf("Trying to create a symlink outside the repository")
+	}
+	dirsToLink := strings.Split(toLinkPath, string(filepath.Separator))
+	if len(dirsToLink) <= 3 || dirsNew[1] != "cvmfs" || dirsNew[2] != CVMFSRepo {
+		LogE(err).WithFields(log.Fields{"repo": CVMFSRepo, "toFile": toLinkPath}).Error(
+			"Error in creating the symlink, trying to link to something outside the repository")
+		return fmt.Errorf("Trying to link to something outside the repository")
+	}
+	// check if the file we want to link actually exists
+	if _, err := os.Stat(toLinkPath); os.IsNotExist(err) {
+		return err
+	}
+
+	err = ExecCommand("cvmfs_server", "transaction", CVMFSRepo)
+	if err != nil {
+		LogE(err).WithFields(log.Fields{"repo": CVMFSRepo}).Error("Error in opening the transaction")
+		ExecCommand("cvmfs_server", "abort", "-f", CVMFSRepo)
+		return err
+	}
+
+	err = os.Symlink(newLinkName, toLinkPath)
+	if err != nil {
+		LogE(err).WithFields(log.Fields{
+			"repo":     CVMFSRepo,
+			"linkName": newLinkName,
+			"toFile":   toLinkPath}).Error(
+			"Error in creating the symlink")
+		ExecCommand("cvmfs_server", "abort", "-f", CVMFSRepo)
+		return err
+	}
+
+	err = ExecCommand("cvmfs_server", "publish", CVMFSRepo)
+	if err != nil {
+		LogE(err).WithFields(log.Fields{"repo": CVMFSRepo}).Error("Error in publishing the repository")
+		ExecCommand("cvmfs_server", "abort", "-f", CVMFSRepo)
+		return err
+	}
+	return nil
 }
 
 func SaveLayersBacklink(CVMFSRepo string, img Image, layerMetadataPaths []string) error {
