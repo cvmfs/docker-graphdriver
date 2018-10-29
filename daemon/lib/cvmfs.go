@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
 
 	copy "github.com/otiai10/copy"
 	log "github.com/sirupsen/logrus"
@@ -93,17 +92,12 @@ func IngestIntoCVMFS(CVMFSRepo string, path string, target string) (err error) {
 
 // create a symbolic link inside the repository called `newLinkName`, the symlink will point to `toLinkPath`
 // newLinkName: comes without the /cvmfs/$REPO/ prefix
+// toLinkPath: comes without the /cvmfs/$REPO/ prefix
 func CreateSymlinkIntoCVMFS(CVMFSRepo, newLinkName, toLinkPath string) (err error) {
-	// make the link point inside the repository
+	// add the necessary prefix
 	newLinkName = filepath.Join("/", "cvmfs", CVMFSRepo, newLinkName)
+	toLinkPath = filepath.Join("/", "cvmfs", CVMFSRepo, toLinkPath)
 
-	// check that we are creating a link inside the repository towards something **in the repository**
-	dirsToLink := strings.Split(toLinkPath, string(filepath.Separator))
-	if len(dirsToLink) <= 3 || dirsToLink[1] != "cvmfs" || dirsToLink[2] != CVMFSRepo {
-		LogE(err).WithFields(log.Fields{"repo": CVMFSRepo, "toFile": toLinkPath}).Error(
-			"Error in creating the symlink, trying to link to something outside the repository")
-		return fmt.Errorf("Trying to link to something outside the repository")
-	}
 	// check if the file we want to link actually exists
 	if _, err := os.Stat(toLinkPath); os.IsNotExist(err) {
 		return err
