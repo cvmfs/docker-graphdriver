@@ -168,7 +168,7 @@ func ConvertWish(wish WishFriendly, convertAgain, forceDownload, convertSingular
 		wg.Done()
 	}()
 
-	layerMetadaLocations := make([]string, 8)
+	var layerMetadaLocations []string
 	wg.Add(1)
 	go func() {
 		for layerMetadaLocation := range layerMetadataLocationChan {
