@@ -267,7 +267,6 @@ func (s Singularity) IngestIntoCVMFS(CVMFSRepo string) error {
 		return err
 	}
 	// lets create the symlink
-	singularityPath = filepath.Join("/", "cvmfs", CVMFSRepo, singularityPath)
 	err = CreateSymlinkIntoCVMFS(CVMFSRepo, symlinkPath, singularityPath)
 	if err != nil {
 		LogE(err).Error("Error in creating the symlink for the singularity Image")

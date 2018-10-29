@@ -91,16 +91,15 @@ func IngestIntoCVMFS(CVMFSRepo string, path string, target string) (err error) {
 	return err
 }
 
+// create a symbolic link inside the repository called `newLinkName`, the symlink will point to `toLinkPath`
+// newLinkName: comes without the /cvmfs/$REPO/ prefix
 func CreateSymlinkIntoCVMFS(CVMFSRepo, newLinkName, toLinkPath string) (err error) {
-	// check that we are creating a link inside the repository towards something in the repository
-	dirsNew := strings.Split(newLinkName, string(filepath.Separator))
-	if len(dirsNew) <= 3 || dirsNew[1] != "cvmfs" || dirsNew[2] != CVMFSRepo {
-		LogE(err).WithFields(log.Fields{"repo": CVMFSRepo, "linkName": newLinkName}).Error(
-			"Error in creating the symlink, new outside repository")
-		return fmt.Errorf("Trying to create a symlink outside the repository")
-	}
+	// make the link point inside the repository
+	newLinkName = filepath.Join("/", "cvmfs", CVMFSRepo, newLinkName)
+
+	// check that we are creating a link inside the repository towards something **in the repository**
 	dirsToLink := strings.Split(toLinkPath, string(filepath.Separator))
-	if len(dirsToLink) <= 3 || dirsNew[1] != "cvmfs" || dirsNew[2] != CVMFSRepo {
+	if len(dirsToLink) <= 3 || dirsToLink[1] != "cvmfs" || dirsToLink[2] != CVMFSRepo {
 		LogE(err).WithFields(log.Fields{"repo": CVMFSRepo, "toFile": toLinkPath}).Error(
 			"Error in creating the symlink, trying to link to something outside the repository")
 		return fmt.Errorf("Trying to link to something outside the repository")
