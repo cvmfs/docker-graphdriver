@@ -191,6 +191,13 @@ func SaveLayersBacklink(CVMFSRepo string, img Image, layerMetadataPaths []string
 				continue
 			}
 
+			err = backlinkFile.Close()
+			if err != nil {
+				llog(LogE(err)).WithFields(log.Fields{"file": originPath}).Error(
+					"Error in closing the file after reading, moving on...")
+				continue
+			}
+
 			err = json.Unmarshal(byteBackLink, &backlink)
 			if err != nil {
 				llog(LogE(err)).WithFields(log.Fields{"file": originPath}).Error(
