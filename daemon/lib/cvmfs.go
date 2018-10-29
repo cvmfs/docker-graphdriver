@@ -117,7 +117,17 @@ func CreateSymlinkIntoCVMFS(CVMFSRepo, newLinkName, toLinkPath string) (err erro
 		return err
 	}
 
-	err = os.Symlink(newLinkName, toLinkPath)
+	linkDir := filepath.Dir(newLinkName)
+	err = os.MkdirAll(linkDir, 0666)
+	if err != nil {
+		LogE(err).WithFields(log.Fields{
+			"repo":      CVMFSRepo,
+			"linkName":  newLinkName,
+			"directory": linkDir}).Error(
+			"Error in creating the directory where to store the symlink")
+	}
+
+	err = os.Symlink(toLinkPath, newLinkName)
 	if err != nil {
 		LogE(err).WithFields(log.Fields{
 			"repo":     CVMFSRepo,
