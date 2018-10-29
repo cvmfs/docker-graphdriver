@@ -29,10 +29,10 @@ func IngestIntoCVMFS(CVMFSRepo string, path string, target string) (err error) {
 	path = filepath.Join("/", "cvmfs", CVMFSRepo, path)
 
 	Log().WithFields(log.Fields{"target": target, "action": "ingesting"}).Info("Start transaction")
-	err = ExecCommand("cvmfs_server", "transaction", CVMFSRepo)
+	err = ExecCommand("cvmfs_server", "transaction", CVMFSRepo).Start()
 	if err != nil {
 		LogE(err).WithFields(log.Fields{"repo": CVMFSRepo}).Error("Error in opening the transaction")
-		ExecCommand("cvmfs_server", "abort", "-f", CVMFSRepo)
+		ExecCommand("cvmfs_server", "abort", "-f", CVMFSRepo).Start()
 		return err
 	}
 
@@ -75,15 +75,15 @@ func IngestIntoCVMFS(CVMFSRepo string, path string, target string) (err error) {
 
 	if err != nil {
 		LogE(err).WithFields(log.Fields{"repo": CVMFSRepo, "target": target}).Error("Error in moving the target inside the CVMFS repo")
-		ExecCommand("cvmfs_server", "abort", "-f", CVMFSRepo)
+		ExecCommand("cvmfs_server", "abort", "-f", CVMFSRepo).Start()
 		return err
 	}
 
 	Log().WithFields(log.Fields{"target": target, "action": "ingesting"}).Info("Publishing")
-	err = ExecCommand("cvmfs_server", "publish", CVMFSRepo)
+	err = ExecCommand("cvmfs_server", "publish", CVMFSRepo).Start()
 	if err != nil {
 		LogE(err).WithFields(log.Fields{"repo": CVMFSRepo}).Error("Error in publishing the repository")
-		ExecCommand("cvmfs_server", "abort", "-f", CVMFSRepo)
+		ExecCommand("cvmfs_server", "abort", "-f", CVMFSRepo).Start()
 		return err
 	}
 	err = nil
@@ -103,10 +103,10 @@ func CreateSymlinkIntoCVMFS(CVMFSRepo, newLinkName, toLinkPath string) (err erro
 		return err
 	}
 
-	err = ExecCommand("cvmfs_server", "transaction", CVMFSRepo)
+	err = ExecCommand("cvmfs_server", "transaction", CVMFSRepo).Start()
 	if err != nil {
 		LogE(err).WithFields(log.Fields{"repo": CVMFSRepo}).Error("Error in opening the transaction")
-		ExecCommand("cvmfs_server", "abort", "-f", CVMFSRepo)
+		ExecCommand("cvmfs_server", "abort", "-f", CVMFSRepo).Start()
 		return err
 	}
 
@@ -127,14 +127,14 @@ func CreateSymlinkIntoCVMFS(CVMFSRepo, newLinkName, toLinkPath string) (err erro
 			"linkName": newLinkName,
 			"toFile":   toLinkPath}).Error(
 			"Error in creating the symlink")
-		ExecCommand("cvmfs_server", "abort", "-f", CVMFSRepo)
+		ExecCommand("cvmfs_server", "abort", "-f", CVMFSRepo).Start()
 		return err
 	}
 
-	err = ExecCommand("cvmfs_server", "publish", CVMFSRepo)
+	err = ExecCommand("cvmfs_server", "publish", CVMFSRepo).Start()
 	if err != nil {
 		LogE(err).WithFields(log.Fields{"repo": CVMFSRepo}).Error("Error in publishing the repository")
-		ExecCommand("cvmfs_server", "abort", "-f", CVMFSRepo)
+		ExecCommand("cvmfs_server", "abort", "-f", CVMFSRepo).Start()
 		return err
 	}
 	return nil
@@ -211,7 +211,7 @@ func SaveLayersBacklink(CVMFSRepo string, img Image, layerMetadataPaths []string
 		backlinks[originPath] = backlinkBytesMarshal
 	}
 
-	err := ExecCommand("cvmfs_server", "transaction", CVMFSRepo)
+	err := ExecCommand("cvmfs_server", "transaction", CVMFSRepo).Start()
 	if err != nil {
 		llog(LogE(err)).Error("Error in opening the transaction")
 		return err
@@ -238,7 +238,7 @@ func SaveLayersBacklink(CVMFSRepo string, img Image, layerMetadataPaths []string
 			"Wrote backlink")
 	}
 
-	err = ExecCommand("cvmfs_server", "publish", CVMFSRepo)
+	err = ExecCommand("cvmfs_server", "publish", CVMFSRepo).Start()
 	if err != nil {
 		llog(LogE(err)).Error("Error in publishing after adding the backlinks")
 		return err

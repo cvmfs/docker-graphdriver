@@ -79,12 +79,12 @@ func ConvertWish(wish WishFriendly, convertAgain, forceDownload, convertSingular
 		cleanup := func(location string) {
 			Log().Info("Running clean up function deleting the last layer.")
 
-			err := ExecCommand("cvmfs_server", "abort", "-f", wish.CvmfsRepo)
+			err := ExecCommand("cvmfs_server", "abort", "-f", wish.CvmfsRepo).Start()
 			if err != nil {
 				LogE(err).Warning("Error in the abort command inside the cleanup function, this warning is usually normal")
 			}
 
-			err = ExecCommand("cvmfs_server", "ingest", "--delete", location, wish.CvmfsRepo)
+			err = ExecCommand("cvmfs_server", "ingest", "--delete", location, wish.CvmfsRepo).Start()
 			if err != nil {
 				LogE(err).Error("Error in the cleanup command")
 			}
@@ -118,7 +118,7 @@ func ConvertWish(wish WishFriendly, convertAgain, forceDownload, convertSingular
 			}(layer.Name, filepath.Join(layerRepoLocationRoot, layerLocation), layerMetadata)
 
 			if pathExists == false || forceDownload {
-				err = ExecCommand("cvmfs_server", "ingest", "-t", layer.Path, "-b", layerLocation, wish.CvmfsRepo)
+				err = ExecCommand("cvmfs_server", "ingest", "-t", layer.Path, "-b", layerLocation, wish.CvmfsRepo).Start()
 
 				if err != nil {
 					LogE(err).WithFields(log.Fields{"layer": layer.Name}).Error("Some error in ingest the layer")

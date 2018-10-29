@@ -489,7 +489,7 @@ func (img Image) downloadLayer(layer da.Layer, token, rootPath string) (toSend d
 }
 
 func (img Image) downloadImage() (err error) {
-	err = ExecCommand("docker", "pull", img.GetSimpleName())
+	err = ExecCommand("docker", "pull", img.GetSimpleName()).Start()
 	if err != nil {
 		LogE(err).Error("Error in pulling from the registry")
 		return
@@ -508,7 +508,7 @@ func (img Image) saveDockerLayerAndManifestOnDisk() (manifest string, paths []st
 		LogE(err).Error("Error in creating the temp file where to save the image")
 		return
 	}
-	err = ExecCommand("docker", "save", img.GetSimpleName(), "-o", fName)
+	err = ExecCommand("docker", "save", img.GetSimpleName(), "-o", fName).Start()
 	if err != nil {
 		LogE(err).Error("Error in saving the image")
 		return
@@ -586,7 +586,7 @@ func (img Image) saveDockerLayerAndManifestOnDisk() (manifest string, paths []st
 }
 
 func (img Image) removeImage() (err error) {
-	err = ExecCommand("docker", "rmi", img.GetSimpleName())
+	err = ExecCommand("docker", "rmi", img.GetSimpleName()).Start()
 	if err != nil {
 		LogE(err).Error("Error in removing the image")
 		return

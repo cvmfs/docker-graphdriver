@@ -62,7 +62,7 @@ func RemoveUselessLayers() error {
 	// but few of them like 10 or 20 together is something very reasonable.
 	for repoName, layers := range paths {
 		for _, layer := range layers {
-			err = ExecCommand("cvmfs_server", "ingest", "--delete", layer, repoName)
+			err = ExecCommand("cvmfs_server", "ingest", "--delete", layer, repoName).Start()
 			if err != nil {
 				LogE(err).Warning("Error in deleting the layer")
 			}
