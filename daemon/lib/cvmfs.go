@@ -10,6 +10,8 @@ import (
 
 	copy "github.com/otiai10/copy"
 	log "github.com/sirupsen/logrus"
+
+	da "github.com/cvmfs/docker-graphdriver/daemon/docker-api"
 )
 
 // ingest into the repository, inside the subpath, the target (directory or file) object
@@ -236,6 +238,83 @@ func SaveLayersBacklink(CVMFSRepo string, img Image, layerMetadataPaths []string
 		}
 		llog(LogE(err)).WithFields(log.Fields{"file": path}).Info(
 			"Wrote backlink")
+	}
+
+	err = ExecCommand("cvmfs_server", "publish", CVMFSRepo).Start()
+	if err != nil {
+		llog(LogE(err)).Error("Error in publishing after adding the backlinks")
+		return err
+	}
+
+	return nil
+}
+
+func RemoveScheduleLocation(CVMFSRepo string) string {
+	return filepath.Join("/", "cvmfs", CVMFSRepo, ".metadata", "remove-schedule.json")
+}
+
+func AddManifestToRemoveScheduler(CVMFSRepo string, manifest da.Manifest) error {
+	schedulePath := RemoveScheduleLocation(CVMFSRepo)
+	llog := func(l *log.Entry) *log.Entry {
+		return l.WithFields(log.Fields{
+			"action": "add manifest to remove schedule",
+			"file":   schedulePath})
+	}
+	var schedule []da.Manifest
+
+	// if the file exist, load from it
+	if _, err := os.Stat(schedulePath); !os.IsNotExist(err) {
+
+		scheduleFileRO, err := os.OpenFile(schedulePath, os.O_RDONLY, 0666)
+		if err != nil {
+			llog(LogE(err)).Error("Impossible to open the schedule file")
+			return err
+		}
+
+		scheduleBytes, err := ioutil.ReadAll(scheduleFileRO)
+		if err != nil {
+			llog(LogE(err)).Error("Impossible to read the schedule file")
+			return err
+		}
+
+		err = scheduleFileRO.Close()
+		if err != nil {
+			llog(LogE(err)).Error("Impossible to close the schedule file")
+			return err
+		}
+
+		err = json.Unmarshal(scheduleBytes, &schedule)
+		if err != nil {
+			llog(LogE(err)).Error("Impossible to unmarshal the schedule file")
+			return err
+		}
+	}
+	schedule = append(schedule, manifest)
+
+	err := ExecCommand("cvmfs_server", "transaction", CVMFSRepo).Start()
+	if err != nil {
+		llog(LogE(err)).Error("Error in opening the transaction")
+		return err
+	}
+
+	if _, err = os.Stat(schedulePath); os.IsNotExist(err) {
+		err = os.MkdirAll(filepath.Dir(schedulePath), 0666)
+		if err != nil {
+			llog(LogE(err)).Error("Error in creating the directory where save the schedule")
+		}
+
+		bytes, err := json.Marshal(schedule)
+		if err != nil {
+			llog(LogE(err)).Error("Error in marshaling the new schedule")
+		} else {
+
+			err = ioutil.WriteFile(schedulePath, bytes, 0666)
+			if err != nil {
+				llog(LogE(err)).Error("Error in writing the new schedule")
+			} else {
+				llog(Log()).Info("Wrote new remove schedule")
+			}
+		}
 	}
 
 	err = ExecCommand("cvmfs_server", "publish", CVMFSRepo).Start()
