@@ -44,8 +44,7 @@ func ConvertWish(wish WishFriendly, convertAgain, forceDownload, convertSingular
 		return
 	}
 
-	digest := strings.Split(manifest.Config.Digest, ":")[1]
-	alreadyConverted := AlreadyConverted(wish.CvmfsRepo, inputImage, digest)
+	alreadyConverted := AlreadyConverted(wish.CvmfsRepo, inputImage, manifest.Config.Digest)
 	Log().WithFields(log.Fields{"alreadyConverted": alreadyConverted}).Info(
 		"Already converted the image, skipping.")
 
@@ -330,17 +329,15 @@ func AlreadyConverted(CVMFSRepo string, img Image, reference string) bool {
 
 	bytes, _ := ioutil.ReadAll(manifestFile)
 
-	var manifests []manifestItem
-	err = json.Unmarshal(bytes, &manifests)
+	var manifest da.Manifest
+	err = json.Unmarshal(bytes, &manifest)
 	if err != nil {
-		LogE(err).Info("Error in unmarshaling the manifest")
+		LogE(err).Warning("Error in unmarshaling the manifest")
 		return false
 	}
-	for _, manifest := range manifests {
-		fmt.Println("%s == %s.json", manifest.Config, reference)
-		if manifest.Config == reference+".json" {
-			return true
-		}
+	fmt.Printf("%s == %s\n", manifest.Config.Digest, reference)
+	if manifest.Config.Digest == reference {
+		return true
 	}
 	return false
 }
