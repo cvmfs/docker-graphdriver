@@ -252,7 +252,7 @@ func (img Image) DownloadSingularityDirectory(rootPath string) (sing Singularity
 }
 
 func (s Singularity) IngestIntoCVMFS(CVMFSRepo string) error {
-	symlinkPath := filepath.Join("/", "cvmfs", CVMFSRepo, s.Image.Registry, s.Image.Repository, s.Image.GetSimpleReference())
+	symlinkPath := filepath.Join("/", "cvmfs", CVMFSRepo, s.Image.Registry, s.Image.Repository+":"+s.Image.GetSimpleReference())
 	singularityPath, err := s.Image.GetSingularityPath()
 	if err != nil {
 		LogE(err).Error(
