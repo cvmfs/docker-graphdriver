@@ -334,18 +334,18 @@ func AddManifestToRemoveScheduler(CVMFSRepo string, manifest da.Manifest) error 
 		if err != nil {
 			llog(LogE(err)).Error("Error in creating the directory where save the schedule")
 		}
+	}
 
-		bytes, err := json.Marshal(schedule)
+	bytes, err := json.Marshal(schedule)
+	if err != nil {
+		llog(LogE(err)).Error("Error in marshaling the new schedule")
+	} else {
+
+		err = ioutil.WriteFile(schedulePath, bytes, 0666)
 		if err != nil {
-			llog(LogE(err)).Error("Error in marshaling the new schedule")
+			llog(LogE(err)).Error("Error in writing the new schedule")
 		} else {
-
-			err = ioutil.WriteFile(schedulePath, bytes, 0666)
-			if err != nil {
-				llog(LogE(err)).Error("Error in writing the new schedule")
-			} else {
-				llog(Log()).Info("Wrote new remove schedule")
-			}
+			llog(Log()).Info("Wrote new remove schedule")
 		}
 	}
 
