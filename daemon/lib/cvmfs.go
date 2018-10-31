@@ -101,6 +101,13 @@ func CreateSymlinkIntoCVMFS(CVMFSRepo, newLinkName, toLinkPath string) (err erro
 	newLinkName = filepath.Join("/", "cvmfs", CVMFSRepo, newLinkName)
 	toLinkPath = filepath.Join("/", "cvmfs", CVMFSRepo, toLinkPath)
 
+	llog := func(l *log.Entry) *log.Entry {
+		return l.WithFields(log.Fields{"action": "save backlink",
+			"repo":           CVMFSRepo,
+			"link name":      newLinkName,
+			"target to link": toLinkPath})
+	}
+
 	// check if the file we want to link actually exists
 	if _, err := os.Stat(toLinkPath); os.IsNotExist(err) {
 		return err
@@ -108,7 +115,7 @@ func CreateSymlinkIntoCVMFS(CVMFSRepo, newLinkName, toLinkPath string) (err erro
 
 	err = ExecCommand("cvmfs_server", "transaction", CVMFSRepo).Start()
 	if err != nil {
-		LogE(err).WithFields(log.Fields{"repo": CVMFSRepo}).Error("Error in opening the transaction")
+		llog(LogE(err)).Error("Error in opening the transaction")
 		ExecCommand("cvmfs_server", "abort", "-f", CVMFSRepo).Start()
 		return err
 	}
@@ -116,19 +123,33 @@ func CreateSymlinkIntoCVMFS(CVMFSRepo, newLinkName, toLinkPath string) (err erro
 	linkDir := filepath.Dir(newLinkName)
 	err = os.MkdirAll(linkDir, 0666)
 	if err != nil {
-		LogE(err).WithFields(log.Fields{
-			"repo":      CVMFSRepo,
-			"linkName":  newLinkName,
+		llog(LogE(err)).WithFields(log.Fields{
 			"directory": linkDir}).Error(
 			"Error in creating the directory where to store the symlink")
 	}
 
+	// the symlink exists already, we delete it and replace it
+	if lstat, err := os.Lstat(newLinkName); !os.IsNotExist(err) {
+		if lstat.Mode()&os.ModeSymlink != 0 {
+			// the file exists and it is a symlink, we overwrite it
+			err = os.Remove(newLinkName)
+			if err != nil {
+				err = fmt.Errorf("Error in removing existsing symlink: %s", err)
+				llog(LogE(err)).Error("Error in removing previous symlink")
+				return err
+			}
+		} else {
+			// the file exists but is not a symlink
+			err = fmt.Errorf(
+				"Error, trying to overwrite with a symlink something that is not a symlink")
+			llog(LogE(err)).Error("Error in creating a symlink")
+			return err
+		}
+	}
+
 	err = os.Symlink(toLinkPath, newLinkName)
 	if err != nil {
-		LogE(err).WithFields(log.Fields{
-			"repo":     CVMFSRepo,
-			"linkName": newLinkName,
-			"toFile":   toLinkPath}).Error(
+		llog(LogE(err)).Error(
 			"Error in creating the symlink")
 		ExecCommand("cvmfs_server", "abort", "-f", CVMFSRepo).Start()
 		return err
@@ -136,7 +157,8 @@ func CreateSymlinkIntoCVMFS(CVMFSRepo, newLinkName, toLinkPath string) (err erro
 
 	err = ExecCommand("cvmfs_server", "publish", CVMFSRepo).Start()
 	if err != nil {
-		LogE(err).WithFields(log.Fields{"repo": CVMFSRepo}).Error("Error in publishing the repository")
+		llog(LogE(err)).WithFields(log.Fields{"repo": CVMFSRepo}).Error(
+			"Error in publishing the repository")
 		ExecCommand("cvmfs_server", "abort", "-f", CVMFSRepo).Start()
 		return err
 	}
