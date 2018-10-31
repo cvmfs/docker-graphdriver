@@ -34,11 +34,13 @@ var convertCmd = &cobra.Command{
 			os.Exit(1)
 		}
 		for _, wish := range wish {
-			lib.Log().WithFields(log.Fields{"input image": wish.InputName}).Info("Converting Image")
+			fields := log.Fields{"input image": wish.InputName,
+				"repository":   wish.CvmfsRepo,
+				"output image": wish.OutputName}
+			lib.Log().WithFields(fields).Info("Start conversion of wish")
 			err = lib.ConvertWish(wish, convertAgain, overwriteLayer, convertSingularity)
 			if err != nil {
-				fmt.Println(err)
-				os.Exit(1)
+				lib.LogE(err).WithFields(fields).Error("Error in converting wish, going on")
 			}
 		}
 		os.Exit(0)
