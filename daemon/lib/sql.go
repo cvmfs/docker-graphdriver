@@ -225,6 +225,7 @@ func AddImageWithConnection(db *sql.DB, img Image) error {
 	return err
 }
 
+/*
 var addWish = `
 INSERT INTO wish(input_image, output_image, cvmfs_repo)
 VALUES(:input, :output, :repo);
@@ -247,7 +248,7 @@ func AddWish(inputId, outputId int, repo string) (err error) {
 }
 
 var getWish = `
-SELECT id, input_image, output_image, cvmfs_repo 
+SELECT id, input_image, output_image, cvmfs_repo
 FROM wish
 WHERE (
 	input_image = :input
@@ -318,7 +319,7 @@ func GetAllWish() ([]Wish, error) {
 	return wishes, nil
 
 }
-
+*/
 var getPassword = `
 SELECT password FROM credential WHERE
 user = :user AND registry = :registry
@@ -446,6 +447,7 @@ func AddConverted(wishId int, manifest da.Manifest) error {
 	return err
 }
 
+/*
 var deleteWish = `DELETE FROM wish WHERE id = ?;`
 
 func DeleteWish(wishId int) (int, error) {
@@ -464,7 +466,7 @@ func DeleteWish(wishId int) (int, error) {
 	n, err := res.RowsAffected()
 	return int(n), err
 }
-
+*/
 var deleteAllConverted = `DELETE FROM converted`
 
 func DeleteAllConverted() (int, error) {

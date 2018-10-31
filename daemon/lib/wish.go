@@ -12,9 +12,11 @@ type Wish struct {
 	CvmfsRepo   string
 }
 
+/*
 func (w Wish) Equal(other Wish) bool {
 	return (w.InputImage == other.InputImage) && (w.OutputImage == other.OutputImage) && (w.CvmfsRepo == other.CvmfsRepo)
 }
+*/
 
 type WishFriendly struct {
 	Id         int
@@ -26,6 +28,7 @@ type WishFriendly struct {
 	Converted  bool
 }
 
+/*
 func (w WishFriendly) Equal(other WishFriendly) bool {
 	return ((w.InputId == other.InputId) &&
 		(w.OutputId == other.OutputId) &&
@@ -35,6 +38,7 @@ func (w WishFriendly) Equal(other WishFriendly) bool {
 			(w.OutputName == other.OutputName) &&
 			(w.CvmfsRepo == other.CvmfsRepo))
 }
+*/
 
 type WishAlreadyInDBError struct{}
 
