@@ -435,27 +435,6 @@ func GetPassword(user, registry string) (string, error) {
 	return password, nil
 }
 
-var addUser = `
-INSERT INTO credential(user, registry, password)
-VALUES(:user, :registry, :password);
-`
-
-func AddUser(user, password, registry string) error {
-	db, err := sql.Open("sqlite3", Database())
-	if err != nil {
-		LogE(err).Fatal("Impossible to open the database.")
-	}
-	addUserStmt, err := db.Prepare(addUser)
-	if err != nil {
-		LogE(err).Fatal("Impossible to create the statement.")
-	}
-	_, err = addUserStmt.Exec(
-		sql.Named("user", user),
-		sql.Named("password", password),
-		sql.Named("registry", registry))
-	return err
-}
-
 var getAllUsers = `SELECT user, registry FROM credential;`
 
 func GetAllUsers() ([]struct{ Username, Registry string }, error) {
