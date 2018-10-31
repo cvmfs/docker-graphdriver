@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 
 	copy "github.com/otiai10/copy"
 	log "github.com/sirupsen/logrus"
@@ -289,7 +290,16 @@ func AddManifestToRemoveScheduler(CVMFSRepo string, manifest da.Manifest) error 
 			return err
 		}
 	}
-	schedule = append(schedule, manifest)
+
+	schedule = func() []da.Manifest {
+		for _, m := range schedule {
+			if m.Config.Digest == manifest.Config.Digest {
+				return schedule
+			}
+		}
+		schedule = append(schedule, manifest)
+		return schedule
+	}()
 
 	err := ExecCommand("cvmfs_server", "transaction", CVMFSRepo).Start()
 	if err != nil {
@@ -315,6 +325,83 @@ func AddManifestToRemoveScheduler(CVMFSRepo string, manifest da.Manifest) error 
 				llog(Log()).Info("Wrote new remove schedule")
 			}
 		}
+	}
+
+	err = ExecCommand("cvmfs_server", "publish", CVMFSRepo).Start()
+	if err != nil {
+		llog(LogE(err)).Error("Error in publishing after adding the backlinks")
+		return err
+	}
+
+	return nil
+}
+
+func RemoveSingularityImageFromManifest(CVMFSRepo string, manifest da.Manifest) error {
+	dir := filepath.Join("/", "cvmfs", CVMFSRepo, GetSingularityPathFromManifest(manifest))
+	llog := func(l *log.Entry) *log.Entry {
+		return l.WithFields(log.Fields{
+			"action": "removing singularity directory", "directory": dir})
+	}
+	err := RemoveDirectory(dir)
+	if err != nil {
+		llog(LogE(err)).Error("Error in removing singularity direcotry")
+		return err
+	}
+	return nil
+}
+
+func RemoveLayer(CVMFSRepo, layerDigest string) error {
+	dir := filepath.Join("/", "cvmfs", CVMFSRepo, subDirInsideRepo, layerDigest[0:2], layerDigest)
+	llog := func(l *log.Entry) *log.Entry {
+		return l.WithFields(log.Fields{
+			"action": "removing layer", "directory": dir, "layer": layerDigest})
+	}
+	err := RemoveDirectory(dir)
+	if err != nil {
+		llog(LogE(err)).Error("Error in deleting a layer")
+		return err
+	}
+	return nil
+}
+
+func RemoveDirectory(directory string) error {
+	llog := func(l *log.Entry) *log.Entry {
+		return l.WithFields(log.Fields{
+			"action": "removing directory", "directory": directory})
+	}
+	stat, err := os.Stat(directory)
+	if err != nil {
+		if os.IsNotExist(err) {
+			llog(LogE(err)).Warning("Directory not existing")
+			return nil
+		}
+		llog(LogE(err)).Error("Error in stating the directory")
+		return err
+	}
+	if !stat.Mode().IsDir() {
+		err = fmt.Errorf("Trying to remove something different from a directory")
+		llog(LogE(err)).Error("Error, input is not a directory")
+		return err
+	}
+
+	dirsSplitted := strings.Split(directory, string(os.PathSeparator))
+	if len(dirsSplitted) <= 3 || dirsSplitted[1] != "cvmfs" {
+		err := fmt.Errorf("Directory not in the CVMFS repo")
+		llog(LogE(err)).Error("Error in opening the transaction")
+		return err
+	}
+	CVMFSRepo := dirsSplitted[2]
+	err = ExecCommand("cvmfs_server", "transaction", CVMFSRepo).Start()
+	if err != nil {
+		llog(LogE(err)).Error("Error in opening the transaction")
+		return err
+	}
+
+	err = os.RemoveAll(directory)
+	if err != nil {
+		llog(LogE(err)).Error("Error in publishing after adding the backlinks")
+		ExecCommand("cvmfs_server", "abort", "-f", CVMFSRepo).Start()
+		return err
 	}
 
 	err = ExecCommand("cvmfs_server", "publish", CVMFSRepo).Start()
