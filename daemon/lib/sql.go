@@ -513,47 +513,6 @@ func GetAllWishes() ([]WishFriendly, error) {
 	return wishes, nil
 }
 
-var getWishF = `
-SELECT d.id, d.input_image, input.name, d.output_image, output.name, d.cvmfs_repo
-	FROM wish AS d
-	JOIN image_name as input
-	JOIN image_name as output
-	WHERE 
-		d.input_image = input.image_id
-		AND d.output_image = output.image_id
-		AND input.image_id = :input_id
-		AND output.image_id = :output_id
-		AND d.cvmfs_repo = :repo;
-`
-
-func GetWishF(inputId, outputId int, repo string) (wish WishFriendly, err error) {
-	db, err := sql.Open("sqlite3", Database())
-	if err != nil {
-		LogE(err).Fatal("Impossible to open the database.")
-	}
-	getWishFStmt, err := db.Prepare(getWishF)
-	if err != nil {
-		LogE(err).Fatal("Impossible to create the statement.")
-	}
-	var id, input_id, output_id int
-	var input_name, output_name, cvmfsRepo string
-	err = getWishFStmt.QueryRow(
-		sql.Named("input_id", inputId),
-		sql.Named("output_id", outputId),
-		sql.Named("repo", repo),
-	).Scan(&id, &input_id, &input_name, &output_id, &output_name, &cvmfsRepo)
-	if err != nil {
-		return
-	}
-	wish.Id = id
-	wish.InputId = input_id
-	wish.InputName = input_name
-	wish.OutputId = output_id
-	wish.OutputName = output_name
-	wish.CvmfsRepo = cvmfsRepo
-	return
-}
-
 var addConverted = `INSERT INTO converted VALUES(:wish, :input_reference, json(:manifest));`
 
 func AddConverted(wishId int, manifest da.Manifest) error {
