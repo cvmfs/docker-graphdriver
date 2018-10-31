@@ -435,34 +435,6 @@ func GetPassword(user, registry string) (string, error) {
 	return password, nil
 }
 
-var getAllUsers = `SELECT user, registry FROM credential;`
-
-func GetAllUsers() ([]struct{ Username, Registry string }, error) {
-	db, err := sql.Open("sqlite3", Database())
-	if err != nil {
-		LogE(err).Fatal("Impossible to open the database.")
-	}
-	getAllUserStmt, err := db.Prepare(getAllUsers)
-	if err != nil {
-		LogE(err).Fatal("Impossible to create the statement.")
-	}
-	rows, err := getAllUserStmt.Query()
-	users := []struct{ Username, Registry string }{}
-	defer rows.Close()
-	if err != nil {
-		return users, err
-	}
-	for rows.Next() {
-		var user, registry string
-		err = rows.Scan(&user, &registry)
-		if err != nil {
-			return users, err
-		}
-		users = append(users, struct{ Username, Registry string }{Username: user, Registry: registry})
-	}
-	return users, nil
-}
-
 var getUserPassword = `
 SELECT password FROM credential 
 WHERE user = :user 
