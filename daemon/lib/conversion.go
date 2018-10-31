@@ -15,12 +15,17 @@ import (
 
 	da "github.com/cvmfs/docker-graphdriver/daemon/docker-api"
 
-	"github.com/docker/distribution"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
-	"github.com/docker/docker/image"
-	"github.com/docker/docker/layer"
 	log "github.com/sirupsen/logrus"
+)
+
+type ConversionResult int
+
+const (
+	ConversionNotFound = iota
+	ConversionMatch    = iota
+	ConversionNotMatch = iota
 )
 
 var subDirInsideRepo = ".layers"
@@ -48,10 +53,28 @@ func ConvertWish(wish WishFriendly, convertAgain, forceDownload, convertSingular
 	Log().WithFields(log.Fields{"alreadyConverted": alreadyConverted}).Info(
 		"Already converted the image, skipping.")
 
-	if alreadyConverted && convertAgain == false {
-		Log().Info("Already converted the image, skipping.")
-		return nil
+	switch alreadyConverted {
+
+	case ConversionMatch:
+		{
+			Log().Info("Already converted the image.")
+			if convertAgain == false {
+				return nil
+			}
+
+		}
+	case ConversionNotMatch:
+		{
+
+			Log().Info("Image already converted, but it does not match the manifest, adding it to the remove scheduler")
+			err = AddManifestToRemoveScheduler(wish.CvmfsRepo, manifest)
+			if err != nil {
+				Log().Warning("Error in adding the image to the remove schedule")
+			}
+		}
+
 	}
+
 	layersChanell := make(chan downloadedLayer, 3)
 	manifestChanell := make(chan string, 1)
 	stopGettingLayers := make(chan bool, 1)
@@ -297,33 +320,24 @@ func ConvertWish(wish WishFriendly, convertAgain, forceDownload, convertSingular
 	}
 }
 
-func AlreadyConverted(CVMFSRepo string, img Image, reference string) bool {
+func AlreadyConverted(CVMFSRepo string, img Image, reference string) ConversionResult {
 	path := filepath.Join("/", "cvmfs", CVMFSRepo, ".metadata", img.GetSimpleName(), "manifest.json")
-
-	// from https://github.com/moby/moby/blob/8e610b2b55bfd1bfa9436ab110d311f5e8a74dcb/image/tarexport/tarexport.go#L18
-	type manifestItem struct {
-		Config       string
-		RepoTags     []string
-		Layers       []string
-		Parent       image.ID                                 `json:",omitempty"`
-		LayerSources map[layer.DiffID]distribution.Descriptor `json:",omitempty"`
-	}
 
 	fmt.Println(path)
 	manifestStat, err := os.Stat(path)
 	if os.IsNotExist(err) {
 		Log().Info("Manifest not existing")
-		return false
+		return ConversionNotFound
 	}
 	if !manifestStat.Mode().IsRegular() {
 		Log().Info("Manifest not a regular file")
-		return false
+		return ConversionNotFound
 	}
 
 	manifestFile, err := os.Open(path)
 	if err != nil {
 		Log().Info("Error in opening the manifest")
-		return false
+		return ConversionNotFound
 	}
 	defer manifestFile.Close()
 
@@ -333,11 +347,11 @@ func AlreadyConverted(CVMFSRepo string, img Image, reference string) bool {
 	err = json.Unmarshal(bytes, &manifest)
 	if err != nil {
 		LogE(err).Warning("Error in unmarshaling the manifest")
-		return false
+		return ConversionNotFound
 	}
 	fmt.Printf("%s == %s\n", manifest.Config.Digest, reference)
 	if manifest.Config.Digest == reference {
-		return true
+		return ConversionMatch
 	}
-	return false
+	return ConversionNotMatch
 }
