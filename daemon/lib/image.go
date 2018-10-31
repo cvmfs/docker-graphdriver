@@ -1,7 +1,6 @@
 package lib
 
 import (
-	"archive/tar"
 	"compress/gzip"
 	"encoding/json"
 	"fmt"
@@ -66,10 +65,6 @@ func (i Image) GetManifestUrl() string {
 		url = fmt.Sprintf("%s%s", url, i.Tag)
 	}
 	return url
-}
-
-func (i Image) GetServerUrl() string {
-	return fmt.Sprintf("%s://%s", i.Scheme, i.Registry)
 }
 
 func (i Image) GetReference() string {
@@ -499,112 +494,6 @@ func (img Image) downloadLayer(layer da.Layer, token, rootPath string) (toSend d
 	}
 	return
 
-}
-
-func (img Image) downloadImage() (err error) {
-	err = ExecCommand("docker", "pull", img.GetSimpleName()).Start()
-	if err != nil {
-		LogE(err).Error("Error in pulling from the registry")
-		return
-	}
-	return
-}
-
-func (img Image) saveDockerLayerAndManifestOnDisk() (manifest string, paths []string, err error) {
-
-	f, err := ioutil.TempFile("", "docker-save.*.tar")
-	defer os.Remove(f.Name())
-	fName := f.Name()
-	f.Close()
-
-	if err != nil {
-		LogE(err).Error("Error in creating the temp file where to save the image")
-		return
-	}
-	err = ExecCommand("docker", "save", img.GetSimpleName(), "-o", fName).Start()
-	if err != nil {
-		LogE(err).Error("Error in saving the image")
-		return
-	}
-	Log().WithFields(log.Fields{"image": img.GetSimpleName(), "file": fName}).Info("Finish saving the docker image into the temporary file")
-
-	deleteFiles := func() {
-		if manifest != "" {
-			os.Remove(manifest)
-		}
-		if len(paths) != 0 {
-			for _, p := range paths {
-				os.Remove(p)
-			}
-		}
-	}
-	tempDir, err := ioutil.TempDir("", "layers")
-	f, err = os.OpenFile(fName, os.O_RDONLY, 0666)
-	tr := tar.NewReader(f)
-	for {
-		hdr, err := tr.Next()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			LogE(err).Error("Error in reading the archive")
-			deleteFiles()
-			return "", nil, err
-		}
-		if hdr.Name == "manifest.json" {
-			tempManifest, err := ioutil.TempFile(tempDir, "tempManifest")
-			if err != nil {
-				LogE(err).Error("Error in creating manifest temp file")
-				deleteFiles()
-				return "", nil, err
-			}
-			manifest = tempManifest.Name()
-			_, err = io.Copy(tempManifest, tr)
-			if err != nil {
-				LogE(err).Error("Error in copying the manifest to a file")
-				deleteFiles()
-				return "", nil, err
-			}
-		}
-		// the files are stored inside the directory $layer (so the actual name of the layer) as tar archive called "layer.tar", not the layer name, the string "layer"
-		if strings.HasSuffix(hdr.Name, ".tar") {
-			Log().WithFields(log.Fields{"path": hdr.Name}).Info("Got layer from tar")
-			splitList := strings.Split(hdr.Name, string(os.PathSeparator))
-			splitListLen := len(splitList)
-			if splitListLen < 2 {
-				err = fmt.Errorf("Error in reading the tar for layer, less than 2 subpath for layer, expected at least two: $layerName/layer.tar")
-				LogE(err).WithFields(log.Fields{"name": hdr.Name}).Error(err)
-				deleteFiles()
-				return "", nil, err
-			}
-			layerName := splitList[splitListLen-2]
-			fLayer, err := os.OpenFile(filepath.Join(tempDir, layerName+".tar"), os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0666)
-			if err != nil {
-				LogE(err).Error("Impossible to exclusively open the file to write the tar layer")
-				deleteFiles()
-				return "", nil, err
-			}
-			_, err = io.Copy(fLayer, tr)
-			if err != nil {
-				LogE(err).Error("Error in copying the layer in a file")
-				deleteFiles()
-				return "", nil, err
-			}
-			paths = append(paths, fLayer.Name())
-			fLayer.Close()
-		}
-	}
-
-	return
-}
-
-func (img Image) removeImage() (err error) {
-	err = ExecCommand("docker", "rmi", img.GetSimpleName()).Start()
-	if err != nil {
-		LogE(err).Error("Error in removing the image")
-		return
-	}
-	return
 }
 
 func parseBearerToken(token string) (realm string, options map[string]string, err error) {

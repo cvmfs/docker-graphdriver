@@ -59,26 +59,6 @@ WHERE
 	);
 `
 
-func IsImageInDatabase(image Image) bool {
-	db, err := sql.Open("sqlite3", Database())
-	if err != nil {
-		LogE(err).Fatal("Impossible to open the database.")
-	}
-	getImageStmt, err := db.Prepare(getImageQuery)
-	if err != nil {
-		LogE(err).Fatal("Impossible to create the statement.")
-	}
-	rows, err := getImageStmt.Query(
-		sql.Named("registry", image.Registry),
-		sql.Named("repository", image.Repository),
-		sql.Named("user", image.User),
-		sql.Named("tag", image.Tag),
-		sql.Named("digest", image.Digest),
-	)
-	defer rows.Close()
-	return rows.Next()
-}
-
 func GetImage(queryImage Image) (Image, error) {
 	db, err := sql.Open("sqlite3", Database())
 	if err != nil {
@@ -136,15 +116,6 @@ func GetImageWithDb(db *sql.DB, queryImage Image) (Image, error) {
 
 func GetImageId(imageQuery Image) (id int, err error) {
 	image, err := GetImage(imageQuery)
-	if err != nil {
-		return
-	}
-	id = image.Id
-	return
-}
-
-func GetImageIdWithDb(db *sql.DB, imageQuery Image) (id int, err error) {
-	image, err := GetImageWithDb(db, imageQuery)
 	if err != nil {
 		return
 	}
@@ -698,32 +669,6 @@ var getAllNeededImages = `SELECT printf("%s://%s/%s@%s", i.scheme, i.registry, i
 converted.wish = wish.id AND
 wish.input_image = i.id;
 `
-
-func GetAllNeededImages() ([]string, error) {
-	db, err := sql.Open("sqlite3", Database())
-	if err != nil {
-		LogE(err).Fatal("Impossible to open the database.")
-	}
-	getAllNeededImagesStmt, err := db.Prepare(getAllNeededImages)
-	if err != nil {
-		LogE(err).Fatal("Impossible to create the statement.")
-	}
-	rows, err := getAllNeededImagesStmt.Query()
-	var images []string
-	defer rows.Close()
-	if err != nil {
-		return images, err
-	}
-	for rows.Next() {
-		var image string
-		err = rows.Scan(&image)
-		if err != nil {
-			return images, err
-		}
-		images = append(images, image)
-	}
-	return images, nil
-}
 
 var getAllNeededLayers = fmt.Sprintf(`
 SELECT DISTINCT( 
