@@ -26,13 +26,23 @@ type WishFriendly struct {
 	Converted  bool
 }
 
+func (w WishFriendly) Equal(other WishFriendly) bool {
+	return ((w.InputId == other.InputId) &&
+		(w.OutputId == other.OutputId) &&
+		(w.CvmfsRepo == other.CvmfsRepo)) ||
+
+		((w.InputName == other.InputName) &&
+			(w.OutputName == other.OutputName) &&
+			(w.CvmfsRepo == other.CvmfsRepo))
+}
+
 type WishAlreadyInDBError struct{}
 
 func (e *WishAlreadyInDBError) Error() string {
 	return "Wish is already in the database"
 }
 
-func CreateWish(inputImage, outputImage, cvmfsRepo, userInput, userOutput string) (wish Wish, err error) {
+func CreateWish(inputImage, outputImage, cvmfsRepo, userInput, userOutput string) (wish WishFriendly, err error) {
 
 	inputImg, err := ParseImage(inputImage)
 	if err != nil {
@@ -40,6 +50,9 @@ func CreateWish(inputImage, outputImage, cvmfsRepo, userInput, userOutput string
 		return
 	}
 	inputImg.User = userInput
+
+	wish.InputName = inputImg.WholeName()
+
 	outputImg, err := ParseImage(outputImage)
 	if err != nil {
 		err = fmt.Errorf("%s | %s", err.Error(), "Error in parsing the output image")
@@ -47,6 +60,7 @@ func CreateWish(inputImage, outputImage, cvmfsRepo, userInput, userOutput string
 	}
 	outputImg.User = userOutput
 	outputImg.IsThin = true
+	wish.OutputName = outputImg.WholeName()
 
 	// check if the images are already in the database
 	inputImgDb, errIn := GetImage(inputImg)
@@ -60,18 +74,6 @@ func CreateWish(inputImage, outputImage, cvmfsRepo, userInput, userOutput string
 	if errOut != nil && errOut != sql.ErrNoRows {
 		err = fmt.Errorf("%s | %s", errIn.Error(), "Error in querying the database for the output image")
 		return
-	}
-
-	// both images are already in our database if we enter the if
-	// check if also the wish itself is already in the database
-	if errIn == nil && errOut == nil {
-		inputId := inputImgDb.Id
-		outputId := outputImgDb.Id
-		wishInDb, errWishDb := GetWish(inputId, outputId, cvmfsRepo)
-		if errWishDb == nil {
-			err = &WishAlreadyInDBError{}
-			return wishInDb, err
-		}
 	}
 
 	// the input image is not in the db, we download again the manifest
@@ -120,8 +122,8 @@ func CreateWish(inputImage, outputImage, cvmfsRepo, userInput, userOutput string
 	}
 	// at this point we add the real wish to the database
 	wish.Id = 0
-	wish.InputImage = inputImgDbId
-	wish.OutputImage = outputImgDbId
+	wish.InputId = inputImgDbId
+	wish.OutputId = outputImgDbId
 	wish.CvmfsRepo = cvmfsRepo
 	return
 }

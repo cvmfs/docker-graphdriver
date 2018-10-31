@@ -17,7 +17,7 @@ type YamlRecipeV1 struct {
 }
 
 type Recipe struct {
-	Wishes []Wish
+	Wishes []WishFriendly
 }
 
 func ParseYamlRecipeV1(data []byte) (Recipe, error) {
