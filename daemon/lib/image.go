@@ -220,6 +220,11 @@ func (img Image) GetSingularityLocation() string {
 	return fmt.Sprintf("docker://%s/%s%s", img.Registry, img.Repository, img.GetReference())
 }
 
+func GetSingularityPathFromManifest(manifest da.Manifest) string {
+	digest := strings.Split(manifest.Config.Digest, ":")[1]
+	return filepath.Join(".flat", digest[0:2], digest)
+}
+
 // here is where in the FS we are going to store the singularity image
 func (img Image) GetSingularityPath() (string, error) {
 	manifest, err := img.GetManifest()
@@ -227,8 +232,7 @@ func (img Image) GetSingularityPath() (string, error) {
 		LogE(err).Error("Error in getting the manifest to figureout the singularity path")
 		return "", err
 	}
-	digest := strings.Split(manifest.Config.Digest, ":")[1]
-	return filepath.Join(".flat", digest[0:2], digest), nil
+	return GetSingularityPathFromManifest(manifest), nil
 }
 
 type Singularity struct {
