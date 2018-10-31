@@ -63,16 +63,6 @@ func ConvertWish(wish WishFriendly, convertAgain, forceDownload, convertSingular
 			}
 
 		}
-	case ConversionNotMatch:
-		{
-
-			Log().Info("Image already converted, but it does not match the manifest, adding it to the remove scheduler")
-			err = AddManifestToRemoveScheduler(wish.CvmfsRepo, manifest)
-			if err != nil {
-				Log().Warning("Error in adding the image to the remove schedule")
-			}
-		}
-
 	}
 
 	layersChanell := make(chan downloadedLayer, 3)
@@ -310,7 +300,15 @@ func ConvertWish(wish WishFriendly, convertAgain, forceDownload, convertSingular
 		if err != nil && convertAgain == false {
 			LogE(errConv).Error("Error in storing the conversion in the database")
 		}
-		if errIng == nil && errConv == nil {
+		var errRemoveSchedule error
+		if alreadyConverted == ConversionNotMatch {
+			Log().Info("Image already converted, but it does not match the manifest, adding it to the remove scheduler")
+			errRemoveSchedule = AddManifestToRemoveScheduler(wish.CvmfsRepo, manifest)
+			if errRemoveSchedule != nil {
+				Log().Warning("Error in adding the image to the remove schedule")
+			}
+		}
+		if errIng == nil && errConv == nil && errRemoveSchedule == nil {
 			Log().Info("Conversion completed")
 		}
 		return
