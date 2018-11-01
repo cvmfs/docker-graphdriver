@@ -35,6 +35,15 @@ var loopCmd = &cobra.Command{
 			lib.Log().Info("Received SIGINT (Ctrl-C) waiting the last layer to upload then exiting.")
 		}()
 
+		checkQuitSignal := func() {
+			select {
+			case <-stopWishLoopSignal:
+				lib.Log().Info("Received SIGINT (Ctrl-C) Quitting")
+				os.Exit(1)
+			default:
+			}
+		}
+
 		for {
 			data, err := ioutil.ReadFile(args[0])
 			if err != nil {
@@ -55,6 +64,7 @@ var loopCmd = &cobra.Command{
 				if err != nil {
 					lib.LogE(err).WithFields(fields).Error("Error in converting wish, going on")
 				}
+				checkQuitSignal()
 			}
 
 		}
