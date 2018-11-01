@@ -48,6 +48,5 @@ var convertCmd = &cobra.Command{
 				lib.LogE(err).WithFields(fields).Error("Error in converting wish, going on")
 			}
 		}
-		//}
 	},
 }

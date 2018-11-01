@@ -50,8 +50,6 @@ func CreateWish(inputImage, outputImage, cvmfsRepo, userInput, userOutput string
 	wish.OutputName = outputImg.WholeName()
 
 	wish.Id = 0
-	//wish.InputId = inputImgDbId
-	//wish.OutputId = outputImgDbId
 	wish.InputId = 0
 	wish.OutputId = 0
 	wish.CvmfsRepo = cvmfsRepo
