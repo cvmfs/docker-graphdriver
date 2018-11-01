@@ -36,7 +36,7 @@ func ConvertWish(wish WishFriendly, convertAgain, forceDownload, convertSingular
 	if err != nil {
 		return
 	}
-	password, err := GetUserPassword(cred_username, cred_repo)
+	password, err := getPassword()
 	if err != nil {
 		return
 	}

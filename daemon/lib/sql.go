@@ -348,10 +348,9 @@ func GetPassword(user, registry string) (string, error) {
 	return password, nil
 }
 
-*/
 var getUserPassword = `
-SELECT password FROM credential 
-WHERE user = :user 
+SELECT password FROM credential
+WHERE user = :user
 AND registry = :registry;`
 
 func GetUserPassword(user, registry string) (password string, err error) {
@@ -369,6 +368,7 @@ func GetUserPassword(user, registry string) (password string, err error) {
 	).Scan(&password)
 	return
 }
+*/
 
 var getAllWishes = `
 SELECT 
