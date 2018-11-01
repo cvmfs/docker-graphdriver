@@ -32,15 +32,15 @@ var subDirInsideRepo = ".layers"
 
 func ConvertWish(wish WishFriendly, convertAgain, forceDownload, convertSingularity bool) (err error) {
 
-	outputImage, err := GetImageById(wish.OutputId)
+	outputImage, err := ParseImage(wish.OutputName)
 	if err != nil {
 		return
 	}
-	password, err := GetUserPassword(outputImage.User, outputImage.Registry)
+	password, err := GetUserPassword(cred_username, cred_repo)
 	if err != nil {
 		return
 	}
-	inputImage, err := GetImageById(wish.InputId)
+	inputImage, err := ParseImage(wish.InputName)
 	if err != nil {
 		return
 	}

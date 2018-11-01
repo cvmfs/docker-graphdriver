@@ -40,18 +40,20 @@ var (
 	GetImageStmt *sql.Stmt
 )
 
+/*
+
 var getImageQuery = `
-SELECT id, user, scheme, registry, repository, tag, digest, is_thin 
-FROM image 
+SELECT id, user, scheme, registry, repository, tag, digest, is_thin
+FROM image
 WHERE
-	registry = :registry 
-	AND repository = :repository 
+	registry = :registry
+	AND repository = :repository
 	AND (
 		(user = :user)
 		OR ("" = :user AND user IS NULL)
 	)
 	AND (
-		(tag = :tag AND digest = :digest) 
+		(tag = :tag AND digest = :digest)
 		OR (tag IS NULL AND digest = :digest)
 		OR (tag = :tag AND digest IS NULL)
 		OR ("" = :tag AND digest = :digest)
@@ -66,7 +68,8 @@ func GetImage(queryImage Image) (Image, error) {
 	}
 	return GetImageWithDb(db, queryImage)
 }
-
+*/
+/*
 func GetImageWithDb(db *sql.DB, queryImage Image) (Image, error) {
 	getImageStmt, err := db.Prepare(getImageQuery)
 	if err != nil {
@@ -124,8 +127,8 @@ func GetImageId(imageQuery Image) (id int, err error) {
 }
 
 var getImageById = `
-SELECT id, user, scheme, registry, repository, tag, digest, is_thin 
-FROM image 
+SELECT id, user, scheme, registry, repository, tag, digest, is_thin
+FROM image
 WHERE id = :id;
 `
 
@@ -176,7 +179,7 @@ func GetImageById(inputId int) (Image, error) {
 }
 
 var addImage = `
-INSERT INTO image(scheme, user, registry, repository, tag, digest, is_thin) 
+INSERT INTO image(scheme, user, registry, repository, tag, digest, is_thin)
 VALUES(:scheme, :user, :registry, :repository, :tag, :digest, :is_thin);
 `
 
@@ -224,7 +227,7 @@ func AddImageWithConnection(db *sql.DB, img Image) error {
 	_, err = addImagesStmt.Exec(args...)
 	return err
 }
-
+*/
 /*
 var addWish = `
 INSERT INTO wish(input_image, output_image, cvmfs_repo)
