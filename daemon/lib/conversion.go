@@ -353,3 +353,14 @@ func AlreadyConverted(CVMFSRepo string, img Image, reference string) ConversionR
 	}
 	return ConversionNotMatch
 }
+
+func getPassword() (string, error) {
+	envVar := "DOCKER2CVMFS_DOCKER_REGISTRY_PASS"
+	pass := os.Getenv(envVar)
+	if pass == "" {
+		err := fmt.Errorf(
+			"Env variable (%s) storing the password to access the docker registry is not set", envVar)
+		return "", err
+	}
+	return pass, nil
+}

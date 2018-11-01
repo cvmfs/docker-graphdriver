@@ -322,8 +322,8 @@ func GetAllWish() ([]Wish, error) {
 	return wishes, nil
 
 }
-*/
-var getPassword = `
+
+var getPasswordQuery = `
 SELECT password FROM credential WHERE
 user = :user AND registry = :registry
 `
@@ -333,7 +333,7 @@ func GetPassword(user, registry string) (string, error) {
 	if err != nil {
 		LogE(err).Fatal("Impossible to open the database.")
 	}
-	getRefreshTokenStmt, err := db.Prepare(getPassword)
+	getRefreshTokenStmt, err := db.Prepare(getPasswordQuery)
 	if err != nil {
 		LogE(err).Fatal("Impossible to create the statement.")
 	}
@@ -348,6 +348,7 @@ func GetPassword(user, registry string) (string, error) {
 	return password, nil
 }
 
+*/
 var getUserPassword = `
 SELECT password FROM credential 
 WHERE user = :user 

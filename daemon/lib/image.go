@@ -144,7 +144,7 @@ func (img Image) GetManifest() (da.Manifest, error) {
 
 func (img Image) GetChanges() (changes []string, err error) {
 	user := img.User
-	pass, err := GetPassword(img.User, img.Registry)
+	pass, err := getPassword()
 	if err != nil {
 		LogE(err).Warning("Unable to get the credential for downloading the configuration blog, trying anonymously")
 		user = ""
@@ -284,7 +284,7 @@ func (s Singularity) IngestIntoCVMFS(CVMFSRepo string) error {
 }
 
 func (img Image) getByteManifest() ([]byte, error) {
-	pass, err := GetPassword(img.User, img.Registry)
+	pass, err := getPassword()
 	if err != nil {
 		LogE(err).Warning("Unable to retrieve the password, trying to get the manifest anonymously.")
 		return img.getAnonymousManifest()
@@ -377,7 +377,7 @@ func (img Image) GetLayers(layersChan chan<- downloadedLayer, manifestChan chan<
 	defer close(manifestChan)
 
 	user := img.User
-	pass, err := GetPassword(img.User, img.Registry)
+	pass, err := getPassword()
 	if err != nil {
 		LogE(err).Warning("Unable to retrieve the password, trying to get the layers anonymously.")
 		user = ""
@@ -435,7 +435,7 @@ func (img Image) GetLayers(layersChan chan<- downloadedLayer, manifestChan chan<
 
 func (img Image) downloadLayer(layer da.Layer, token, rootPath string) (toSend downloadedLayer, err error) {
 	user := img.User
-	pass, err := GetPassword(img.User, img.Registry)
+	pass, err := getPassword()
 	if err != nil {
 		LogE(err).Warning("Unable to retrieve the password, trying to get the layers anonymously.")
 		user = ""
