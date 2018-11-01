@@ -33,6 +33,7 @@ var subDirInsideRepo = ".layers"
 func ConvertWish(wish WishFriendly, convertAgain, forceDownload, convertSingularity bool) (err error) {
 
 	outputImage, err := ParseImage(wish.OutputName)
+	outputImage.User = wish.UserOutput
 	if err != nil {
 		return
 	}
@@ -41,6 +42,7 @@ func ConvertWish(wish WishFriendly, convertAgain, forceDownload, convertSingular
 		return
 	}
 	inputImage, err := ParseImage(wish.InputName)
+	inputImage.User = wish.UserInput
 	if err != nil {
 		return
 	}
@@ -264,6 +266,9 @@ func ConvertWish(wish WishFriendly, convertAgain, forceDownload, convertSingular
 	if err != nil {
 		return
 	}
+	b, _ := ioutil.ReadAll(res)
+	fmt.Println(string(b))
+	defer res.Close()
 	// here is possible to use the result of the above ReadAll to have
 	// informantion about the status of the upload.
 	_, err = ioutil.ReadAll(res)

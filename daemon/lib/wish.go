@@ -25,6 +25,8 @@ type WishFriendly struct {
 	OutputName string
 	CvmfsRepo  string
 	Converted  bool
+	UserInput  string
+	UserOutput string
 }
 
 /*
@@ -134,5 +136,7 @@ func CreateWish(inputImage, outputImage, cvmfsRepo, userInput, userOutput string
 	wish.InputId = 0
 	wish.OutputId = 0
 	wish.CvmfsRepo = cvmfsRepo
+	wish.UserInput = userInput
+	wish.UserOutput = userOutput
 	return
 }
