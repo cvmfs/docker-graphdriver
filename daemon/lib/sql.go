@@ -427,6 +427,7 @@ func GetAllWishes() ([]WishFriendly, error) {
 	return wishes, nil
 }
 
+/*
 var addConverted = `INSERT INTO converted VALUES(:wish, :input_reference, json(:manifest));`
 
 func AddConverted(wishId int, manifest da.Manifest) error {
@@ -450,7 +451,7 @@ func AddConverted(wishId int, manifest da.Manifest) error {
 	)
 	return err
 }
-
+*/
 /*
 var deleteWish = `DELETE FROM wish WHERE id = ?;`
 

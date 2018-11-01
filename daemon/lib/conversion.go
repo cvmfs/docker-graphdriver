@@ -296,10 +296,6 @@ func ConvertWish(wish WishFriendly, convertAgain, forceDownload, convertSingular
 		if err != nil {
 			LogE(errIng).Error("Error in storing the manifest in the repository")
 		}
-		errConv := AddConverted(wish.Id, manifest)
-		if err != nil && convertAgain == false {
-			LogE(errConv).Error("Error in storing the conversion in the database")
-		}
 		var errRemoveSchedule error
 		if alreadyConverted == ConversionNotMatch {
 			Log().Info("Image already converted, but it does not match the manifest, adding it to the remove scheduler")
@@ -308,7 +304,7 @@ func ConvertWish(wish WishFriendly, convertAgain, forceDownload, convertSingular
 				Log().Warning("Error in adding the image to the remove schedule")
 			}
 		}
-		if errIng == nil && errConv == nil && errRemoveSchedule == nil {
+		if errIng == nil && errRemoveSchedule == nil {
 			Log().Info("Conversion completed")
 		}
 		return
