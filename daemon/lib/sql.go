@@ -2,12 +2,9 @@ package lib
 
 import (
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"os/user"
 	"path"
-
-	da "github.com/cvmfs/docker-graphdriver/daemon/docker-api"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -368,13 +365,12 @@ func GetUserPassword(user, registry string) (password string, err error) {
 	).Scan(&password)
 	return
 }
-*/
 
 var getAllWishes = `
-SELECT 
-	d.id, d.input_image, 
-	input.name, d.output_image, 
-	output.name, d.cvmfs_repo, 
+SELECT
+	d.id, d.input_image,
+	input.name, d.output_image,
+	output.name, d.cvmfs_repo,
 	CASE WHEN
 		(SELECT input_reference FROM converted WHERE d.id = wish) IS NULL
 		THEN 0
@@ -385,7 +381,7 @@ FROM wish AS d
 	JOIN image_name as input
 	JOIN image_name as output
 
-WHERE 
+WHERE
 	d.input_image = input.image_id
 	AND d.output_image = output.image_id;
 `
@@ -427,7 +423,6 @@ func GetAllWishes() ([]WishFriendly, error) {
 	return wishes, nil
 }
 
-/*
 var addConverted = `INSERT INTO converted VALUES(:wish, :input_reference, json(:manifest));`
 
 func AddConverted(wishId int, manifest da.Manifest) error {

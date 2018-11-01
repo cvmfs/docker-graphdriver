@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"io/ioutil"
 	"os"
 	"os/signal"
 
@@ -35,32 +36,27 @@ var loopCmd = &cobra.Command{
 		}()
 
 		for {
-			wish, err := lib.GetAllWishes()
+			data, err := ioutil.ReadFile(args[0])
 			if err != nil {
-				lib.LogE(err).Error("Error in getting the desiderata")
+				lib.LogE(err).Fatal("Impossible to read the recipe file")
+				os.Exit(1)
 			}
-			for _, wish := range wish {
-
-				select {
-				case <-stopWishLoopSignal:
-					lib.Log().Info("Exiting because of SIGINT")
-					os.Exit(1)
-				default:
-					{
-					}
-				}
-
-				fields := log.Fields{
-					"input image":  wish.InputName,
-					"CVMFS repo":   wish.CvmfsRepo,
-					"output image": wish.OutputName,
-				}
-				lib.Log().WithFields(fields).Info("Working on desiderata")
+			recipe, err := lib.ParseYamlRecipeV1(data)
+			if err != nil {
+				lib.LogE(err).Fatal("Impossible to parse the recipe file")
+				os.Exit(1)
+			}
+			for _, wish := range recipe.Wishes {
+				fields := log.Fields{"input image": wish.InputName,
+					"repository":   wish.CvmfsRepo,
+					"output image": wish.OutputName}
+				lib.Log().WithFields(fields).Info("Start conversion of wish")
 				err = lib.ConvertWish(wish, convertAgain, overwriteLayer, convertSingularity)
 				if err != nil {
-					lib.LogE(err).Error("Error in converting the desiderata")
+					lib.LogE(err).WithFields(fields).Error("Error in converting wish, going on")
 				}
 			}
+
 		}
 	},
 }

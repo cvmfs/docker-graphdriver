@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 
@@ -29,47 +28,26 @@ var convertCmd = &cobra.Command{
 		AliveMessage()
 		defer lib.ExecCommand("docker", "system", "prune", "--force", "--all")
 
-		if len(args) < 1 {
-
-			wish, err := lib.GetAllWishes()
-			if err != nil {
-				fmt.Println(err)
-				os.Exit(1)
-			}
-			for _, wish := range wish {
-				fields := log.Fields{"input image": wish.InputName,
-					"repository":   wish.CvmfsRepo,
-					"output image": wish.OutputName}
-				lib.Log().WithFields(fields).Info("Start conversion of wish")
-				err = lib.ConvertWish(wish, convertAgain, overwriteLayer, convertSingularity)
-				if err != nil {
-					lib.LogE(err).WithFields(fields).Error("Error in converting wish, going on")
-				}
-			}
-			os.Exit(0)
-		} else {
-
-			data, err := ioutil.ReadFile(args[0])
-			if err != nil {
-				lib.LogE(err).Fatal("Impossible to read the recipe file")
-				os.Exit(1)
-			}
-			recipe, err := lib.ParseYamlRecipeV1(data)
-			if err != nil {
-				lib.LogE(err).Fatal("Impossible to parse the recipe file")
-				os.Exit(1)
-			}
-			for _, wish := range recipe.Wishes {
-				fields := log.Fields{"input image": wish.InputName,
-					"repository":   wish.CvmfsRepo,
-					"output image": wish.OutputName}
-				lib.Log().WithFields(fields).Info("Start conversion of wish")
-				err = lib.ConvertWish(wish, convertAgain, overwriteLayer, convertSingularity)
-				if err != nil {
-					lib.LogE(err).WithFields(fields).Error("Error in converting wish, going on")
-				}
-			}
-
+		data, err := ioutil.ReadFile(args[0])
+		if err != nil {
+			lib.LogE(err).Fatal("Impossible to read the recipe file")
+			os.Exit(1)
 		}
+		recipe, err := lib.ParseYamlRecipeV1(data)
+		if err != nil {
+			lib.LogE(err).Fatal("Impossible to parse the recipe file")
+			os.Exit(1)
+		}
+		for _, wish := range recipe.Wishes {
+			fields := log.Fields{"input image": wish.InputName,
+				"repository":   wish.CvmfsRepo,
+				"output image": wish.OutputName}
+			lib.Log().WithFields(fields).Info("Start conversion of wish")
+			err = lib.ConvertWish(wish, convertAgain, overwriteLayer, convertSingularity)
+			if err != nil {
+				lib.LogE(err).WithFields(fields).Error("Error in converting wish, going on")
+			}
+		}
+		//}
 	},
 }
