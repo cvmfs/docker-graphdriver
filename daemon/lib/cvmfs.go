@@ -165,77 +165,97 @@ func CreateSymlinkIntoCVMFS(CVMFSRepo, newLinkName, toLinkPath string) (err erro
 	return nil
 }
 
-func SaveLayersBacklink(CVMFSRepo string, img Image, layerMetadataPaths []string) error {
+type Backlink struct {
+	Origin []string `json:"origin"`
+}
+
+func getBacklinkPath(CVMFSRepo, layerDigest string) string {
+	return filepath.Join(LayerMetadataPath(CVMFSRepo, layerDigest), "origin.json")
+}
+
+func getBacklinkFromLayer(CVMFSRepo, layerDigest string) (backlink Backlink, err error) {
+	backlinkPath := getBacklinkPath(CVMFSRepo, layerDigest)
+	llog := func(l *log.Entry) *log.Entry {
+		return l.WithFields(log.Fields{"action": "get backlink from layer",
+			"repo":         CVMFSRepo,
+			"layer":        layerDigest,
+			"backlinkPath": backlinkPath})
+	}
+
+	if _, err := os.Stat(backlinkPath); os.IsNotExist(err) {
+		return Backlink{Origin: []string{}}, nil
+	}
+
+	backlinkFile, err := os.Open(backlinkPath)
+	if err != nil {
+		llog(LogE(err)).Error(
+			"Error in opening the file for writing the backlinks, skipping...")
+		return
+	}
+
+	byteBackLink, err := ioutil.ReadAll(backlinkFile)
+	if err != nil {
+		llog(LogE(err)).Error(
+			"Error in reading the bytes from the origin file, skipping...")
+		return
+	}
+
+	err = backlinkFile.Close()
+	if err != nil {
+		llog(LogE(err)).Error(
+			"Error in closing the file after reading, moving on...")
+		return
+	}
+
+	err = json.Unmarshal(byteBackLink, &backlink)
+	if err != nil {
+		llog(LogE(err)).Error(
+			"Error in unmarshaling the files, skipping...")
+		return
+	}
+	return
+}
+
+func SaveLayersBacklink(CVMFSRepo string, img Image, layerDigest []string) error {
 	llog := func(l *log.Entry) *log.Entry {
 		return l.WithFields(log.Fields{"action": "save backlink",
 			"repo":  CVMFSRepo,
 			"image": img.GetSimpleName()})
 	}
-	type Backlink struct {
-		Origin []string `json:"origin"`
-	}
+
 	llog(Log()).Info("Start saving backlinks")
-	llog(Log()).Info("Start transaction")
 
 	backlinks := make(map[string][]byte)
 
-	for _, layerMetadataPath := range layerMetadataPaths {
-		originPath := filepath.Join(layerMetadataPath, "origin.json")
+	for _, layerDigest := range layerDigest {
 		imgManifest, err := img.GetManifest()
 		if err != nil {
-			llog(LogE(err)).WithFields(log.Fields{"file": originPath}).Error(
+			llog(LogE(err)).Error(
 				"Error in getting the manifest from the image, skipping...")
 			continue
 		}
 		imgDigest := imgManifest.Config.Digest
 
-		var backlink Backlink
-		if _, err := os.Stat(originPath); os.IsNotExist(err) {
-
-			backlink = Backlink{Origin: []string{imgDigest}}
-
-		} else {
-
-			backlinkFile, err := os.Open(originPath)
-			if err != nil {
-				llog(LogE(err)).WithFields(log.Fields{"file": originPath}).Error(
-					"Error in opening the file for writing the backlinks, skipping...")
-				continue
-			}
-
-			byteBackLink, err := ioutil.ReadAll(backlinkFile)
-			if err != nil {
-				llog(LogE(err)).WithFields(log.Fields{"file": originPath}).Error(
-					"Error in reading the bytes from the origin file, skipping...")
-				continue
-			}
-
-			err = backlinkFile.Close()
-			if err != nil {
-				llog(LogE(err)).WithFields(log.Fields{"file": originPath}).Error(
-					"Error in closing the file after reading, moving on...")
-				continue
-			}
-
-			err = json.Unmarshal(byteBackLink, &backlink)
-			if err != nil {
-				llog(LogE(err)).WithFields(log.Fields{"file": originPath}).Error(
-					"Error in unmarshaling the files, skipping...")
-				continue
-			}
-
-			backlink.Origin = append(backlink.Origin, imgDigest)
+		backlink, err := getBacklinkFromLayer(CVMFSRepo, layerDigest)
+		if err != nil {
+			llog(LogE(err)).WithFields(log.Fields{"layer": layerDigest}).Error(
+				"Error in obtaining the backlink from a layer digest, skipping...")
+			continue
 		}
+		backlink.Origin = append(backlink.Origin, imgDigest)
+
 		backlinkBytesMarshal, err := json.Marshal(backlink)
 		if err != nil {
-			llog(LogE(err)).WithFields(log.Fields{"file": originPath}).Error(
+			llog(LogE(err)).WithFields(log.Fields{"layer": layerDigest}).Error(
 				"Error in Marshaling back the files, skipping...")
 			continue
 		}
 
-		backlinks[originPath] = backlinkBytesMarshal
+		backlinkPath := getBacklinkPath(CVMFSRepo, layerDigest)
+		backlinks[backlinkPath] = backlinkBytesMarshal
 	}
 
+	llog(Log()).Info("Start transaction")
 	err := ExecCommand("cvmfs_server", "transaction", CVMFSRepo).Start()
 	if err != nil {
 		llog(LogE(err)).Error("Error in opening the transaction")

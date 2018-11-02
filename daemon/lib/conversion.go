@@ -77,14 +77,14 @@ func ConvertWish(wish WishFriendly, convertAgain, forceDownload, convertSingular
 		Location string //location does NOT need the prefix `/cvmfs`
 	}
 	layerRepoLocationChan := make(chan LayerRepoLocation, 3)
-	layerMetadataLocationChan := make(chan string, 3)
+	layerDigestChan := make(chan string, 3)
 	go func() {
 		noErrors := true
 		var wg sync.WaitGroup
 		defer func() {
 			wg.Wait()
 			close(layerRepoLocationChan)
-			close(layerMetadataLocationChan)
+			close(layerDigestChan)
 		}()
 		defer func() {
 			noErrorInConversion <- noErrors
@@ -108,7 +108,6 @@ func ConvertWish(wish WishFriendly, convertAgain, forceDownload, convertSingular
 
 			Log().WithFields(log.Fields{"layer": layer.Name}).Info("Start Ingesting the file into CVMFS")
 			layerDigest := strings.Split(layer.Name, ":")[1]
-			layerMetadata := LayerMetadataPath(wish.CvmfsRepo, layerDigest)
 			layerPath := LayerRootfsPath(wish.CvmfsRepo, layerDigest)
 
 			var pathExists bool
@@ -120,13 +119,13 @@ func ConvertWish(wish WishFriendly, convertAgain, forceDownload, convertSingular
 
 			// need to run this into a goroutine to avoid a deadlock
 			wg.Add(1)
-			go func(layerName, layerLocation, layerMetadata string) {
+			go func(layerName, layerLocation, layerDigest string) {
 				layerRepoLocationChan <- LayerRepoLocation{
 					Digest:   layerName,
 					Location: layerLocation}
-				layerMetadataLocationChan <- layerMetadata
+				layerDigestChan <- layerDigest
 				wg.Done()
-			}(layer.Name, layerPath, layerMetadata)
+			}(layer.Name, layerPath, layerDigest)
 
 			if pathExists == false || forceDownload {
 				err = ExecCommand("cvmfs_server", "ingest", "-t", layer.Path, "-b", TrimCVMFSRepoPrefix(layerPath), wish.CvmfsRepo).Start()
@@ -178,11 +177,11 @@ func ConvertWish(wish WishFriendly, convertAgain, forceDownload, convertSingular
 		wg.Done()
 	}()
 
-	var layerMetadaLocations []string
+	var layerDigests []string
 	wg.Add(1)
 	go func() {
-		for layerMetadaLocation := range layerMetadataLocationChan {
-			layerMetadaLocations = append(layerMetadaLocations, layerMetadaLocation)
+		for layerDigest := range layerDigestChan {
+			layerDigests = append(layerDigests, layerDigest)
 		}
 		wg.Done()
 	}()
@@ -285,7 +284,7 @@ func ConvertWish(wish WishFriendly, convertAgain, forceDownload, convertSingular
 		}
 	}
 
-	err = SaveLayersBacklink(wish.CvmfsRepo, inputImage, layerMetadaLocations)
+	err = SaveLayersBacklink(wish.CvmfsRepo, inputImage, layerDigests)
 	if err != nil {
 		LogE(err).Error("Error in saving the backlinks")
 		noErrorInConversionValue = false
