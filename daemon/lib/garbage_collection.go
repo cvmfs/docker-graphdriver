@@ -1,9 +1,16 @@
 package lib
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
+
+	da "github.com/cvmfs/docker-graphdriver/daemon/docker-api"
 )
 
 func getAllLayers() []string {
@@ -34,6 +41,56 @@ func findToRemoveLayers(all_layers, needed_layers []string) (removes []string) {
 		removes = append(removes, layer)
 	}
 	return
+}
+
+func findImageToGarbageCollect(CVMFSRepo string) ([]da.Manifest, error) {
+	removeSchedulePath := RemoveScheduleLocation(CVMFSRepo)
+	llog := func(l *log.Entry) *log.Entry {
+		return l.WithFields(log.Fields{
+			"action": "find image to garbage collect in schedule file",
+			"file":   removeSchedulePath})
+	}
+
+	var schedule []da.Manifest
+
+	_, err := os.Stat(removeSchedulePath)
+	if os.IsNotExist(err) {
+		return schedule, nil
+	}
+	if err != nil {
+		llog(LogE(err)).Error("Error in stating the schedule file")
+		return schedule, err
+	}
+	scheduleFileRO, err := os.Open(removeSchedulePath)
+	if err != nil {
+		llog(LogE(err)).Error("Error in opening the schedule file")
+		return schedule, err
+	}
+
+	scheduleBytes, err := ioutil.ReadAll(scheduleFileRO)
+	if err != nil {
+		llog(LogE(err)).Error("Impossible to read the schedule file")
+		return schedule, err
+	}
+
+	err = scheduleFileRO.Close()
+	if err != nil {
+		llog(LogE(err)).Error("Impossible to close the schedule file")
+		return schedule, err
+	}
+
+	err = json.Unmarshal(scheduleBytes, &schedule)
+	if err != nil {
+		llog(LogE(err)).Error("Impossible to unmarshal the schedule file")
+		return schedule, err
+	}
+
+	return schedule, nil
+}
+
+// with image and layer we pass the digest of the layer and the digest of the image
+func garbabeCollectSingleLayer(CVMFSRepo, image, layer string) error {
+	return nil
 }
 
 func RemoveUselessLayers() error {
