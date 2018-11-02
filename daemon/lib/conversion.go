@@ -104,18 +104,14 @@ func ConvertWish(wish WishFriendly, convertAgain, forceDownload, convertSingular
 				LogE(err).Error("Error in the cleanup command")
 			}
 		}
-		layerRepoLocationRoot := filepath.Join("/", "cvmfs", wish.CvmfsRepo)
 		for layer := range layersChanell {
 
 			Log().WithFields(log.Fields{"layer": layer.Name}).Info("Start Ingesting the file into CVMFS")
 			layerDigest := strings.Split(layer.Name, ":")[1]
-			layerRoot := filepath.Join(subDirInsideRepo, layerDigest[0:2], layerDigest)
-			layerLocation := filepath.Join(layerRoot, "layerfs")
-			layerMetadata := filepath.Join(layerRoot, ".metadata")
+			layerMetadata := LayerMetadataPath(wish.CvmfsRepo, layerDigest)
+			layerPath := LayerRootfsPath(wish.CvmfsRepo, layerDigest)
 
 			var pathExists bool
-			layerPath := filepath.Join("/", "cvmfs", wish.CvmfsRepo, layerLocation)
-
 			if _, err := os.Stat(layerPath); os.IsNotExist(err) {
 				pathExists = false
 			} else {
@@ -130,15 +126,15 @@ func ConvertWish(wish WishFriendly, convertAgain, forceDownload, convertSingular
 					Location: layerLocation}
 				layerMetadataLocationChan <- layerMetadata
 				wg.Done()
-			}(layer.Name, filepath.Join(layerRepoLocationRoot, layerLocation), layerMetadata)
+			}(layer.Name, layerPath, layerMetadata)
 
 			if pathExists == false || forceDownload {
-				err = ExecCommand("cvmfs_server", "ingest", "-t", layer.Path, "-b", layerLocation, wish.CvmfsRepo).Start()
+				err = ExecCommand("cvmfs_server", "ingest", "-t", layer.Path, "-b", TrimCVMFSRepoPrefix(layerPath), wish.CvmfsRepo).Start()
 
 				if err != nil {
 					LogE(err).WithFields(log.Fields{"layer": layer.Name}).Error("Some error in ingest the layer")
 					noErrors = false
-					cleanup(layerLocation)
+					cleanup(TrimCVMFSRepoPrefix(layerPath))
 					return
 				}
 				Log().WithFields(log.Fields{"layer": layer.Name}).Info("Finish Ingesting the file")

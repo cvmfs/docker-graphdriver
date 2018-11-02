@@ -180,7 +180,7 @@ func SaveLayersBacklink(CVMFSRepo string, img Image, layerMetadataPaths []string
 	backlinks := make(map[string][]byte)
 
 	for _, layerMetadataPath := range layerMetadataPaths {
-		originPath := filepath.Join("/", "cvmfs", CVMFSRepo, layerMetadataPath, "origin.json")
+		originPath := filepath.Join(layerMetadataPath, "origin.json")
 		imgManifest, err := img.GetManifest()
 		if err != nil {
 			llog(LogE(err)).WithFields(log.Fields{"file": originPath}).Error(
@@ -372,8 +372,25 @@ func RemoveSingularityImageFromManifest(CVMFSRepo string, manifest da.Manifest) 
 	return nil
 }
 
+func LayerPath(CVMFSRepo, layerDigest string) string {
+	return filepath.Join("/", "cvmfs", CVMFSRepo, subDirInsideRepo, layerDigest[0:2], layerDigest)
+}
+
+func LayerRootfsPath(CVMFSRepo, layerDigest string) string {
+	return filepath.Join(LayerPath(CVMFSRepo, layerDigest), "layerfs")
+}
+
+func LayerMetadataPath(CVMFSRepo, layerDigest string) string {
+	return filepath.Join(LayerPath(CVMFSRepo, layerDigest), ".metadata")
+}
+
+//from /cvmfs/$REPO/foo/bar -> foo/bar
+func TrimCVMFSRepoPrefix(path string) string {
+	return strings.Join(strings.Split(path, string(os.PathSeparator))[3:], string(os.PathSeparator))
+}
+
 func RemoveLayer(CVMFSRepo, layerDigest string) error {
-	dir := filepath.Join("/", "cvmfs", CVMFSRepo, subDirInsideRepo, layerDigest[0:2], layerDigest)
+	dir := LayerPath(CVMFSRepo, layerDigest)
 	llog := func(l *log.Entry) *log.Entry {
 		return l.WithFields(log.Fields{
 			"action": "removing layer", "directory": dir, "layer": layerDigest})
