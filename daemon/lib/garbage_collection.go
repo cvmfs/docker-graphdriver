@@ -43,7 +43,7 @@ func findToRemoveLayers(all_layers, needed_layers []string) (removes []string) {
 	return
 }
 
-func findImageToGarbageCollect(CVMFSRepo string) ([]da.Manifest, error) {
+func FindImageToGarbageCollect(CVMFSRepo string) ([]da.Manifest, error) {
 	removeSchedulePath := RemoveScheduleLocation(CVMFSRepo)
 	llog := func(l *log.Entry) *log.Entry {
 		return l.WithFields(log.Fields{
@@ -88,8 +88,9 @@ func findImageToGarbageCollect(CVMFSRepo string) ([]da.Manifest, error) {
 	return schedule, nil
 }
 
-// with image and layer we pass the digest of the layer and the digest of the image, both without the sha256: prefix
-func garbabeCollectSingleLayer(CVMFSRepo, image, layer string) error {
+// with image and layer we pass the digest of the layer and the digest of the image,
+// both without the sha256: prefix
+func GarbageCollectSingleLayer(CVMFSRepo, image, layer string) error {
 	backlink, err := getBacklinkFromLayer(CVMFSRepo, layer)
 	llog := func(l *log.Entry) *log.Entry {
 		return l.WithFields(log.Fields{"action": "garbage collect layer",
