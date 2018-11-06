@@ -2,7 +2,6 @@ package lib
 
 import (
 	"database/sql"
-	"fmt"
 	"os/user"
 	"path"
 
@@ -491,11 +490,12 @@ converted.wish = wish.id AND
 wish.input_image = i.id;
 `
 
+/*
 var getAllNeededLayers = fmt.Sprintf(`
-SELECT DISTINCT( 
+SELECT DISTINCT(
 	'/cvmfs/' || wish.cvmfs_repo || '/'|| '%s' || '/' || substr(json_extract(layers.value, '$.Digest'), 8)
-	) 
-FROM 
+	)
+FROM
 converted, wish, json_each(converted.manifest, '$.Layers') as layers WHERE
 converted.wish = wish.id;
 `, subDirInsideRepo)
@@ -525,3 +525,4 @@ func GetAllNeededLayers() ([]string, error) {
 	}
 	return layers, nil
 }
+*/
