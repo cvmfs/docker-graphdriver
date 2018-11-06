@@ -17,7 +17,7 @@
     "syscallx",
     "sysx"
   ]
-  revision = "be9bd761db19d4fc551d40be908f02e00487511d"
+  revision = "bea7585dbfac2847dbf49a6b8e7738a36c09bc75"
 
 [[projects]]
   name = "github.com/docker/distribution"
@@ -76,7 +76,7 @@
     "pkg/useragent",
     "plugin/v2"
   ]
-  revision = "4f9258328913b1433ebd9e5bc046622bbf6289f7"
+  revision = "12bba16306dd618883fe2e85ef1730efc572294f"
 
 [[projects]]
   name = "github.com/docker/go-connections"
@@ -107,10 +107,10 @@
   version = "v1.0"
 
 [[projects]]
-  branch = "master"
   name = "github.com/konsorten/go-windows-terminal-sequences"
   packages = ["."]
-  revision = "b729f2633dfe35f4d1d8a32385f6685610ce1cb5"
+  revision = "5c8c8bd35d3832f5d134ae1e1e375b69a4d25242"
+  version = "v1.0.1"
 
 [[projects]]
   name = "github.com/mattn/go-runewidth"
@@ -125,16 +125,10 @@
   version = "v1.0.3"
 
 [[projects]]
-  name = "github.com/mattn/go-sqlite3"
-  packages = ["."]
-  revision = "25ecb14adfc7543176f7d85291ec7dba82c6f7e4"
-  version = "v1.9.0"
-
-[[projects]]
-  branch = "master"
   name = "github.com/olekukonko/tablewriter"
   packages = ["."]
-  revision = "be2c049b30ccd4d3fd795d6bf7dce74e42eeedaa"
+  revision = "e6d60cf7ba1f42d86d54cdf5508611c4aafb3970"
+  version = "v0.0.1"
 
 [[projects]]
   name = "github.com/opencontainers/go-digest"
@@ -181,19 +175,10 @@
   version = "v0.8.0"
 
 [[projects]]
-  branch = "master"
-  name = "github.com/rubenv/sql-migrate"
-  packages = [
-    ".",
-    "sqlparse"
-  ]
-  revision = "3f452fc0ebebbb784fdab91f7bc79a31dcacab5c"
-
-[[projects]]
   name = "github.com/sirupsen/logrus"
   packages = ["."]
-  revision = "a67f783a3814b8729bd2dac5780b5f78f8dbd64d"
-  version = "v1.1.0"
+  revision = "bcd833dfe83d3cebad139e4a29ed79cb2318bf95"
+  version = "v1.2.0"
 
 [[projects]]
   name = "github.com/spf13/cobra"
@@ -221,18 +206,16 @@
   branch = "master"
   name = "golang.org/x/crypto"
   packages = ["ssh/terminal"]
-  revision = "e3636079e1a4c1f337f212cc5cd2aca108f6c900"
+  revision = "4d3f4d9ffa16a13f451c3b2999e9c49e9750bf06"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/net"
   packages = [
-    "context",
-    "context/ctxhttp",
     "internal/socks",
     "proxy"
   ]
-  revision = "f5e5bdd778241bfefa8627f7124c39cd6ad8d74f"
+  revision = "10aee181995363b41f712a55844a0dd52ea04646"
 
 [[projects]]
   branch = "master"
@@ -242,13 +225,7 @@
     "windows",
     "windows/registry"
   ]
-  revision = "af653ce8b74f808d092db8ca9741fbb63d2a469d"
-
-[[projects]]
-  name = "gopkg.in/gorp.v1"
-  packages = ["."]
-  revision = "c87af80f3cc5036b55b83d77171e156791085e2e"
-  version = "v1.7.1"
+  revision = "3a76605856fddce5718553cbb8bd50ca492a7274"
 
 [[projects]]
   name = "gopkg.in/yaml.v2"
@@ -259,6 +236,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "dba9f6217c7ad27cb51db60e861103d1e508cab1f0c1d792504136a8d0c4cb53"
+  inputs-digest = "c71158387d39c8d33cbc4310bfe7ebc8a63b1bd1e80d4cdffffc72ea7962ce1a"
   solver-name = "gps-cdcl"
   solver-version = 1

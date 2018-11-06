@@ -1,2 +1,2 @@
 all:
-	go build --tags "json1"
+	go build
