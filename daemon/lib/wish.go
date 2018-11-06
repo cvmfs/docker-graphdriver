@@ -23,12 +23,6 @@ type WishFriendly struct {
 	UserOutput string
 }
 
-type WishAlreadyInDBError struct{}
-
-func (e *WishAlreadyInDBError) Error() string {
-	return "Wish is already in the database"
-}
-
 func CreateWish(inputImage, outputImage, cvmfsRepo, userInput, userOutput string) (wish WishFriendly, err error) {
 
 	inputImg, err := ParseImage(inputImage)

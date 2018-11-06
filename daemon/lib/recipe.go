@@ -36,13 +36,8 @@ func ParseYamlRecipeV1(data []byte) (Recipe, error) {
 		output := formatOutputImage(recipeYamlV1.OutputFormat, input)
 		wish, err := CreateWish(inputImage, output, recipeYamlV1.CVMFSRepo, "", recipeYamlV1.User)
 		if err != nil {
-			switch err.(type) {
-			case *WishAlreadyInDBError:
-				recipe.Wishes = append(recipe.Wishes, wish)
-			default:
-				LogE(err).Warning("Error in creating the wish")
-				continue
-			}
+			LogE(err).Warning("Error in creating the wish")
+			continue
 		} else {
 			recipe.Wishes = append(recipe.Wishes, wish)
 		}
