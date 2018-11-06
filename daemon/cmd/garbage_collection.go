@@ -35,7 +35,7 @@ var garbageCollectionCmd = &cobra.Command{
 			llog(lib.LogE(err)).Warning(
 				"Error in finding the image to remove from the scheduler, goin on...")
 		}
-		var images2layers map[string][]string
+		images2layers := make(map[string][]string)
 
 		for _, manifest := range manifestToRemove {
 			digest := strings.Split(manifest.Config.Digest, ":")[1]
