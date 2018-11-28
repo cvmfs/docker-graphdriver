@@ -471,3 +471,20 @@ func RemoveDirectory(directory string) error {
 
 	return nil
 }
+
+func CreateCatalogIntoDir(CVMFSRepo, dir string) (err error) {
+	catalogPath := filepath.Join("/", "cvmfs", CVMFSRepo, dir, ".cvmfscatalog")
+	if _, err := os.Stat(catalogPath); os.IsNotExist(err) {
+		tmpFile, err := ioutil.TempFile("", "tempCatalog")
+		tmpFile.Close()
+		if err != nil {
+			return err
+		}
+		err = IngestIntoCVMFS(CVMFSRepo, TrimCVMFSRepoPrefix(catalogPath), tmpFile.Name())
+		if err != nil {
+			return err
+		}
+		return err
+	}
+	return nil
+}

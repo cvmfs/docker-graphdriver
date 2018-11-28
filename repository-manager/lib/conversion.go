@@ -128,7 +128,25 @@ func ConvertWish(wish WishFriendly, convertAgain, forceDownload, convertSingular
 			}(layer.Name, layerPath, layerDigest)
 
 			if pathExists == false || forceDownload {
-				err = ExecCommand("cvmfs_server", "ingest", "-t", layer.Path, "-b", TrimCVMFSRepoPrefix(layerPath), wish.CvmfsRepo).Start()
+
+				// need to create the "super-directory", those
+				// directory starting with 2 char prefix of the
+				// digest itself, and put a .cvmfscatalog files
+				// in it, if the directory still doesn't
+				// exists.
+				superDirectory := filepath.Dir(TrimCVMFSRepoPrefix(layerPath))
+				err = CreateCatalogIntoDir(wish.CvmfsRepo, superDirectory)
+				if err != nil {
+					LogE(err).WithFields(log.Fields{
+						"directory": superDirectory}).Error(
+						"Impossible to create subcatalog in super-directory.")
+				} else {
+					Log().WithFields(log.Fields{
+						"directory": superDirectory}).Info(
+						"Created subcatalog in directory")
+				}
+
+				err = ExecCommand("cvmfs_server", "ingest", "--catalog", "-t", layer.Path, "-b", TrimCVMFSRepoPrefix(layerPath), wish.CvmfsRepo).Start()
 
 				if err != nil {
 					LogE(err).WithFields(log.Fields{"layer": layer.Name}).Error("Some error in ingest the layer")
