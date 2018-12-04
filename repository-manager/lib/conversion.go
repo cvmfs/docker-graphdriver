@@ -133,20 +133,28 @@ func ConvertWish(wish WishFriendly, convertAgain, forceDownload, convertSingular
 				// directory starting with 2 char prefix of the
 				// digest itself, and put a .cvmfscatalog files
 				// in it, if the directory still doesn't
-				// exists.
-				superDirectory := filepath.Dir(TrimCVMFSRepoPrefix(layerPath))
-				err = CreateCatalogIntoDir(wish.CvmfsRepo, superDirectory)
-				if err != nil {
-					LogE(err).WithFields(log.Fields{
-						"directory": superDirectory}).Error(
-						"Impossible to create subcatalog in super-directory.")
-				} else {
-					Log().WithFields(log.Fields{
-						"directory": superDirectory}).Info(
-						"Created subcatalog in directory")
-				}
+				// exists. Similarly we need a .cvmfscatalog in
+				// the layerfs directory, the one that host the
+				// whole layer
 
-				err = ExecCommand("cvmfs_server", "ingest", "--catalog", "-t", layer.Path, "-b", TrimCVMFSRepoPrefix(layerPath), wish.CvmfsRepo).Start()
+				for _, dir := range []string{
+					filepath.Dir(filepath.Dir(TrimCVMFSRepoPrefix(layerPath))),
+					//TrimCVMFSRepoPrefix(layerPath)} {
+				} {
+
+					Log().WithFields(log.Fields{"catalogdirectory": dir}).Info("Working on CATALOGDIRECTORY")
+					err = CreateCatalogIntoDir(wish.CvmfsRepo, dir)
+					if err != nil {
+						LogE(err).WithFields(log.Fields{
+							"directory": dir}).Error(
+							"Impossible to create subcatalog in super-directory.")
+					} else {
+						Log().WithFields(log.Fields{
+							"directory": dir}).Info(
+							"Created subcatalog in directory")
+					}
+				}
+				err = ExecCommand("cvmfs_server", "ingest", "-t", layer.Path, "-b", TrimCVMFSRepoPrefix(layerPath), wish.CvmfsRepo).Start()
 
 				if err != nil {
 					LogE(err).WithFields(log.Fields{"layer": layer.Name}).Error("Some error in ingest the layer")
@@ -158,7 +166,7 @@ func ConvertWish(wish WishFriendly, convertAgain, forceDownload, convertSingular
 			} else {
 				Log().WithFields(log.Fields{"layer": layer.Name}).Info("Skipping ingestion of layer, already exists")
 			}
-			os.Remove(layer.Path)
+			//os.Remove(layer.Path)
 		}
 		Log().Info("Finished pushing the layers into CVMFS")
 	}()

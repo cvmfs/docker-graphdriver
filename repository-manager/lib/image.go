@@ -267,17 +267,6 @@ func (s Singularity) IngestIntoCVMFS(CVMFSRepo string) error {
 			"Error in ingesting singularity image into CVMFS, unable to get where save the image")
 		return err
 	}
-	superDirectory := filepath.Dir(singularityPath)
-	err = CreateCatalogIntoDir(CVMFSRepo, superDirectory)
-	if err != nil {
-		LogE(err).WithFields(log.Fields{
-			"directory": superDirectory}).Error(
-			"Impossible to create subcatalog in super-directory.")
-	} else {
-		Log().WithFields(log.Fields{
-			"directory": superDirectory}).Info(
-			"Created subcatalog in directory")
-	}
 
 	err = IngestIntoCVMFS(CVMFSRepo, singularityPath, s.TempDirectory)
 	if err != nil {
@@ -286,6 +275,24 @@ func (s Singularity) IngestIntoCVMFS(CVMFSRepo string) error {
 		os.RemoveAll(s.TempDirectory)
 		return err
 	}
+
+	for _, dir := range []string{
+		filepath.Dir(singularityPath),
+		singularityPath} {
+
+		err = CreateCatalogIntoDir(CVMFSRepo, dir)
+		if err != nil {
+			LogE(err).WithFields(log.Fields{
+				"directory": dir}).Error(
+				"Impossible to create subcatalog in super-directory.")
+		} else {
+			Log().WithFields(log.Fields{
+				"directory": dir}).Info(
+				"Created subcatalog in directory")
+		}
+
+	}
+
 	// lets create the symlink
 	err = CreateSymlinkIntoCVMFS(CVMFSRepo, symlinkPath, singularityPath)
 	if err != nil {
