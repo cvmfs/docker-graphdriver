@@ -32,6 +32,19 @@ var subDirInsideRepo = ".layers"
 
 func ConvertWish(wish WishFriendly, convertAgain, forceDownload, convertSingularity bool) (err error) {
 
+	err = CreateCatalogIntoDir(wish.CvmfsRepo, subDirInsideRepo)
+	if err != nil {
+		LogE(err).WithFields(log.Fields{
+			"directory": subDirInsideRepo}).Error(
+			"Impossible to create subcatalog in super-directory.")
+	}
+	err = CreateCatalogIntoDir(wish.CvmfsRepo, ".flat")
+	if err != nil {
+		LogE(err).WithFields(log.Fields{
+			"directory": ".flat"}).Error(
+			"Impossible to create subcatalog in super-directory.")
+	}
+
 	outputImage, err := ParseImage(wish.OutputName)
 	outputImage.User = wish.UserOutput
 	if err != nil {
@@ -154,7 +167,7 @@ func ConvertWish(wish WishFriendly, convertAgain, forceDownload, convertSingular
 							"Created subcatalog in directory")
 					}
 				}
-				err = ExecCommand("cvmfs_server", "ingest", "-t", layer.Path, "-b", TrimCVMFSRepoPrefix(layerPath), wish.CvmfsRepo).Start()
+				err = ExecCommand("cvmfs_server", "ingest", "--catalog", "-t", layer.Path, "-b", TrimCVMFSRepoPrefix(layerPath), wish.CvmfsRepo).Start()
 
 				if err != nil {
 					LogE(err).WithFields(log.Fields{"layer": layer.Name}).Error("Some error in ingest the layer")
